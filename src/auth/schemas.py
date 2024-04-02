@@ -6,16 +6,12 @@ from pydantic import BaseModel, constr
 
 class UserSchema(BaseModel):
     id: Optional[int] = None
-    name: constr(max_length=30)
-    surname: constr(max_length=30)
-    fathername: Optional[constr(max_length=30)] = None
-    org: Optional[constr(max_length=60)] = None
-    inn: constr(max_length=12)
+    name: constr(max_length=100)
+    username: constr(min_length=5, max_length=20)
+    email: constr(max_length=100)
     telnum: constr(max_length=11)
-    url: constr(max_length=31)
-    email: constr(max_length=50)
+    telegram: constr(max_length=50)
     password: constr(min_length=8, max_length=16)
-    refer_id: Optional[constr(max_length=8)] = None
 
 
 class UserStatusModel(BaseModel):

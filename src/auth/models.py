@@ -15,14 +15,11 @@ class UserModel(Base):
 
     id: Mapped[pk]
     name: Mapped[str]
-    surname: Mapped[str]
-    fathername: Mapped[str | None]
-    org: Mapped[str | None]
-    inn: Mapped[str]
+    username: Mapped[str]
+    email: Mapped[str]
     telnum: Mapped[str]
-    url: Mapped[str]
+    telegram: Mapped[str]
     password: Mapped[str]
-    refer_id: Mapped[int | None]
 
 
 class UserStatusModel(Base):
@@ -38,7 +35,7 @@ class UserStatusHistoryModel(Base):
     id: Mapped[pk]
     user_id: Mapped[int]
     status_id: Mapped[int]
-    description: Mapped[str]
+    description: Mapped[str | None]
     date: Mapped[dt]
 
 

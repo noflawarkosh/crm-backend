@@ -8,7 +8,7 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
 
-    <title>SellerCRM - Регистрация</title>
+    <title>GreedyBear - Регистрация</title>
 
 
     <link rel="icon" type="image/x-icon" href="../../assets/img/favicon/favicon.ico"/>
@@ -63,7 +63,7 @@
                 <!-- Logo -->
                 <div class="app-brand mb-5">
                     <a href="index.html" class="app-brand-link gap-2">
-                        <span class="app-brand-text demo text-body fw-bold">SellersCRM</span>
+                        <span class="app-brand-text demo text-body fw-bold">greedybear</span>
                     </a>
                 </div>
                 <!-- /Logo -->
@@ -73,75 +73,53 @@
                 <form id="reg">
 
                     <div class="mb-3">
-                        <label for="surname" class="form-label">Фамилия</label>
-                        <input type="text" class="form-control" id="surname" name="surname"
-                               placeholder="Иванов" autofocus>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Имя</label>
+                        <label for="name" class="form-label">Имя *</label>
                         <input type="text" class="form-control" id="name" name="name"
-                               placeholder="Иван" autofocus>
+                               placeholder="Иван" autofocus autocomplete="nofill">
                     </div>
 
                     <div class="mb-3">
-                        <label for="fathername" class="form-label">Отчество</label>
-                        <input type="text" class="form-control" id="fathername" name="fathername"
-                               placeholder="Иванович" autofocus>
+                        <label for="username" class="form-label">Логин *</label>
+                        <input type="text" class="form-control" id="username" name="username"
+                               placeholder="ivan77" autofocus autocomplete="nofill">
                     </div>
 
                     <div class="mb-3">
-                        <label for="org" class="form-label">Наименование организации (ЕГРЮЛ/ЕГРИП)</label>
-                        <input type="text" class="form-control" id="org" name="org"
-                               placeholder="ИП Иванов" autofocus>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="inn" class="form-label">ИНН организации (ЕГРЮЛ/ЕГРИП)</label>
-                        <input type="text" class="form-control" id="inn" name="inn"
-                               placeholder="012345678910" autofocus>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
+                        <label for="email" class="form-label">Email *</label>
                         <input type="text" class="form-control" id="email" name="email" placeholder="mail@example.ru">
                     </div>
 
                     <div class="mb-3">
-                        <label for="telnum" class="form-label">Номер телефона</label>
+                        <label for="telnum" class="form-label">Номер телефона *</label>
                         <input type="tel" class="form-control" id="telnum" name="telnum"
-                               placeholder="79100000000" autofocus>
+                               placeholder="79100000000" autofocus autocomplete="nofill">
                     </div>
 
                     <div class="mb-3">
-                        <label for="url" class="form-label">Telegram</label>
-                        <input type="text" class="form-control" id="url" name="url"
-                               placeholder="@example" autofocus>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="ref" class="form-label">Реферальный код</label>
-                        <input type="text" class="form-control" id="ref" name="ref"
-                               placeholder="XXXXXXXX" autofocus>
+                        <label for="telegram" class="form-label">Telegram *</label>
+                        <input type="text" class="form-control" id="telegram" name="telegram"
+                               placeholder="@example" autofocus autocomplete="nofill">
                     </div>
 
                     <div class="mb-3 form-password-toggle">
-                        <label class="form-label" for="password1">Пароль</label>
+                        <label class="form-label" for="password1">Пароль *</label>
                         <div class="input-group input-group-merge">
                             <input type="password" id="password1" class="form-control" name="password1"
-                                   placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;"
-                                   aria-describedby="password"/>
-                            <span class="input-group-text cursor-pointer"></span>
+
+                                   aria-describedby="password" autocomplete="nofill"/>
+                            <span class="input-group-text cursor-pointer"><i class="bx bx-hide"
+                                                                             id="password-toggle1"></i></span>
                         </div>
                     </div>
 
                     <div class="mb-3 form-password-toggle">
-                        <label class="form-label" for="password2">Повтор пароля</label>
+                        <label class="form-label" for="password2">Повтор пароля *</label>
                         <div class="input-group input-group-merge">
                             <input type="password" id="password2" class="form-control" name="password2"
-                                   placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;"
-                                   aria-describedby="password"/>
-                            <span class="input-group-text cursor-pointer"></span>
+
+                                   aria-describedby="password" autocomplete="nofill"/>
+                            <span class="input-group-text cursor-pointer"><i class="bx bx-hide"
+                                                                             id="password-toggle2"></i></span>
                         </div>
                     </div>
 
@@ -164,12 +142,12 @@
                         </div>
 
                     </div>
-                    <button class="btn btn-primary d-grid w-100" type="submit">
+                    <button class="btn btn-primary d-grid w-100 mt-2" type="submit">
                         Зарегистрироваться
                     </button>
                 </form>
 
-                <p class="text-center">
+                <p class="text-center mt-2">
                     <span>Уже зарегистрированы?</span>
                     <a href="/v1/login">
                         <span>Войти</span>
@@ -185,63 +163,180 @@
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/3.3.4/jquery.inputmask.bundle.min.js"></script>
+
 <script>
+    // Show password buttons
     $(document).ready(function () {
-        $('#name').inputmask('****************************************', {placeholder: ''});
-        $('#surname').inputmask('****************************************', {placeholder: ''});
-        $('#fathername').inputmask('****************************************', {placeholder: ''});
-        $('#org').inputmask('********************************************************************************', {placeholder: ''});
+        $('#password-toggle1').click(function () {
+            var input = $('#password1');
+            var icon = $('#password-toggle1');
+            if (input.attr('type') === 'password') {
+                input.attr('type', 'text');
+                icon.removeClass('bx-hide').addClass('bx-show');
+            } else {
+                input.attr('type', 'password');
+                icon.removeClass('bx-show').addClass('bx-hide');
+            }
+        });
+        $('#password-toggle2').click(function () {
+            var input = $('#password2');
+            var icon = $('#password-toggle2');
+            if (input.attr('type') === 'password') {
+                input.attr('type', 'text');
+                icon.removeClass('bx-hide').addClass('bx-show');
+            } else {
+                input.attr('type', 'password');
+                icon.removeClass('bx-show').addClass('bx-hide');
+            }
+        });
+    });
+</script>
+
+<script>
+    // Inputmasks
+    $(document).ready(function () {
+
+        passwordOptions = {
+            mask: '*{8,16}',
+            definitions: {
+                '*': {
+                    validator: '[A-Za-z0-9!@#$%^&*]',
+                },
+            }
+        };
+
+        telegramOptions = {
+            mask: '@*{5,33}',
+            definitions: {
+                '*': {
+                    validator: '[A-Za-z0-9!@._]',
+                },
+            }
+        };
+
+        usernameOptions = {
+            mask: '*{5,20}',
+            definitions: {
+                '*': {
+                    validator: '[a-z0-9]',
+                },
+            }
+        };
+
+        $('#name').inputmask('A***************************************', {placeholder: ''});
+        $('#username').inputmask(usernameOptions);
+        $('#email').inputmask({alias: 'email', placeholder: ''});
         $('#telnum').inputmask('79999999999', {placeholder: ''});
-        $('#url').inputmask('@*****************************', {placeholder: ''});
-        $('#inn').inputmask('999999999999', {placeholder: ''});
-        $('#email').inputmask({ alias: 'email', placeholder: '' });
-        $('#ref').inputmask('99999999', {placeholder: ''});
+        $('#telegram').inputmask(telegramOptions);
+        $('#password1').inputmask(passwordOptions);
+        $('#password2').inputmask(passwordOptions);
 
     });
-
 </script>
 
 <script>
     document.getElementById('reg').addEventListener('submit', function (event) {
+
         event.preventDefault();
 
         var submitButton = document.querySelector('button[type="submit"]');
         submitButton.classList.add('disabled');
 
-        const url = new URL('http://127.0.0.1:8000/auth/register');
-        url.searchParams.append('name', '123');
-        url.searchParams.append('surname', '1233');
-        url.searchParams.append('fathername', '11111111111111111111111111111111111111111111111111111111111111111111');
-        url.searchParams.append('inn', '1233');
-        url.searchParams.append('telnum', '1233');
-        url.searchParams.append('url', '1233');
-        url.searchParams.append('password', '111111111111');
+        const nameInput = document.getElementById('name');
+        const usernameInput = document.getElementById('username');
+        const emailInput = document.getElementById('email');
+        const telnumInput = document.getElementById('telnum');
+        const telegramInput = document.getElementById('telegram');
+        const password1Input = document.getElementById('password1');
+        const password2Input = document.getElementById('password2');
+        const check1 = document.getElementById('terms-conditions1');
+        const check2 = document.getElementById('terms-conditions2');
 
+        if ((nameInput.value.length === 0) || (nameInput.value.length > 30)) {
+            alert('Поле ввода имени является обязательным, длина должна составлять от 1 до 100 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
 
-        fetch(url, {
-            method: 'POST',
-        })
-            .then(function (response) {
-                if (response.ok) {
-                    return response.text();
-                } else {
-                    throw new Error(response.statusText);
+        if ((usernameInput.value.length < 5) || (usernameInput.value.length > 15)) {
+            alert('Поле ввода логина является обязательным, длина должна составлять от 5 до 20 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((emailInput.value.length === 0) || (emailInput.value.length > 50)) {
+            alert('Поле ввода эл. почты является обязательным, длина должна составлять не более 100 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((telnumInput.value.length === 0) || (telnumInput.value.length !== 11)) {
+            alert('Поле ввода номера телефона является обязательным, длина должна составлять 11 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((telegramInput.value.length === 0) || (telegramInput.value.length > 31)) {
+            alert('Поле ввода тега Telegram является обязательным, длина должна составлять от 5 до 32 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((password1Input.value.length < 8) || (password1Input.value.length > 16)) {
+            alert('Поле ввода пароля является обязательным, длина должна составлять от 8 до 16 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if (password1Input.value !== password2Input.value) {
+            alert('Пароли не совпадают')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if (!(check1.checked)) {
+            alert('Для начала использования сервиса, вы должны согласиться с условиями использования')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if (!(check2.checked)) {
+            alert('Для начала использования сервиса, вы должны дать согласие на обработку персональных данных')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        const currentDomain = window.location.origin;
+        const url = new URL('/auth/register', currentDomain);
+        url.searchParams.append('name', nameInput.value);
+        url.searchParams.append('username', usernameInput.value);
+        url.searchParams.append('email', emailInput.value);
+        url.searchParams.append('telnum', telnumInput.value);
+        url.searchParams.append('telegram', telegramInput.value);
+        url.searchParams.append('password', password1Input.value);
+
+        $.ajax({
+            url: url,
+            method: 'post',
+            success: function (data) {
+                if (data.result === 'success') {
+                    alert(nameInput.value + ', ваша заявка на регистрацию успешно создана. Ожидайте письмо с результатом');
                 }
-            })
-            .then(function (data) {
-                alert(data);
+
+                if (data.result === 'error') {
+                    alert(data.details)
+                }
                 submitButton.classList.remove('disabled');
-            })
-            .catch(function (error) {
-                alert(error);
+            },
+
+            error: function () {
+                alert('Произошла ошибка сервера при регистрации. Обновите страницу и повторите попытку');
                 submitButton.classList.remove('disabled');
-            });
+            }
+        });
+
     });
 </script>
-
-
-<!-- Core JS -->
-<!-- build:js assets/vendor/js/core.js -->
 
 
 </body>
