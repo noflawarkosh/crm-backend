@@ -48,3 +48,4 @@ class UserSessionModel(Base):
     useragent: Mapped[str]
     ip: Mapped[str]
     login_date: Mapped[dt]
+    is_active: Mapped[bool]

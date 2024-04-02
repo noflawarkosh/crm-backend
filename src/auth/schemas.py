@@ -13,21 +13,7 @@ class UserSchema(BaseModel):
     telegram: constr(max_length=50)
     password: constr(min_length=8, max_length=16)
 
+class LoginSchema(BaseModel):
+    username: constr(min_length=5, max_length=20)
+    password: constr(min_length=8, max_length=16)
 
-class UserStatusModel(BaseModel):
-    title: int
-
-
-class UserStatusHistoryModel(BaseModel):
-    user_id: int
-    status_id: int
-    description: int
-    date: datetime
-
-
-class UserSessionModel(BaseModel):
-    user_id: int
-    token: int
-    useragent: int
-    ip: int
-    login_date: datetime
