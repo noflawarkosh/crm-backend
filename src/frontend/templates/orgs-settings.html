@@ -19,6 +19,12 @@
 {% block js %}
 <script src="{{ url_for('static', path='assets/vendor/libs/apex-charts/apexcharts.js') }}"></script>
 <script src="{{ url_for('static', path='assets/js/app-ecommerce-dashboard.js') }}"></script>
+
+<script>
+
+</script>
+
+
 <script>
 
     $(document).ready(function () {
@@ -104,6 +110,137 @@
     });
 
 </script>
+
+<!-- Create Inv -->
+<script>
+
+    function calculateDecimalValue() {
+        const checkboxes = document.querySelectorAll('input[name="rights"]:checked');
+        let result = 0;
+
+        checkboxes.forEach((checkbox) => {
+            result += Math.pow(2, parseInt(checkbox.value));
+        });
+
+        return result;
+    }
+
+    var checkboxes = document.querySelectorAll('input[name="rights"]');
+
+    function calcOnChange() {
+        var levelCounter = document.getElementById('level-counter')
+        var levelCounted = calculateDecimalValue()
+        levelCounter.innerText = 'Уровень: ' + levelCounted
+    }
+
+    checkboxes.forEach(function (checkbox) {
+        checkbox.addEventListener('change', calcOnChange);
+    });
+
+
+    document.getElementById('create-invitation-form').addEventListener('submit', function (event) {
+
+        event.preventDefault();
+
+        var submitButton = document.querySelector('button[type="submit"]');
+        submitButton.classList.add('disabled');
+
+        const amountInput = document.getElementById('inv-amount');
+        const expiresInput = document.getElementById('inv-expires');
+
+        if (amountInput.value.length === 0) {
+            toastr.error('Введите максимальное число использований')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if (expiresInput.value.length === 0) {
+            toastr.error('Введите дату и время истечения действия приглашения')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        var level = calculateDecimalValue()
+        var currentPage = window.location.pathname;
+        var parts = currentPage.split('/');
+        var org_id = parts[parts.length - 1];
+
+
+        const currentDomain = window.location.origin;
+        const url = new URL('/orgs/createInvitation', currentDomain);
+        url.searchParams.append('org_id', org_id);
+        url.searchParams.append('level', level);
+        url.searchParams.append('expires', expiresInput.value);
+        url.searchParams.append('amount', amountInput.value);
+        submitButton.classList.remove('disabled');
+
+        $.ajax({
+            url: url,
+            method: 'post',
+            success: function () {
+                location.reload()
+            },
+
+            error: function (data) {
+                console.log(data)
+                toastr.error(data.responseJSON.detail)
+                submitButton.classList.remove('disabled');
+            }
+        });
+
+    });
+</script>
+
+<!-- Get Invs -->
+<script>
+    var currentPage = window.location.pathname;
+    var parts = currentPage.split('/');
+    var org_id = parts[parts.length - 1];
+
+    $(document).ready(function () {
+
+        $.ajax({
+
+            url: '/orgs/getAllInvitations?org_id=' + org_id,
+            type: 'GET',
+
+            success: function (data) {
+                var table = $('#invitations-table tbody');
+                data.forEach(function (item) {
+                    var row = $('<tr>');
+                    row.append($('<td>').text(item.code));
+                    row.append($('<td>').text(item.level));
+
+                    var createdDate = new Date(item.created);
+                    var expiresDate = new Date(item.expires);
+                    var createdFormatted = createdDate.toLocaleString();
+                    var expiresFormatted = expiresDate.toLocaleString();
+
+                    row.append($('<td>').text(createdFormatted));
+                    row.append($('<td>').text(expiresFormatted));
+                    row.append($('<td>').text(item.usages.length));
+
+                    var remainingUsages = item.amount - item.usages.length;
+                    row.append($('<td>').text(remainingUsages));
+
+                    var actionsCell = $('<td>');
+                    var dropdown = $('<div>').addClass('dropdown');
+                    dropdown.append($('<button>').attr('type', 'button').addClass('btn p-0 dropdown-toggle hide-arrow').attr('data-bs-toggle', 'dropdown').html('<i class="bx bx-dots-vertical-rounded"></i>'));
+                    var dropdownMenu = $('<div>').addClass('dropdown-menu');
+                    dropdownMenu.append($('<a>').addClass('dropdown-item').attr('href', 'javascript:void(0);').html('<i class="bx bx-info-circle me-1"></i>Подробнее'));
+                    dropdownMenu.append($('<a>').addClass('dropdown-item').attr('href', 'javascript:void(0);').html('<i class="bx bx-trash me-1"></i>Сделать недействительным'));
+                    dropdown.append(dropdownMenu);
+                    actionsCell.append(dropdown);
+                    row.append(actionsCell);
+
+                    table.append(row);
+
+
+                });
+            }
+        });
+
+    });
 
 </script>
 
@@ -236,8 +373,8 @@
                     <div class="col-md-4">
                         <div class="card-header d-flex justify-content-between">
                             <div>
-                                <h5 class="card-title mb-0">Кошелек</h5>
-                                <small class="card-subtitle">24.03.24 12:20</small>
+                                <h5 class="card-title mb-0" id="org-name-card"></h5>
+                                <small class="card-subtitle">Кошелек</small>
                             </div>
                             <div class="dropdown">
                                 <button class="btn p-0" type="button" id="totalIncome"
@@ -310,39 +447,72 @@
 
     </div>
 
-
     <div class="row">
 
-        <div class="col-md-12 col-lg-4">
+        <div class="col">
             <div class="row">
-
                 <div class="col-12 col-md-6 col-lg-12 mb-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between gap-3">
-                                <div class="d-flex align-items-start flex-column justify-content-between">
-                                    <div class="card-title">
-                                        <h5 class="mb-0">Expenses</h5>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <div class="mt-auto">
-                                            <h3 class="mb-2">$84.7k</h3>
-                                            <small class="text-danger text-nowrap fw-medium"><i
-                                                    class='bx bx-down-arrow-alt'></i> 8.2%</small>
-                                        </div>
-                                    </div>
-                                    <span class="badge bg-label-secondary rounded-pill">2021 Year</span>
+                    <div class="card h-100">
+                        <div class="row">
+                            <div class="col">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Активные приглашения в организацию
+                                        <a href="#" data-bs-toggle="offcanvas" data-bs-target="#off-create-invitation"
+                                           aria-controls="off-create-invitation">
+                                            <i class="bx bxs-plus-square" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                                               data-bs-original-title="Создать приглашение">
+                                            </i>
+                                        </a>
+                                    </h5>
+
+                                    <small class="card-subtitle">Приглашайте коллег в свою организацию для совместной
+                                        работы. У коллег ваша организация будет отображаться в разделе "Другие
+                                        организации" бокового меню</small>
                                 </div>
-                                <div id="expensesBarChart"></div>
+
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col">
+                                <table class="table text-nowrap" id="invitations-table">
+                                    <thead>
+                                    <tr>
+                                        <th>Код</th>
+                                        <th>Уровень</th>
+                                        <th>Создано</th>
+                                        <th>Истекает</th>
+                                        <th>Использований</th>
+                                        <th>Осталось использований</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody class="table-border-bottom-0">
+
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6 col-lg-8 mb-4 mb-md-0">
+
+    </div>
+
+    <div class="row">
+
+        <div class="col">
             <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Участники вашей организации</h5>
+
+                    <small class="card-subtitle">В этой карточке вы можете отредактировать права участников</small>
+                </div>
                 <div class="table-responsive text-nowrap">
                     <table class="table text-nowrap">
                         <thead>
@@ -598,10 +768,64 @@
                 </div>
             </div>
         </div>
-        <!-- Total Balance -->
 
-        <!--/ Total Balance -->
     </div>
 </div>
+
+<div class="mt-3">
+    <div class="offcanvas offcanvas-start" id="off-create-invitation">
+
+        <div class="offcanvas-header">
+            <h5 id="off-create-invitation-label" class="offcanvas-title">Новое приглашение</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                    aria-label="Закрыть"></button>
+        </div>
+
+        <div class="offcanvas-body my-auto mx-0 flex-grow-0">
+
+            <form id="create-invitation-form">
+
+                <h5>Основные параметры</h5>
+                <hr>
+                <div class="mb-3 row">
+
+
+                    <label for="inv-amount" class="form-label">Макс. использований</label>
+                    <div class="col-md-10">
+                        <input class="form-control" type="number" value="5" id="inv-amount">
+                    </div>
+                </div>
+                <div class="mb-5 row">
+                    <label for="inv-expires" class="form-label">Истекает</label>
+                    <div class="col-md-10">
+                        <input class="form-control" type="datetime-local" id="inv-expires">
+                    </div>
+                </div>
+
+                <h5>Права доступа</h5>
+                <hr>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="0" id="R1" name="rights">
+                    <label class="form-check-label" for="R1">Создавать</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="R2" name="rights">
+                    <label class="form-check-label" for="R2">Удалять</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="2" id="R3" name="rights">
+                    <label class="form-check-label" for="R3">Изменять</label>
+                </div>
+                <small id="level-counter">Уровень: 0</small>
+
+                <div class="mt-5">
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
 
 {% endblock %}

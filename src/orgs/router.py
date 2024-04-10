@@ -2,18 +2,27 @@ import datetime
 from typing import Annotated
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 
-from sqlalchemy import select, delete, update, text, func, and_, distinct
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
-
 from auth.models import UserModel
 from auth.utils import authed
-from database import get_async_session, check_field_is_unique
-from orgs.schemas import OrganizationPOSTSchema, OrganizationRELSchema, OrganizationGETSchema, \
-    OrganizationInvitationPOSTSchema
-from orgs.models import OrganizationModel, OrganizationStatusHistoryModel, OrganizationStatusModel, \
-    OrganizationInvitationModel, OrganizationMembershipModel
-from orgs.utils import generate_invitation_code
+
+from orgs.schemas import (
+    OrganizationPOSTSchema,
+    OrganizationRELSchema,
+    OrganizationGETSchema,
+    OrganizationInvitationPOSTSchema,
+    OrganizationInvitationGETSchema,
+    OrganizationInvitationRELSchema,
+    OrganizationMembershipGETSchema,
+    OrganizationMembershipPOSTSchema
+)
+
+from orgs.repository import (
+    OrganizationRepository,
+    InvitationRepository,
+    MembershipRepository
+)
+
+from strings import *
 
 router = APIRouter(
     prefix="/orgs",
@@ -21,166 +30,155 @@ router = APIRouter(
 )
 
 
-@router.post('/register')
-async def create_organization(request: Request,
-                              data: Annotated[OrganizationPOSTSchema, Depends()],
-                              user: UserModel = Depends(authed),
-                              session: AsyncSession = Depends(get_async_session)):
-    data_dict = data.model_dump()
+@router.post('/createOrganization')
+async def create_organization(data: Annotated[OrganizationPOSTSchema, Depends()],
+                              user: UserModel = Depends(authed)
+                              ) -> OrganizationGETSchema:
+    """
+    Registration of organization
+    :param data: organization post schema
+    :param user: identified user by cookie token (strictly authed)
+    :return: organization get schema
+    """
 
-    if not await check_field_is_unique(session, OrganizationModel.inn, data.inn):
-        return {'result': 'error', 'details': 'Указанный ИНН уже зарегистрирован'}
-
-    new_org = OrganizationModel(**data_dict)
-    new_org.owner_id = user.id
-    session.add(new_org)
-    await session.flush()
-
-    new_org_status = OrganizationStatusHistoryModel(org_id=new_org.id, status_id=1)
-    session.add(new_org_status)
-    await session.commit()
-
-    return {'result': 'success', 'details': 'Успешная регистрация'}
-
-
-@router.get('/getMyOrgs')
-async def get_all_user_organizations(request: Request,
-                                     user: UserModel = Depends(authed),
-                                     session: AsyncSession = Depends(get_async_session)):
-    query = (
-        select(OrganizationModel)
-        .options(selectinload(OrganizationModel.statuses))
-        .where(OrganizationModel.owner_id == user.id)
-    )
-
-    db_response = await session.execute(query)
-    result = db_response.scalars().all()
-    dto = [OrganizationRELSchema.model_validate(row, from_attributes=True) for row in result]
+    result = await OrganizationRepository.add_one(data, user.id)
+    dto = OrganizationGETSchema.model_validate(result, from_attributes=True)
 
     return dto
 
 
-@router.get('/getOrg/{org_id}')
-async def get_organization_by_id(request: Request,
-                                 org_id: int,
-                                 user: UserModel = Depends(authed),
-                                 session: AsyncSession = Depends(get_async_session)):
-    query = (
-        select(OrganizationModel)
-        .options(selectinload(OrganizationModel.statuses))
-        .where(OrganizationModel.id == org_id)
-    )
+@router.get('/getOwned')
+async def get_all_organizations_owned_by_user(user: UserModel = Depends(authed)
+                                              ) -> list[OrganizationRELSchema]:
+    """
+    Getting all organizations which owned by the user
+    :param user: identified user by cookie token (strictly authed)
+    :return: list of organization get schemas
+    """
 
-    db_response = await session.execute(query)
-    organization = db_response.scalars().one_or_none()
+    organizations = await OrganizationRepository.get_orgs_by_owner_id(user.id)
+    dto = [OrganizationRELSchema.model_validate(organization, from_attributes=True) for organization in organizations]
 
-    if organization:
-        if organization.owner_id == user.id:
-            return OrganizationRELSchema.model_validate(organization, from_attributes=True)
-        else:
-            raise HTTPException(status_code=403, detail='Доступ запрещен')
-    else:
-        raise HTTPException(status_code=404, detail='Запрашиваемая организация не найдена')
+    return dto
 
 
-@router.post('/createInvitation/{org_id}')
-async def create_invitation(request: Request,
-                            data: Annotated[OrganizationInvitationPOSTSchema, Depends()],
-                            org_id: int,
-                            user: UserModel = Depends(authed),
-                            session: AsyncSession = Depends(get_async_session)):
-    query = (select(OrganizationModel).where(OrganizationModel.id == org_id))
-    db_response = await session.execute(query)
-    organization = db_response.scalars().one_or_none()
+@router.get('/getOrg')
+async def get_certain_organization_by_id(org_id: int, user: UserModel = Depends(authed)
+                                         ) -> OrganizationRELSchema:
+    """
+    Getting certain organization by id if user is owner only
+    :param org_id: organization identifier
+    :param user: identified user by cookie token (strictly authed)
+    :return: organization get schema
+    """
 
-    if organization:
-        if organization.owner_id == user.id:
+    organization = await OrganizationRepository.get_one(org_id)
 
-            data_dict = data.model_dump()
-            data_dict['code'] = generate_invitation_code()
-            data_dict['org_id'] = organization.id
-            new_invitation = OrganizationInvitationModel(**data_dict)
-            session.add(new_invitation)
-            await session.commit()
+    if not organization:
+        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
 
-            return {'result': 'success', 'details': 'Приглашение создано'}
+    if organization.owner_id != user.id:
+        raise HTTPException(status_code=403, detail=string_403)
 
-        else:
-            raise HTTPException(status_code=403, detail='Доступ запрещен')
-    else:
-        raise HTTPException(status_code=404, detail='Запрашиваемая организация не найдена')
+    dto = OrganizationRELSchema.model_validate(organization, from_attributes=True)
+
+    return dto
+
+
+@router.post('/createInvitation')
+async def create_invitation(data: Annotated[OrganizationInvitationPOSTSchema, Depends()],
+                            user: UserModel = Depends(authed)
+                            ) -> OrganizationInvitationGETSchema:
+    """
+    Creating invitation
+    :param data: invitation schema
+    :param user: identified user by cookie token (strictly authed)
+    :return: invitation get schema
+    """
+
+    data_dict = data.model_dump()
+    organization = await OrganizationRepository.get_one(data_dict.get('org_id'))
+
+    if not organization:
+        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
+
+    if organization.owner_id != user.id:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    invitation = await InvitationRepository.add_one(data)
+    dto = OrganizationInvitationGETSchema.model_validate(invitation, from_attributes=True)
+
+    return dto
+
+
+@router.get('/getAllInvitations')
+async def get_all_invitations_by_org_id(org_id: int,
+                                        user: UserModel = Depends(authed)
+                                        ) -> list[OrganizationInvitationRELSchema]:
+    """
+    Getting all invitations of certain organization
+    :param org_id:
+    :param user: identified user by cookie token (strictly authed)
+    :return: list of invitation get schemas
+    """
+
+    organization = await OrganizationRepository.get_one(org_id)
+
+    if not organization:
+        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
+
+    if organization.owner_id != user.id:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    invitations = await InvitationRepository.get_all_by_org_id(org_id)
+    dto = [OrganizationInvitationRELSchema.model_validate(row, from_attributes=True) for row in invitations]
+
+    return dto
 
 
 @router.post('/acceptInvitation')
-async def accept_invitation(request: Request,
-                            code: str,
-                            user: UserModel = Depends(authed),
-                            session: AsyncSession = Depends(get_async_session)):
-    query = (
-        select(OrganizationInvitationModel)
-        .where(
-            and_(
-                OrganizationInvitationModel.code == code,
-                OrganizationInvitationModel.expires > func.NOW()
-            )
-        )
-    )
+async def accept_invitation(code: str,
+                            user: UserModel = Depends(authed)
+                            ) -> OrganizationMembershipGETSchema:
+    """
+    Accepting invitation by code
+    :param code: unique code (XXX-XXX-XXX)
+    :param user: identified user by cookie token (strictly authed)
+    :return: membership get schema
+    """
 
-    db_response = await session.execute(query)
-    invitation = db_response.scalars().one_or_none()
+    invitation = await InvitationRepository.get_one_by_code(code)
 
     if not invitation:
-        raise HTTPException(status_code=404, detail='Приглашение не найдено или истекло')
+        raise HTTPException(status_code=404, detail=string_inv_not_found)
 
-    query = (
-        select(OrganizationMembershipModel)
-        .where(
-            OrganizationMembershipModel.invitation_id == invitation.id
-        )
-    )
+    if invitation.expires <= datetime.datetime.now():
+        raise HTTPException(status_code=403, detail=string_inv_expired)
 
-    db_response = await session.execute(query)
-    invitation_usages = db_response.scalars().all()
+    invitation_usages = await MembershipRepository.get_by_invitation_id(invitation.id)
 
     if len(invitation_usages) >= invitation.amount:
-        raise HTTPException(status_code=403, detail='Приглашение использовано максимальное кол-во раз')
+        raise HTTPException(status_code=403, detail=string_inv_max_usages)
 
-    query = (
-        select(OrganizationModel)
-        .where(OrganizationModel.id == invitation.org_id)
-    )
-
-    db_response = await session.execute(query)
-    organization = db_response.scalars().one_or_none()
+    organization = await OrganizationRepository.get_one(invitation.org_id)
 
     if not organization:
-        raise HTTPException(status_code=404, detail='Организация не найдена или ее работа приостановлена')
+        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
 
     if organization.owner_id == user.id:
-        raise HTTPException(status_code=403, detail='Вы являетесь владельцем этой организации')
+        raise HTTPException(status_code=403, detail=string_inv_owner_error)
 
-    query = (
-        select(OrganizationMembershipModel)
-        .where(
-            and_(
-                OrganizationMembershipModel.user_id == user.id,
-                OrganizationMembershipModel.org_id == organization.id
-            )
-        )
-        .order_by(OrganizationMembershipModel.date.desc())
-        .limit(1)
-    )
-
-    db_response = await session.execute(query)
-    current_membership = db_response.scalars().one_or_none()
+    current_membership = await MembershipRepository.get_current(user.id, organization.id)
 
     if current_membership:
-        if current_membership.status_id == 1:
-            raise HTTPException(status_code=403, detail='Вы уже являетесь участником этой организации')
-        if current_membership.status_id == 4:
-            raise HTTPException(status_code=403, detail='Вы были заблокированы владельцем организации')
 
-    new_membership_dict = {
+        if current_membership.status_id == 1:
+            raise HTTPException(status_code=403, detail=string_inv_alredy_member)
+
+        if current_membership.status_id == 4:
+            raise HTTPException(status_code=403, detail=string_inv_blocked_member)
+
+    membership_dict = {
         'org_id': organization.id,
         'user_id': user.id,
         'level': invitation.level,
@@ -188,52 +186,33 @@ async def accept_invitation(request: Request,
         'invitation_id': invitation.id
     }
 
-    new_membership = OrganizationMembershipModel(**new_membership_dict)
-    session.add(new_membership)
-    await session.commit()
+    data = OrganizationMembershipPOSTSchema.model_validate(membership_dict)
 
-    return {'result': 'success', 'details': 'Приглашение успешно принято'}
+    membership = await MembershipRepository.add_one(data)
+    dto = OrganizationMembershipGETSchema.model_validate(membership, from_attributes=True)
 
-
-
+    return dto
 
 
-@router.get('/getActiveMembershipOrgs')
-async def get_user_membership_organizations(request: Request,
-                                            user: UserModel = Depends(authed),
-                                            session: AsyncSession = Depends(get_async_session)):
-    subq = (
-        select(
-            OrganizationMembershipModel.org_id,
-            func.max(OrganizationMembershipModel.date).label('max_date')
-        )
-        .where(OrganizationMembershipModel.user_id == user.id)
-        .group_by(OrganizationMembershipModel.org_id)
-        .alias()
-    )
+@router.get('/getOrgsWithMembership')
+async def get_user_membership_organizations(user: UserModel = Depends(authed)
+                                            ) -> list[OrganizationRELSchema]:
+    """
+    Getting organizations in which the user has a membership
+    :param user: identified user by cookie token (strictly authed)
+    :return: list of organization get schemas
+    """
 
-    query = (
-        select(OrganizationMembershipModel.org_id, OrganizationMembershipModel.status_id)
-        .select_from(OrganizationMembershipModel)
-        .join(subq, and_(
-            OrganizationMembershipModel.org_id == subq.c.org_id,
-            OrganizationMembershipModel.date == subq.c.max_date
-        ))
-        .where(OrganizationMembershipModel.user_id == user.id)
-    )
-
-    db_response = await session.execute(query)
-    orgs_users_statuses = db_response.all()
+    orgs_users_statuses = await MembershipRepository.get_all_user_statuses_in_orgs(user.id)
 
     list_of_orgs = []
+
     for line in orgs_users_statuses:
         if line[1] == 1:
-            query = select(OrganizationModel).where(OrganizationModel.id == line[0])
-            db_response = await session.execute(query)
-            organization = db_response.scalars().one_or_none()
+
+            organization = await OrganizationRepository.get_one(line[0])
+
             if organization:
-                list_of_orgs.append(OrganizationGETSchema.model_validate(organization, from_attributes=True))
+                list_of_orgs.append(OrganizationRELSchema.model_validate(organization, from_attributes=True))
 
     return list_of_orgs
-
-

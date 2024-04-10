@@ -2,6 +2,8 @@ import datetime
 from typing import Optional
 from pydantic import BaseModel, constr
 
+from auth.schemas import UserSchema, UserGETSchema
+
 
 class OrganizationStatusSchema(BaseModel):
     id: int
@@ -27,7 +29,13 @@ class OrganizationRELSchema(OrganizationGETSchema):
     statuses: list['OrganizationStatusHistorySchema']
 
 
+class OrganizationGETMembershipSchema(BaseModel):
+    user: UserGETSchema
+    date: datetime.datetime
+
+
 class OrganizationInvitationPOSTSchema(BaseModel):
+    org_id: int
     level: int
     expires: datetime.datetime
     amount: int
@@ -41,4 +49,17 @@ class OrganizationInvitationGETSchema(OrganizationInvitationPOSTSchema):
 
 
 class OrganizationInvitationRELSchema(OrganizationInvitationGETSchema):
-    organization: OrganizationGETSchema
+    usages: list['OrganizationGETMembershipSchema'] | None
+
+
+class OrganizationMembershipPOSTSchema(BaseModel):
+    user_id: int
+    org_id: int
+    level: int
+    status_id: int
+    invitation_id: int
+
+
+class OrganizationMembershipGETSchema(OrganizationMembershipPOSTSchema):
+    id: int
+    date: datetime.datetime

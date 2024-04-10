@@ -411,7 +411,7 @@
         }
 
         const currentDomain = window.location.origin;
-        const url = new URL('/orgs/register', currentDomain);
+        const url = new URL('/orgs/createOrganization', currentDomain);
         url.searchParams.append('title', titleInput.value);
         url.searchParams.append('inn', innInput.value);
 
@@ -419,18 +419,11 @@
             url: url,
             method: 'post',
             success: function (data) {
-                if (data.result === 'success') {
-                    location.reload()
-                }
-
-                if (data.result === 'error') {
-                    toastr.error(data.details)
-                }
-                submitButton.classList.remove('disabled');
+                location.replace('/organization/'+ data.id)
             },
-
-            error: function () {
-                toastr.error('Произошла ошибка. Обновите страницу и повторите попытку');
+            error: function (data) {
+                console.log(data)
+                toastr.error(data.responseJSON.detail)
                 submitButton.classList.remove('disabled');
             }
         });
@@ -462,10 +455,8 @@
         $.ajax({
             url: url,
             method: 'post',
-            success: function (data) {
-                if (data.result === 'success') {
-                    location.reload()
-                }
+            success: function () {
+                location.reload()
             },
 
             error: function (data) {
@@ -512,14 +503,15 @@
         var orgsMine = $('#orgs-mine');
         var orgMenu = [
             {'menuItemTitle': 'Управление', 'menuItemHref': '/organization/'},
-            {'menuItemTitle': 'Баланс', 'menuItemHref': '/'},
+            {'menuItemTitle': 'Кошелек', 'menuItemHref': '/'},
             {'menuItemTitle': 'Товары', 'menuItemHref': '/'},
-            {'menuItemTitle': 'Выкупы', 'menuItemHref': '/'},
+            {'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': '/'},
+            {'menuItemTitle': 'Статусы заказов WB', 'menuItemHref': '/'},
         ]
 
         $.ajax({
 
-            url: '/orgs/getMyOrgs',
+            url: '/orgs/getOwned',
             type: 'GET',
 
             success: function (data) {
@@ -582,7 +574,6 @@
 
         var orgsOther = $('#orgs-other');
         var orgMenu = [
-            {'menuItemTitle': 'Управление', 'menuItemHref': '/organization/'},
             {'menuItemTitle': 'Баланс', 'menuItemHref': '/'},
             {'menuItemTitle': 'Товары', 'menuItemHref': '/'},
             {'menuItemTitle': 'Выкупы', 'menuItemHref': '/'},
@@ -590,7 +581,7 @@
 
         $.ajax({
 
-            url: '/orgs/getActiveMembershipOrgs',
+            url: '/orgs/getOrgsWithMembership',
             type: 'GET',
 
             success: function (data) {

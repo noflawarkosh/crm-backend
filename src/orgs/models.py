@@ -2,7 +2,7 @@ from typing import Annotated
 from sqlalchemy import text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import datetime
-from auth.models import Base
+from auth.models import Base, UserModel
 
 pk = Annotated[int, mapped_column(primary_key=True)]
 dt = Annotated[datetime.datetime, mapped_column(server_default=text('NOW()'))]
@@ -46,10 +46,14 @@ class OrganizationMembershipModel(Base):
     org_id: Mapped[int] = mapped_column(ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE'))
     date: Mapped[dt]
     level: Mapped[int]
-    status_id: Mapped[int] = mapped_column(ForeignKey('organization_membership_status.id', ondelete='CASCADE', onupdate='CASCADE'))
-    invitation_id: Mapped[int | None] = mapped_column(ForeignKey('organization_invitation.id', ondelete='CASCADE', onupdate='CASCADE'))
+    status_id: Mapped[int] = mapped_column(
+        ForeignKey('organization_membership_status.id', ondelete='CASCADE', onupdate='CASCADE'))
+    invitation_id: Mapped[int | None] = mapped_column(
+        ForeignKey('organization_invitation.id', ondelete='CASCADE', onupdate='CASCADE'))
 
+    user: Mapped['UserModel'] = relationship(lazy=False)
     organization: Mapped['OrganizationModel'] = relationship()
+
 
 class OrganizationMembershipStatusModel(Base):
     __tablename__ = 'organization_membership_status'
@@ -69,6 +73,7 @@ class OrganizationInvitationModel(Base):
     expires: Mapped[datetime.datetime | None]
     amount: Mapped[int | None]
 
+    usages: Mapped[list['OrganizationMembershipModel']] = relationship(primaryjoin="and_(OrganizationInvitationModel.id == OrganizationMembershipModel.invitation_id)",)
 
 
 """

@@ -236,7 +236,17 @@
             placeholder: ''
         };
 
-        $('#name').inputmask('A***************************************', {placeholder: ''});
+        nameOptions = {
+            mask: '*{5,100}',
+            definitions: {
+                '*': {
+                    validator: '[а-яА-Я ]',
+                },
+            },
+            placeholder: ''
+        };
+
+        $('#name').inputmask(nameOptions);
         $('#username').inputmask(usernameOptions);
         $('#email').inputmask({alias: 'email', placeholder: ''});
         $('#telnum').inputmask('9999999999', {placeholder: ''});
@@ -265,7 +275,7 @@
         const check1 = document.getElementById('terms-conditions1');
         const check2 = document.getElementById('terms-conditions2');
 
-        if ((nameInput.value.length === 0) || (nameInput.value.length > 30)) {
+        if ((nameInput.value.length === 0) || (nameInput.value.length > 100)) {
             toastr.error('Поле ввода имени является обязательным, длина должна составлять от 1 до 100 символов')
             submitButton.classList.remove('disabled');
             return
