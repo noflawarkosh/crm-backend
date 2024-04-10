@@ -1,0 +1,200 @@
+{% extends "!base.html" %}
+{% block title %}Настройки{% endblock %}
+{% block js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/3.3.4/jquery.inputmask.bundle.min.js"></script>
+
+<script>
+
+    $(document).ready(function () {
+
+        $.ajax({
+
+            url: '/auth/getSelfProfile',
+            method: 'get',
+
+            success: function (data) {
+                document.getElementById('nav-name').innerText = data.name
+                document.getElementById('nav-username').innerText = data.username
+
+                const inputName = document.querySelector('input[id="name"]');
+                const inputEmail = document.querySelector('input[id="email"]');
+                const inputTelegram = document.querySelector('input[id="telegram"]');
+                const inputTelnum = document.querySelector('input[id="telnum"]');
+
+                inputName.setAttribute('value', data.name);
+                inputEmail.setAttribute('value', data.email);
+                inputTelegram.setAttribute('value', data.telegram);
+                inputTelnum.setAttribute('value', data.telnum);
+
+            },
+
+        });
+
+    });
+
+</script>
+
+
+<script>
+    document.getElementById('update').addEventListener('submit', function (event) {
+
+        event.preventDefault();
+
+        var submitButton = document.querySelector('button[type="submit"]');
+        submitButton.classList.add('disabled');
+
+        const nameInput = document.getElementById('name');
+        const emailInput = document.getElementById('email');
+        const telnumInput = document.getElementById('telnum');
+        const telegramInput = document.getElementById('telegram');
+
+        if ((nameInput.value.length === 0) || (nameInput.value.length > 30)) {
+            toastr.error('Поле ввода имени является обязательным, длина должна составлять от 1 до 100 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((emailInput.value.length === 0) || (emailInput.value.length > 50)) {
+            toastr.error('Поле ввода эл. почты является обязательным, длина должна составлять не более 100 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((telnumInput.value.length === 0) || (telnumInput.value.length !== 10)) {
+            toastr.error('Поле ввода номера телефона является обязательным, длина должна составлять 11 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((telegramInput.value.length === 0) || (telegramInput.value.length > 31)) {
+            toastr.error('Поле ввода тега Telegram является обязательным, длина должна составлять от 5 до 32 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+
+        const currentDomain = window.location.origin;
+        const url = new URL('/auth/updateSelfProfile', currentDomain);
+        url.searchParams.append('name', nameInput.value);
+        url.searchParams.append('email', emailInput.value);
+        url.searchParams.append('telnum', telnumInput.value);
+        url.searchParams.append('telegram', telegramInput.value);
+
+        $.ajax({
+            url: url,
+            method: 'post',
+            success: function (data) {
+                if (data.result === 'success') {
+                    toastr.success('Сохранено');
+
+                }
+
+                if (data.result === 'error') {
+                    toastr.error(data.details)
+                }
+                submitButton.classList.remove('disabled');
+            },
+
+            error: function () {
+                toastr.error('Произошла ошибка. Обновите страницу и повторите попытку');
+                submitButton.classList.remove('disabled');
+            }
+        });
+
+    });
+
+</script>
+
+{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row fv-plugins-icon-container">
+        <div class="col-md-12">
+
+            <ul class="nav nav-pills flex-column flex-md-row mb-3">
+                <li class="nav-item"><a class="nav-link active" href="javascript:void(0);"><i
+                        class="bx bx-user me-1"></i> Основные</a></li>
+                <li class="nav-item"><a class="nav-link" href="pages-account-settings-security.html"><i
+                        class="bx bx-lock-alt me-1"></i> Безопасность</a></li>
+                <li class="nav-item"><a class="nav-link" href="pages-account-settings-notifications.html"><i
+                        class="bx bx-bell me-1"></i> Уведомления</a></li>
+            </ul>
+
+            <div class="card mb-4">
+
+                <h5 class="card-header">Настройки профиля</h5>
+
+                <div class="card-body">
+                    <div class="d-flex align-items-start align-items-sm-center gap-4">
+                        <img src="{{ url_for('static', path='assets/img/avatars/1.png') }}" alt="user-avatar"
+                             class="d-block rounded" height="100"
+                             width="100" id="uploadedAvatar">
+                        <div class="button-wrapper">
+                            <label for="upload" class="btn btn-primary me-2 mb-4" tabindex="0">
+                                <span class="d-none d-sm-block">Выбрать фото</span>
+                                <i class="bx bx-upload d-block d-sm-none"></i>
+                                <input type="file" id="upload" class="account-file-input" hidden=""
+                                       accept="image/png, image/jpeg">
+                            </label>
+                            <button type="button" class="btn btn-label-secondary account-image-reset mb-4">
+                                <i class="bx bx-reset d-block d-sm-none"></i>
+                                <span class="d-none d-sm-block">Сброс</span>
+                            </button>
+
+                            <p class="text-muted mb-0">JPG, GIF или PNG</p>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-0">
+
+                <div class="card-body">
+                    <form id="update" class="fv-plugins-bootstrap5 fv-plugins-framework" novalidate="novalidate">
+                        <div class="row">
+                            <div class="mb-3 col-md-6 fv-plugins-icon-container">
+                                <label for="name" class="form-label">Имя</label>
+                                <input class="form-control" type="text" id="name" name="name" autofocus="">
+                                <div class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback"></div>
+                            </div>
+
+                            <div class="mb-3 col-md-6 fv-plugins-icon-container">
+                                <label for="email" class="form-label">Email</label>
+                                <input class="form-control" type="text" id="email" name="email" value=""
+                                       autofocus="">
+                                <div class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback"></div>
+                            </div>
+
+                            <div class="mb-3 col-md-6 fv-plugins-icon-container">
+                                <label for="telegram" class="form-label">Telegram</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" id="basic-addon12">@</span>
+                                    <input type="text" class="form-control" placeholder="telegram" aria-label="telegram"
+                                           aria-describedby="basic-addon12" id="telegram" name="telegram"/>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 col-md-6 fv-plugins-icon-container">
+                                <label for="telnum" class="form-label">Телефон</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" id="basic-addon11">+7</span>
+                                    <input type="text" class="form-control" placeholder="9100000000" aria-label="telnum"
+                                           aria-describedby="basic-addon11" id="telnum" name="telnum"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <button type="submit" class="btn btn-primary me-2">Сохранить изменения</button>
+                        </div>
+
+                    </form>
+                </div>
+                <!-- /Account -->
+            </div>
+
+        </div>
+    </div>
+
+
+</div>
+{% endblock %}

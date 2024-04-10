@@ -1,76 +1,61 @@
 from typing import Annotated
-
-from fastapi import APIRouter, Depends, Response, Request
+from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_async_session
-from auth.models import UserModel, UserStatusHistoryModel, UserSessionModel
-from auth.schemas import UserSchema, LoginSchema
+from database import get_async_session, check_field_is_unique
 
-from auth.utils import hash_password, generate_token, get_user
+from auth.models import UserModel, UserStatusHistoryModel, UserSessionModel
+from auth.schemas import UserSchema, LoginSchema, UserProfileSchema, UpdateProfileSchema
+from auth.utils import hash_password, generate_token, any, authed, not_authed
 
 router = APIRouter(
     prefix="/auth",
     tags=["Auth"]
 )
 
+
 @router.post('/register')
 async def register(request: Request,
-                   userform: Annotated[UserSchema, Depends()],
+                   response: Response,
+                   data: Annotated[UserSchema, Depends()],
+                   user: UserModel = Depends(not_authed),
                    session: AsyncSession = Depends(get_async_session)):
+    data_dict = data.model_dump()
+    data_dict['email'] = data_dict['email'].lower()
+    data_dict['username'] = data_dict['username'].lower()
+    data_dict['password'] = hash_password(data_dict['password'])
 
-    user = await get_user(session, request)
-    if user:
-        return {'result': 'error', 'details': 'Уже авторизован'}
-
-    user_dict = userform.model_dump()
-    user_dict['email'] = user_dict['email'].lower()
-    user_dict['username'] = user_dict['username'].lower()
-    user_dict['password'] = hash_password(user_dict['password'])
-
-    query = select(UserModel.email).where(UserModel.email == userform.email)
-    result = await session.execute(query)
-    if len(result.all()) != 0:
+    if not await check_field_is_unique(session, UserModel.email, data.email):
         return {'result': 'error', 'details': 'Указанная почта уже используется'}
 
-    query = select(UserModel.username).where(UserModel.username == userform.username)
-    result = await session.execute(query)
-    if len(result.all()) != 0:
+    if not await check_field_is_unique(session, UserModel.username, data.username):
         return {'result': 'error', 'details': 'Указанный логин уже используется'}
 
-    query = select(UserModel.telnum).where(UserModel.telnum == userform.telnum)
-    result = await session.execute(query)
-    if len(result.all()) != 0:
+    if not await check_field_is_unique(session, UserModel.telnum, data.telnum):
         return {'result': 'error', 'details': 'Указанный телефон уже используется'}
 
-    query = select(UserModel.telegram).where(UserModel.telegram == userform.telegram)
-    result = await session.execute(query)
-    if len(result.all()) != 0:
+    if not await check_field_is_unique(session, UserModel.telegram, data.telegram):
         return {'result': 'error', 'details': 'Указанный тег телеграмм уже используется'}
 
-    user_orm = UserModel(**user_dict)
-    session.add(user_orm)
+    new_user = UserModel(**data_dict)
+    session.add(new_user)
     await session.flush()
 
-    user_status = UserStatusHistoryModel(user_id=user_orm.id, status_id=1)
-    session.add(user_status)
+    new_user_status = UserStatusHistoryModel(user_id=new_user.id, status_id=1)
+    session.add(new_user_status)
 
     await session.commit()
 
     return {'result': 'success', 'details': 'Успешная регистрация'}
 
+
 @router.post('/login')
 async def login(request: Request,
                 response: Response,
                 data: Annotated[LoginSchema, Depends()],
+                user: UserModel = Depends(not_authed),
                 session: AsyncSession = Depends(get_async_session)):
-
-    user = await get_user(session, request)
-
-    if user:
-        return {'result': 'error', 'details': 'Уже авторизован'}
-
     query = select(UserModel).where(UserModel.username == data.username)
     db_response = await session.execute(query)
     result = db_response.scalars().all()
@@ -83,7 +68,8 @@ async def login(request: Request,
     if hash_password(data.password) != user.password:
         return {'result': 'error', 'details': 'Неверный пользователь или пароль'}
 
-    query = select(UserStatusHistoryModel).where(UserStatusHistoryModel.user_id == user.id).order_by(UserStatusHistoryModel.id.desc())
+    query = select(UserStatusHistoryModel).where(UserStatusHistoryModel.user_id == user.id).order_by(
+        UserStatusHistoryModel.id.desc())
     db_response = await session.execute(query)
     result = db_response.scalars().all()
 
@@ -94,7 +80,7 @@ async def login(request: Request,
 
     auth_token = generate_token(64)
 
-    user_session_dict ={
+    user_session_dict = {
         'user_id': user.id,
         'token': auth_token,
         'useragent': request.headers.get('user-agent'),
@@ -109,15 +95,13 @@ async def login(request: Request,
     return {'result': 'success', 'details': 'Успешная авторизация'}
 
 
-@router.post('/logout')
+@router.get('/logout')
 async def logout(request: Request,
-                response: Response,
-                session: AsyncSession = Depends(get_async_session)):
-
+                 response: Response,
+                 session: AsyncSession = Depends(get_async_session)):
     csrf = request.cookies.get('csrf_')
     if not csrf:
         return {'result': 'error', 'details': 'Токен клиента отстутствует в cookies'}
-    print(csrf)
     query = update(UserSessionModel).where(UserSessionModel.token == csrf).values(is_active=False)
     await session.execute(query)
     await session.commit()
@@ -125,3 +109,25 @@ async def logout(request: Request,
     response.delete_cookie('csrf_')
     return {'result': 'success', 'details': 'Успешное закрытие сессии пользователя'}
 
+
+@router.post('/updateSelfProfile')
+async def update_self_user_profile(request: Request,
+                                   response: Response,
+                                   data: Annotated[UpdateProfileSchema, Depends()],
+                                   user: UserModel = Depends(authed),
+                                   session: AsyncSession = Depends(get_async_session)):
+
+    user.telnum = data.telnum
+    user.email = data.email
+    user.name = data.name
+    user.telegram = data.telegram
+
+    await session.commit()
+    return {'result': 'success', 'details': 'Успешное обновление данных пользователя'}
+
+@router.get('/getSelfProfile')
+async def get_self_user_profile(request: Request,
+                                response: Response,
+                                user: UserModel = Depends(authed),
+                                session: AsyncSession = Depends(get_async_session)) -> UserProfileSchema:
+    return UserProfileSchema.model_validate(user.__dict__)

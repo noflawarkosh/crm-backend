@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+
+<html lang="ru" class="light-style layout-wide  customizer-hide" dir="ltr" data-theme="theme-default"
+      data-assets-path="../../assets/" data-template="vertical-menu-template">
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
+
+    <title>GreedyBear - Регистрация</title>
+
+
+    <link rel="icon" type="image/x-icon" href="../../assets/img/favicon/favicon.ico"/>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/fonts/boxicons.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/fonts/fontawesome.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/fonts/flag-icons.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/css/rtl/core.css') }}"
+          class="template-customizer-core-css"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/css/rtl/theme-default.css') }}"
+          class="template-customizer-theme-css"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/css/demo.css') }}"/>
+    <link rel="stylesheet"
+          href="{{ url_for('static', path='assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/libs/typeahead-js/typeahead.css') }}"/>
+    <link rel="stylesheet"
+          href="{{ url_for('static', path='assets/vendor/libs/@form-validation/form-validation.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/css/pages/page-auth.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.0.1/css/toastr.css"/>
+
+
+    <script src="{{ url_for('static', path='assets/vendor/js/helpers.js') }}"></script>
+    <script src="{{ url_for('static', path='assets/js/config.js') }}"></script>
+
+
+</head>
+
+<body>
+
+
+<div class="authentication-wrapper authentication-cover">
+    <div class="authentication-inner row m-0">
+
+        <!-- /Left Text -->
+        <div class="d-none d-lg-flex col-lg-7 col-xl-8 align-items-center p-5">
+            <div class="w-100 d-flex justify-content-center">
+                <img src="{{ url_for('static', path='assets/img/illustrations/girl-with-laptop-light.png') }}"
+                     class="img-fluid" alt="Login image"
+                     width="700" data-app-dark-img="illustrations/girl-with-laptop-dark.png"
+                     data-app-light-img="illustrations/girl-with-laptop-light.png">
+
+            </div>
+        </div>
+        <!-- /Left Text -->
+
+        <!-- Register -->
+        <div class="d-flex col-12 col-lg-5 col-xl-4 align-items-center authentication-bg p-sm-5 p-4">
+            <div class="w-px-400 mx-auto">
+                <!-- Logo -->
+                <div class="app-brand mb-5">
+                    <a href="index.html" class="app-brand-link gap-2">
+                        <span class="app-brand-text demo text-body fw-bold">greedybear</span>
+                    </a>
+                </div>
+                <!-- /Logo -->
+                <h4 class="mb-4">Регистрация пользователя </h4>
+
+
+                <form id="reg">
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Имя *</label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               placeholder="Иван" autofocus autocomplete="nofill">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Логин *</label>
+                        <input type="text" class="form-control" id="username" name="username"
+                               placeholder="ivan77" autofocus autocomplete="nofill">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email *</label>
+                        <input type="text" class="form-control" id="email" name="email" placeholder="mail@example.ru">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="telnum" class="form-label">Номер телефона *</label>
+                        <div class="input-group">
+                            <span class="input-group-text" id="basic-addon11">+7</span>
+                            <input type="text" class="form-control" placeholder="9100000000" aria-label="telnum"
+                                   aria-describedby="basic-addon11" id="telnum" name="telnum"/>
+                        </div>
+                    </div>
+
+
+                    <div class="mb-3">
+                        <label for="telegram" class="form-label">Telegram *</label>
+                        <div class="input-group">
+                            <span class="input-group-text" id="basic-addon12">@</span>
+                            <input type="text" class="form-control" placeholder="telegram" aria-label="telegram"
+                                   aria-describedby="basic-addon12" id="telegram" name="telegram"/>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-password-toggle">
+                        <label class="form-label" for="password1">Пароль *</label>
+                        <div class="input-group input-group-merge">
+                            <input type="password" id="password1" class="form-control" name="password1"
+
+                                   aria-describedby="password" autocomplete="nofill"/>
+                            <span class="input-group-text cursor-pointer"><i class="bx bx-hide"
+                                                                             id="password-toggle1"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-password-toggle">
+                        <label class="form-label" for="password2">Повтор пароля *</label>
+                        <div class="input-group input-group-merge">
+                            <input type="password" id="password2" class="form-control" name="password2"
+
+                                   aria-describedby="password" autocomplete="nofill"/>
+                            <span class="input-group-text cursor-pointer"><i class="bx bx-hide"
+                                                                             id="password-toggle2"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="terms-conditions1" name="terms1">
+                            <label class="form-check-label" for="terms-conditions1">
+                                Я согласен с
+                                <a href="javascript:void(0);">условиями использования сервиса</a>
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="terms-conditions2" name="terms2">
+                            <label class="form-check-label" for="terms-conditions2">
+                                Я даю согласие на
+                                <a href="javascript:void(0);">обработку персональных данных</a>
+                            </label>
+                        </div>
+
+                    </div>
+                    <button class="btn btn-primary d-grid w-100 mt-2" type="submit">
+                        Зарегистрироваться
+                    </button>
+                </form>
+
+                <p class="text-center mt-2">
+                    <span>Уже зарегистрированы?</span>
+                    <a href="/login">
+                        <span>Войти</span>
+                    </a>
+                </p>
+
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/3.3.4/jquery.inputmask.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.0.1/js/toastr.js"></script>
+
+<script>
+    // Show password buttons
+    $(document).ready(function () {
+        $('#password-toggle1').click(function () {
+            var input = $('#password1');
+            var icon = $('#password-toggle1');
+            if (input.attr('type') === 'password') {
+                input.attr('type', 'text');
+                icon.removeClass('bx-hide').addClass('bx-show');
+            } else {
+                input.attr('type', 'password');
+                icon.removeClass('bx-show').addClass('bx-hide');
+            }
+        });
+        $('#password-toggle2').click(function () {
+            var input = $('#password2');
+            var icon = $('#password-toggle2');
+            if (input.attr('type') === 'password') {
+                input.attr('type', 'text');
+                icon.removeClass('bx-hide').addClass('bx-show');
+            } else {
+                input.attr('type', 'password');
+                icon.removeClass('bx-show').addClass('bx-hide');
+            }
+        });
+    });
+</script>
+
+<script>
+    // Inputmasks
+    $(document).ready(function () {
+
+        passwordOptions = {
+            mask: '*{8,16}',
+            definitions: {
+                '*': {
+                    validator: '[A-Za-z0-9!@#$%^&*]',
+                },
+            },
+            placeholder: ''
+        };
+
+        telegramOptions = {
+            mask: '*{5,33}',
+            definitions: {
+                '*': {
+                    validator: '[A-Za-z0-9._]',
+                },
+            },
+            placeholder: ''
+        };
+
+        usernameOptions = {
+            mask: '*{5,20}',
+            definitions: {
+                '*': {
+                    validator: '[a-z0-9]',
+                },
+            },
+            placeholder: ''
+        };
+
+        $('#name').inputmask('A***************************************', {placeholder: ''});
+        $('#username').inputmask(usernameOptions);
+        $('#email').inputmask({alias: 'email', placeholder: ''});
+        $('#telnum').inputmask('9999999999', {placeholder: ''});
+        $('#telegram').inputmask(telegramOptions);
+        $('#password1').inputmask(passwordOptions);
+        $('#password2').inputmask(passwordOptions);
+
+    });
+</script>
+
+<script>
+    document.getElementById('reg').addEventListener('submit', function (event) {
+
+        event.preventDefault();
+
+        var submitButton = document.querySelector('button[type="submit"]');
+        submitButton.classList.add('disabled');
+
+        const nameInput = document.getElementById('name');
+        const usernameInput = document.getElementById('username');
+        const emailInput = document.getElementById('email');
+        const telnumInput = document.getElementById('telnum');
+        const telegramInput = document.getElementById('telegram');
+        const password1Input = document.getElementById('password1');
+        const password2Input = document.getElementById('password2');
+        const check1 = document.getElementById('terms-conditions1');
+        const check2 = document.getElementById('terms-conditions2');
+
+        if ((nameInput.value.length === 0) || (nameInput.value.length > 30)) {
+            toastr.error('Поле ввода имени является обязательным, длина должна составлять от 1 до 100 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((usernameInput.value.length < 5) || (usernameInput.value.length > 20)) {
+            toastr.error('Поле ввода логина является обязательным, длина должна составлять от 5 до 20 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((emailInput.value.length === 0) || (emailInput.value.length > 50)) {
+            toastr.error('Поле ввода эл. почты является обязательным, длина должна составлять не более 100 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((telnumInput.value.length === 0) || (telnumInput.value.length !== 10)) {
+            toastr.error('Поле ввода номера телефона является обязательным, длина должна составлять 11 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((telegramInput.value.length === 0) || (telegramInput.value.length > 30)) {
+            toastr.error('Поле ввода тега Telegram является обязательным, длина должна составлять от 5 до 30 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((password1Input.value.length < 8) || (password1Input.value.length > 16)) {
+            toastr.error('Поле ввода пароля является обязательным, длина должна составлять от 8 до 16 символов')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if (password1Input.value !== password2Input.value) {
+            toastr.error('Пароли не совпадают')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if (!(check1.checked)) {
+            toastr.error('Для начала использования сервиса, вы должны согласиться с условиями использования')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if (!(check2.checked)) {
+            toastr.error('Для начала использования сервиса, вы должны дать согласие на обработку персональных данных')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        const currentDomain = window.location.origin;
+        const url = new URL('/auth/register', currentDomain);
+        url.searchParams.append('name', nameInput.value);
+        url.searchParams.append('username', usernameInput.value);
+        url.searchParams.append('email', emailInput.value);
+        url.searchParams.append('telnum', telnumInput.value);
+        url.searchParams.append('telegram', telegramInput.value);
+        url.searchParams.append('password', password1Input.value);
+
+        $.ajax({
+            url: url,
+            method: 'post',
+            success: function (data) {
+                if (data.result === 'success') {
+                    toastr.success(nameInput.value + ', ваша заявка на регистрацию успешно создана. Ожидайте письмо с результатом');
+                    location.reload()
+                }
+
+                if (data.result === 'error') {
+                    toastr.error(data.details)
+                }
+                submitButton.classList.remove('disabled');
+            },
+
+            error: function () {
+                toastr.error('Произошла ошибка сервера при регистрации. Обновите страницу и повторите попытку');
+                submitButton.classList.remove('disabled');
+            }
+        });
+
+    });
+
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,35 @@
+{% extends "!base.html" %}
+{% block title %}Главная{% endblock %}
+{% block js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/3.3.4/jquery.inputmask.bundle.min.js"></script>
+
+<script>
+
+    $(document).ready(function () {
+
+        $.ajax({
+
+            url: '/auth/getSelfProfile',
+            method: 'get',
+
+            success: function (data) {
+                document.getElementById('nav-name').innerText = data.name
+                document.getElementById('nav-username').innerText = data.username
+
+            },
+
+        });
+
+    });
+
+</script>
+
+
+{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+
+
+</div>
+{% endblock %}

@@ -1,10 +1,10 @@
 from typing import Annotated
-from sqlalchemy import MetaData, Integer, String, TIMESTAMP, ForeignKey, Table, Column, text
+from sqlalchemy import text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
-from database import Base
+from sqlalchemy.orm import DeclarativeBase
 import datetime
+from database import Base
 
-metadata = MetaData()
 
 pk = Annotated[int, mapped_column(primary_key=True)]
 dt = Annotated[datetime.datetime, mapped_column(server_default=text('NOW()'))]
@@ -22,6 +22,7 @@ class UserModel(Base):
     password: Mapped[str]
 
 
+
 class UserStatusModel(Base):
     __tablename__ = 'user_status'
 
@@ -33,8 +34,8 @@ class UserStatusHistoryModel(Base):
     __tablename__ = 'user_status_history'
 
     id: Mapped[pk]
-    user_id: Mapped[int]
-    status_id: Mapped[int]
+    user_id: Mapped[int] = mapped_column(ForeignKey('user.id', ondelete='CASCADE', onupdate='CASCADE'))
+    status_id: Mapped[int] = mapped_column(ForeignKey('user_status.id', ondelete='CASCADE', onupdate='CASCADE'))
     description: Mapped[str | None]
     date: Mapped[dt]
 
@@ -43,7 +44,7 @@ class UserSessionModel(Base):
     __tablename__ = 'user_session'
 
     id: Mapped[pk]
-    user_id: Mapped[int]
+    user_id: Mapped[int] = mapped_column(ForeignKey('user.id', ondelete='CASCADE', onupdate='CASCADE'))
     token: Mapped[str]
     useragent: Mapped[str]
     ip: Mapped[str]

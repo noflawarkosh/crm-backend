@@ -5,11 +5,12 @@ from alembic import context
 
 import os
 import sys
+
 sys.path.append(os.path.join(sys.path[0], 'src'))
 
 from src.config import DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER
-from src.auth.models import Base
 
+from src.orgs.models import Base
 
 config = context.config
 
@@ -27,7 +28,6 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -41,7 +41,6 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
