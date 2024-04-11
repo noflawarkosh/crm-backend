@@ -2,7 +2,7 @@ import datetime
 from typing import Optional
 from pydantic import BaseModel, constr
 
-from auth.schemas import UserSchema, UserGETSchema
+from auth.schemas import UserGETSchema
 
 
 class OrganizationStatusSchema(BaseModel):

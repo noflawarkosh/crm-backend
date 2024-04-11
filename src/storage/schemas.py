@@ -1,15 +1,16 @@
-from datetime import datetime
+import datetime
 from typing import Optional
-
 from pydantic import BaseModel, constr
 
 
-class StorageSchema(BaseModel):
-    id: Optional[int] = None
+class StoragePOSTSchema(BaseModel):
     title: constr(max_length=100)
-    description: constr(max_length=100)
     storage_href: str
-    type: int
+    description: Optional[constr(max_length=100)] = None
+    type: str
+    owner_id: int
 
 
-
+class StorageGETSchema(StoragePOSTSchema):
+    id: int
+    date: datetime.datetime
