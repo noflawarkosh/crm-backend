@@ -1,0 +1,276 @@
+{% extends "!base.html" %}
+{% block title %}Пополнение{% endblock %}
+
+{% block head %}
+
+
+<link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/libs/typeahead-js/typeahead.css') }}"/>
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/datatables-bs5/datatables.bootstrap5.css') }}">
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css') }}">
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/apex-charts/apex-charts.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/css/pages/card-analytics.css') }}"/>
+
+{% endblock %}
+
+
+{% block js %}
+<script src="{{ url_for('static', path='assets/vendor/libs/apex-charts/apexcharts.js') }}"></script>
+<script src="{{ url_for('static', path='assets/js/app-ecommerce-dashboard.js') }}"></script>
+
+<script>
+    function cancelBill() {
+        const url = window.location.href;
+
+        var arr = url.split('/')
+        var id = arr[arr.length - 1]
+
+        $.ajax({
+
+            url: '/payments/cancelBill?bill_id=' + id,
+            method: 'post',
+
+            success: function () {
+                location.reload()
+            },
+
+            error: function (data) {
+                console.log(data)
+                toastr.error('Ошибка загрузки данных. Обновите страницу')
+
+            }
+
+        });
+    }
+
+</script>
+
+<script>
+    function approveBill() {
+        const url = window.location.href;
+
+        var arr = url.split('/')
+        var id = arr[arr.length - 1]
+
+        $.ajax({
+
+            url: '/payments/approveSendingMoneyBill?bill_id=' + id,
+            method: 'post',
+
+            success: function () {
+                location.reload()
+            },
+
+            error: function (data) {
+                console.log(data)
+                toastr.error('Ошибка загрузки данных. Обновите страницу')
+
+            }
+
+        });
+    }
+
+</script>
+
+
+<script>
+
+    $(document).ready(function () {
+
+        const url = window.location.href;
+
+        var arr = url.split('/')
+        var id = arr[arr.length - 1]
+
+        $.ajax({
+
+            url: '/payments/getBill?bill_id=' + id,
+            method: 'get',
+
+            success: function (data) {
+
+                document.title = 'Пополнение#' + data.id + ' - GreedyBear'
+
+                var date = new Date(data.date);
+                var formattedDate = date.getDate().toString().padStart(2, '0') + '.' + (date.getMonth() + 1).toString().padStart(2, '0') + '.' + date.getFullYear() + ', ' + date.toLocaleTimeString();
+
+                var bill_buttons = ''
+
+                if (data.media) {
+                    bill_buttons = bill_buttons +
+                        '<a href="/storage/get/' + data.media.storage_href + '" target="_blank" class="btn btn-label-primary d-grid w-100 mb-3 text-primary"' +
+                        '<a class="d-flex align-items-center justify-content-center text-nowrap">' +
+                        'Скачать вложение\n' +
+                        '</a>\n' +
+                        '</button>'
+                }
+
+                if (data.status.id === 3) {
+                    bill_buttons = bill_buttons + '' +
+                        '<button class="btn btn-primary d-grid w-100 mb-3" onclick="approveBill()" ' +
+                        '<span class="d-flex align-items-center justify-content-center text-nowrap">' +
+                        'Подтвердить перевод\n' +
+                        '</span>\n' +
+                        '</button>'
+
+                    bill_buttons = bill_buttons + '' +
+                        '<button class="btn btn-label-danger d-grid w-100 mb-3" onclick="cancelBill()"' +
+                        '<span class="d-flex align-items-center justify-content-center text-nowrap">' +
+                        'Аннулировать\n' +
+                        '</span>\n' +
+                        '</button>'
+                }
+
+
+                if (bill_buttons.length !== 0) {
+                    document.getElementById('bill-buttons').innerHTML = bill_buttons
+                    document.getElementById('div-buttons').style.display = 'block';
+                }
+
+
+                var status = 'bg-label-warning'
+
+                if (data.status.id === 1) {
+                    status = 'bg-label-success'
+                }
+
+                if (data.status.id === 4) {
+                    status = 'bg-label-danger'
+                }
+
+                if (data.status.id === 5) {
+                    status = 'bg-label-danger'
+                }
+
+                var bill_status = '<span class="badge ' + status + '"> ' + data.status.title + ' </span>'
+
+
+                document.getElementById('bill-id').innerText = 'Пополнение #' + data.id
+                document.getElementById('bill-date').innerText = formattedDate
+
+                document.getElementById('bill-org-name').innerText = data.organization.title
+                document.getElementById('bill-org-inn').innerText = 'ИНН ' + data.organization.inn
+
+
+                document.getElementById('bill-src-title').innerText = data.source.title
+                document.getElementById('bill-src-number').innerText = data.source.number
+                document.getElementById('bill-src-descr').innerText = data.source.description
+
+                document.getElementById('bill-total').innerText = data.amount + ' ₽'
+                document.getElementById('bill-status-bottom').innerHTML = bill_status
+
+                document.getElementById('loading-members').style.display = 'none';
+                document.getElementById('div-mems').style.display = 'block';
+
+                document.getElementById('div-full-card').style.display = 'block';
+            },
+
+
+            error: function (data) {
+                console.log(data)
+                toastr.error('Ошибка загрузки данных. Обновите страницу')
+
+            }
+
+        });
+
+
+    });
+
+</script>
+
+
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container-xxl flex-grow-1 container-p-y">
+
+    <div class="row invoice-preview" id="div-full-card">
+        <!-- Invoice -->
+        <div class="col-xl-9 col-md-8 col-12 mb-md-0 mb-4">
+            <div class="card invoice-preview-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between flex-xl-row flex-md-column flex-sm-row flex-column p-sm-3 p-0">
+                        <div class="mb-xl-0 mb-4">
+                            <div class="d-flex svg-illustration mb-3 gap-2">
+                                <span class="app-brand-text demo text-body fw-bold">greedybear</span>
+                            </div>
+                            <p class="mb-1">Payments service</p>
+                        </div>
+                        <div>
+                            <h4 id="bill-id"></h4>
+                            <div class="mb-2">
+                                <span class="me-1">Дата создания:</span>
+                                <span class="fw-medium" id="bill-date"></span>
+                            </div>
+                            <div class="mb-2">
+                                <span class="me-1" id="bill-status"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-0">
+                <div class="card-body">
+                    <div class="row p-sm-3 p-0">
+                        <div class="col-xl-6 col-md-12 col-sm-5 col-12 mb-xl-0 mb-md-4 mb-sm-0 mb-4">
+                            <h6 class="pb-2">Отправитель:</h6>
+                            <p class="mb-1" id="bill-org-name"></p>
+                            <p class="mb-1" id="bill-org-inn"></p>
+                        </div>
+                        <div class="col-xl-6 col-md-12 col-sm-7 col-12">
+                            <h6 class="pb-2">Способ:</h6>
+                            <p class="mb-1" id="bill-src-title"></p>
+                            <p class="mb-1" id="bill-src-number"></p>
+                            <p class="mb-1 mt-2" id="bill-src-descr"></p>
+
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-0">
+                <div class="card-body">
+                    <div class="row p-sm-3 p-0">
+                        <div class="col-xl-6 col-md-12 col-sm-5 col-12 mb-xl-0 mb-md-4 mb-sm-0 mb-4">
+                            <h6 class="pb-2">Сумма пополнения:</h6>
+
+                        </div>
+                        <div class="col-xl-6 col-md-12 col-sm-7 col-12">
+                            <h6 class="pb-2" id="bill-total"></h6>
+                            <p class="mb-1" id="bill-status-bottom"></p>
+
+                        </div>
+                    </div>
+                </div>
+
+
+                <hr class="my-0">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-12">
+                            <span class="fw-medium">Подсказка:</span>
+                            <span>выполните перевод по указанным реквизитам, а затем нажмите кнопку "Подтвердить перевод". Средства поступят на кошелек после подтверждения поулчения средств администратором сервиса</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /Invoice -->
+
+
+        <!-- Invoice Actions -->
+        <div class="col-xl-3 col-md-4 col-12 invoice-actions" style="display: none" id="div-buttons">
+            <div class="card">
+                <div class="card-body" id="bill-buttons"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+{% endblock %}

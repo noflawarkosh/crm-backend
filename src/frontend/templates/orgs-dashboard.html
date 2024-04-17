@@ -1,0 +1,548 @@
+{% extends "!base.html" %}
+{% block title %}Организация{% endblock %}
+
+{% block head %}
+
+
+<link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/libs/typeahead-js/typeahead.css') }}"/>
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/datatables-bs5/datatables.bootstrap5.css') }}">
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css') }}">
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/apex-charts/apex-charts.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/css/pages/card-analytics.css') }}"/>
+
+{% endblock %}
+
+
+{% block js %}
+<script src="{{ url_for('static', path='assets/vendor/libs/apex-charts/apexcharts.js') }}"></script>
+<script src="{{ url_for('static', path='assets/js/app-ecommerce-dashboard.js') }}"></script>
+
+<script>
+
+</script>
+
+<script>
+
+    function getPageID() {
+        const url = window.location.href;
+        var arr = url.split('/')
+        return arr[arr.length - 1]
+    }
+
+    function blockUser(user_id, name, username) {
+
+
+        if (confirm("Вы уверены, что хотите заблокировать пользователя " + name + '(@' + username + ")? В дальнейшем он не сможет присоединиться к организации по одному из приглашений до момента разблокировки")) {
+            $.ajax({
+
+                url: '/orgs/blockMember?user_id=' + user_id + '&org_id=' + getPageID(),
+                method: 'post',
+
+                success: function () {
+                    location.reload()
+                },
+                error: function (data) {
+                    console.log(data)
+                    toastr.error('Ошибка при выполнении операции. Обновите страницу и повторите попытку')
+                }
+
+            });
+        }
+    }
+
+    function unblockUser(user_id, name, username) {
+
+        if (confirm("Вы уверены, что хотите разблокировать пользователя " + name + '(@' + username + ")? В дальнейшем он вновь сможет присоединиться к организации по одному из активных приглашений")) {
+            $.ajax({
+
+                url: '/orgs/unblockMember?user_id=' + user_id + '&org_id=' + getPageID(),
+                method: 'post',
+
+                success: function () {
+                    location.reload()
+                },
+                error: function (data) {
+                    console.log(data)
+                    toastr.error('Ошибка при выполнении операции. Обновите страницу и повторите попытку')
+                }
+
+            });
+        }
+    }
+
+    function kickUser(user_id, name, username) {
+
+        if (confirm("Вы уверены, что хотите выгнать пользователя " + name + '(@' + username + ")? В дальнейшем он вновь сможет присоединиться к организации по одному из активных приглашений")) {
+            $.ajax({
+
+                url: '/orgs/kickMember?user_id=' + user_id + '&org_id=' + getPageID(),
+                method: 'post',
+
+                success: function () {
+                    location.reload()
+                },
+                error: function (data) {
+                    console.log(data)
+                    toastr.error('Ошибка при выполнении операции. Обновите страницу и повторите попытку')
+                }
+
+            });
+        }
+
+
+    }
+
+    function setLevel(user_id, level, name, username) {
+        if (confirm("Вы уверены, что установить пользователю " + name + '(@' + username + ") уровень " + level)) {
+
+
+
+            $.ajax({
+
+                url: '/orgs/setMemberLevel?user_id=' + user_id + '&level=' + level,
+                method: 'post',
+
+                success: function () {
+                    location.reload()
+                },
+                error: function (data) {
+                    console.log(data)
+                    toastr.error('Ошибка при выполнении операции. Обновите страницу и повторите попытку')
+                }
+
+            });
+        }
+    }
+</script>
+
+<script>
+
+    $(document).ready(function () {
+
+        const url = window.location.href;
+
+        var arr = url.split('/')
+        var id = arr[arr.length - 1]
+
+        $.ajax({
+
+            url: '/orgs/getOrg?org_id=' + id,
+            method: 'get',
+
+            success: function (data) {
+                document.title = data.title + ' - GreedyBear'
+                document.getElementById('org-name-card').innerText = data.title
+                document.getElementById('org-inn-card').innerText = 'ИНН ' + data.inn
+
+            },
+
+        });
+
+
+        $.ajax({
+
+            url: '/orgs/getMembers?org_id=' + id,
+            method: 'get',
+
+            success: function (data) {
+                if (data.length === 0) {
+                    $('#users-list tbody').append('<tr><td>Участники отсутствуют</td></tr>');
+                }
+                $.each(data, function (index, item) {
+                    if ((item.status.id !== 0)) {
+
+                        var statusLabel = 'bg-label-warning'
+                        var kickButton = ''
+                        var attrs = item.user.id + ", '" + item.user.name + "', '" + item.user.username + "'"
+                        var dropMenu = ''
+
+                        if (item.status.id === 4) {
+                            statusLabel = 'bg-label-danger'
+                        }
+
+                        if (item.status.id === 1) {
+                            statusLabel = 'bg-label-success'
+                            dropMenu += '<button href="##" onclick="kickUser(' + attrs + ')" class="dropdown-item">Выгнать</button>'
+                        }
+
+
+                        if (item.status.id === 4) {
+                            dropMenu += '<button href="##" onclick="unblockUser(' + attrs + ')" class="dropdown-item">Разблокировать</button>'
+                        } else {
+                            dropMenu += '<button href="##" onclick="blockUser(' + attrs + ')" class="dropdown-item">Заблокировать</button>'
+                        }
+
+
+                        var row = '<tr>' +
+                            '<td>' +
+                            '<div class="d-flex justify-content-start align-items-center user-name">' +
+                            '<div class="avatar-wrapper">' +
+                            '<div class="avatar avatar-sm me-3">' +
+                            '<img src="../../assets/img/avatars/2.png" alt="Avatar" class="rounded-circle">' +
+                            '</div>' +
+                            '</div>' +
+                            '<div class="d-flex flex-column">' +
+                            '<a href="app-user-view-account.html" class="text-body text-truncate">' +
+                            '<span class="fw-medium">' + item.user.name + '</span>' +
+                            '</a>' +
+                            '<small class="text-muted">@' + item.user.username + '</small>' +
+                            '</div>' +
+                            '</div>' +
+                            '</td>' +
+                            '<td>' +
+                            '<span class="text-truncate d-flex align-items-center">' +
+                            '<a href="http://t.me/' + item.user.telegram + '">@' + item.user.telegram + '</a>' +
+                            '</span>' +
+                            '</td>' +
+                            '<td>' + item.level + '</td>' +
+                            '<td><span class="badge ' + statusLabel + '">' + item.status.title + '</span></td>' +
+                            '<td style="width: 10%;">' +
+                            '<div class="d-inline-block text-nowrap">' +
+                            '<button class="btn btn-sm btn-icon dropdown-toggle hide-arrow" data-bs-toggle="dropdown"><i class="bx bx-dots-vertical-rounded me-2"></i></button>' +
+                            '<div class="dropdown-menu dropdown-menu-end m-0">' +
+                            dropMenu +
+                            '</div>' +
+                            '</div>' +
+                            '</td>' +
+                            '</tr>';
+
+                        $('#users-list tbody').append(row);
+                    }
+
+                });
+
+                document.getElementById('loading-members').style.display = 'none';
+                document.getElementById('div-mems').style.display = 'block';
+            },
+            error: function () {
+
+                toastr.error('Ошибка загрузки списка пользователей')
+                document.getElementById('loading-members').style.display = 'none';
+            }
+
+        });
+
+
+    });
+
+</script>
+
+<!-- Create Inv -->
+<script>
+
+    function calculateDecimalValue() {
+        const checkboxes = document.querySelectorAll('input[name="rights"]:checked');
+        let result = 0;
+
+        checkboxes.forEach((checkbox) => {
+            result += Math.pow(2, parseInt(checkbox.value));
+        });
+
+        return result;
+    }
+
+    var checkboxes = document.querySelectorAll('input[name="rights"]');
+
+    function calcOnChange() {
+        var levelCounter = document.getElementById('level-counter')
+        var levelCounted = calculateDecimalValue()
+        levelCounter.innerText = 'Уровень: ' + levelCounted
+    }
+
+    checkboxes.forEach(function (checkbox) {
+        checkbox.addEventListener('change', calcOnChange);
+    });
+
+
+    document.getElementById('create-invitation-form').addEventListener('submit', function (event) {
+
+        event.preventDefault();
+
+        var submitButton = document.querySelector('button[type="submit"]');
+        submitButton.classList.add('disabled');
+
+        const amountInput = document.getElementById('inv-amount');
+        const expiresInput = document.getElementById('inv-expires');
+
+        if (amountInput.value.length === 0) {
+            toastr.error('Введите максимальное число использований')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if (expiresInput.value.length === 0) {
+            toastr.error('Введите дату и время истечения действия приглашения')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        var level = calculateDecimalValue()
+        var currentPage = window.location.pathname;
+        var parts = currentPage.split('/');
+        var org_id = parts[parts.length - 1];
+
+
+        const currentDomain = window.location.origin;
+        const url = new URL('/orgs/createInvitation', currentDomain);
+        url.searchParams.append('org_id', org_id);
+        url.searchParams.append('level', level);
+        url.searchParams.append('expires', expiresInput.value);
+        url.searchParams.append('amount', amountInput.value);
+        submitButton.classList.remove('disabled');
+
+        $.ajax({
+            url: url,
+            method: 'post',
+            success: function (data) {
+                console.log(data)
+                location.reload()
+            },
+
+            error: function (data) {
+                console.log(data)
+                toastr.error(data.responseJSON.detail)
+                submitButton.classList.remove('disabled');
+            }
+        });
+
+    });
+</script>
+
+<!-- Get Invs -->
+<script>
+    var currentPage = window.location.pathname;
+    var parts = currentPage.split('/');
+    var org_id = parts[parts.length - 1];
+
+    $(document).ready(function () {
+
+        $.ajax({
+
+            url: '/orgs/getAllInvitations?org_id=' + org_id,
+            type: 'GET',
+
+            success: function (data) {
+
+
+                var table = $('#invitations-table tbody');
+                if (data.length === 0) {
+                    table.append('<tr><td>Приглашения отсутствуют</td></tr>');
+                }
+                data.forEach(function (item) {
+                    var row = $('<tr>');
+                    row.append($('<td>').text(item.code));
+                    row.append($('<td>').text(item.level));
+
+                    var createdDate = new Date(item.created);
+                    var expiresDate = new Date(item.expires);
+                    var createdFormatted = createdDate.toLocaleString();
+                    var expiresFormatted = expiresDate.toLocaleString();
+
+                    row.append($('<td>').text(createdFormatted));
+                    row.append($('<td>').text(expiresFormatted));
+                    row.append($('<td>').text(item.usages.length));
+
+                    var remainingUsages = item.amount - item.usages.length;
+                    row.append($('<td>').text(remainingUsages));
+
+                    var actionsCell = $('<td>');
+                    var dropdown = $('<div>').addClass('dropdown');
+                    dropdown.append($('<button>').attr('type', 'button').addClass('btn p-0 dropdown-toggle hide-arrow').attr('data-bs-toggle', 'dropdown').html('<i class="bx bx-dots-vertical-rounded"></i>'));
+                    var dropdownMenu = $('<div>').addClass('dropdown-menu');
+                    dropdownMenu.append($('<a>').addClass('dropdown-item').attr('href', 'javascript:void(0);').html('<i class="bx bx-info-circle me-1"></i>Подробнее'));
+                    dropdownMenu.append($('<a>').addClass('dropdown-item').attr('href', 'javascript:void(0);').html('<i class="bx bx-trash me-1"></i>Сделать недействительным'));
+                    dropdown.append(dropdownMenu);
+                    actionsCell.append(dropdown);
+                    row.append(actionsCell);
+
+                    table.append(row);
+
+
+                });
+
+                document.getElementById('loading-invs').style.display = 'none';
+                document.getElementById('div-invs').style.display = 'block';
+            },
+            error: function () {
+                toastr.error('Ошибка загрузки приглашений')
+                document.getElementById('loading-invs').style.display = 'none';
+            }
+        });
+
+    });
+
+</script>
+
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container-xxl flex-grow-1 container-p-y">
+
+
+    <div class="row">
+
+        <div class="col">
+            <div class="row">
+                <div class="col mb-4">
+                    <div class="card h-100">
+                        <div class="row">
+                            <div class="col">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-1">Активные приглашения в организацию
+                                        <a href="#" data-bs-toggle="offcanvas" data-bs-target="#off-create-invitation"
+                                           aria-controls="off-create-invitation">
+                                            <i class="bx bxs-plus-square" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                                               data-bs-original-title="Создать приглашение">
+                                            </i>
+                                        </a>
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status"
+                                             id="loading-invs">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </h5>
+
+                                    <small class="card-subtitle">Приглашайте коллег в свою организацию для совместной
+                                        работы. У коллег ваша организация будет отображаться в разделе "Другие
+                                        организации" бокового меню</small>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="table-responsive text-nowrap" id="div-invs" style="display: none">
+
+                                    <table class="table text-nowrap" id="invitations-table">
+                                        <thead>
+                                        <tr>
+                                            <th>Код</th>
+                                            <th>Уровень</th>
+                                            <th>Создано</th>
+                                            <th>Истекает</th>
+                                            <th>Использований</th>
+                                            <th>Осталось использований</th>
+                                            <th>Действия</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody class="table-border-bottom-0">
+
+
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    <div class="row">
+
+        <div class="col">
+            <div class="card">
+
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Участники вашей организации
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"
+                             id="loading-members">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </h5>
+
+                    <small class="card-subtitle">В этой карточке вы можете отредактировать права участников</small>
+                </div>
+
+                <div class="table-responsive text-nowrap" id="div-mems">
+                    <table class="table text-nowrap" id="users-list">
+                        <thead>
+                        <tr>
+                            <th>Имя</th>
+                            <th>Telegram</th>
+                            <th>Уровень</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                        </thead>
+                        <tbody class="table-border-bottom-0"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="mt-3">
+    <div class="offcanvas offcanvas-start" id="off-create-invitation">
+
+        <div class="offcanvas-header">
+            <h5 id="off-create-invitation-label" class="offcanvas-title">Новое приглашение</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                    aria-label="Закрыть"></button>
+        </div>
+
+        <div class="offcanvas-body my-auto mx-0 flex-grow-0">
+
+            <form id="create-invitation-form">
+
+                <h5>Основные параметры</h5>
+                <hr>
+                <div class="mb-3 row">
+
+
+                    <label for="inv-amount" class="form-label">Макс. использований</label>
+                    <div class="col-md-10">
+                        <input class="form-control" type="number" value="5" id="inv-amount">
+                    </div>
+                </div>
+                <div class="mb-5 row">
+                    <label for="inv-expires" class="form-label">Истекает</label>
+                    <div class="col-md-10">
+                        <input class="form-control" type="datetime-local" id="inv-expires">
+                    </div>
+                </div>
+
+                <h5>Права доступа</h5>
+                <hr>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="R1" name="rights">
+                    <label class="form-check-label" for="R1">Доступ к товарам</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="2" id="R2" name="rights">
+                    <label class="form-check-label" for="R2">Доступ к задачам на выкуп</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="3" id="R3" name="rights">
+                    <label class="form-check-label" for="R3">Доступ к отзывам</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="4" id="R4" name="rights">
+                    <label class="form-check-label" for="R4">Доступ к статусам заказов на WB</label>
+                </div>
+                <small id="level-counter">Уровень: 0</small>
+
+                <div class="mt-5">
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}

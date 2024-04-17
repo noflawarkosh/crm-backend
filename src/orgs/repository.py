@@ -1,6 +1,6 @@
 from fastapi import HTTPException
-from sqlalchemy import select, and_, func
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select, and_, func, tuple_
+from sqlalchemy.orm import selectinload, aliased
 
 from database import async_session_factory
 from orgs.utils import generate_invitation_code
@@ -165,8 +165,15 @@ class InvitationRepository:
 
                 query = (
                     select(OrganizationInvitationModel)
-                    .where(OrganizationInvitationModel.org_id == org_id)
-                    .options(selectinload(OrganizationInvitationModel.usages))
+                    .where(
+                        and_(
+                            OrganizationInvitationModel.org_id == org_id,
+                            OrganizationInvitationModel.expires > func.now()
+                        )
+                    )
+                    .options(
+                        selectinload(OrganizationInvitationModel.usages)
+                    )
                 )
 
                 db_response = await session.execute(query)
@@ -326,5 +333,79 @@ class MembershipRepository:
 
                 return list_of_statuses_in_orgs
 
+        finally:
+            await session.close()
+
+    @classmethod
+    async def get_all_user_memberships(cls, user_id: int) -> list[OrganizationMembershipModel]:
+
+        try:
+
+            async with async_session_factory() as session:
+
+                subquery = select(
+                    OrganizationMembershipModel.user_id,
+                    OrganizationMembershipModel.org_id,
+                    func.max(OrganizationMembershipModel.date)
+                ).where(
+                    OrganizationMembershipModel.user_id == user_id
+                ).group_by(
+                    OrganizationMembershipModel.user_id,
+                    OrganizationMembershipModel.org_id
+                ).alias()
+
+                query = select(OrganizationMembershipModel).where(
+                    OrganizationMembershipModel.user_id == user_id
+                ).where(
+                    tuple_(
+                        OrganizationMembershipModel.user_id,
+                        OrganizationMembershipModel.org_id,
+                        OrganizationMembershipModel.date
+                    ).in_(subquery)
+                ).options(selectinload(OrganizationMembershipModel.organization))
+
+                db_response = await session.execute(query)
+                memberships = db_response.scalars().all()
+
+                return memberships
+
+        finally:
+            await session.close()
+
+    @classmethod
+    async def get_members_of_org(cls, org_id: int) -> list[OrganizationMembershipModel]:
+
+        try:
+            async with async_session_factory() as session:
+
+                subquery = (
+                    select(
+                        func.max(OrganizationMembershipModel.date).label("max_date")
+                    )
+                    .where(OrganizationMembershipModel.org_id == org_id)
+                    .group_by(OrganizationMembershipModel.user_id)
+                    .subquery()
+                )
+
+                query = (
+                    select(OrganizationMembershipModel)
+                    .where(
+                        and_(
+                            OrganizationMembershipModel.org_id == org_id,
+                            OrganizationMembershipModel.date == subquery.c.max_date
+                        )
+                    )
+                    .options(
+                        selectinload(OrganizationMembershipModel.user),
+                        selectinload(OrganizationMembershipModel.status),
+
+                    )
+                    .order_by(OrganizationMembershipModel.status_id.asc())
+                )
+
+                db_response = await session.execute(query)
+                result = db_response.scalars().all()
+
+                return result
         finally:
             await session.close()

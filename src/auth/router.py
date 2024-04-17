@@ -21,21 +21,22 @@ async def register(request: Request,
                    data: Annotated[UserSchema, Depends()],
                    user: UserModel = Depends(not_authed),
                    session: AsyncSession = Depends(get_async_session)):
+
     data_dict = data.model_dump()
     data_dict['email'] = data_dict['email'].lower()
     data_dict['username'] = data_dict['username'].lower()
     data_dict['password'] = hash_password(data_dict['password'])
 
-    if not await check_field_is_unique(session, UserModel.email, data.email):
+    if not await check_field_is_unique(UserModel.email, data.email):
         return {'result': 'error', 'details': 'Указанная почта уже используется'}
 
-    if not await check_field_is_unique(session, UserModel.username, data.username):
+    if not await check_field_is_unique(UserModel.username, data.username):
         return {'result': 'error', 'details': 'Указанный логин уже используется'}
 
-    if not await check_field_is_unique(session, UserModel.telnum, data.telnum):
+    if not await check_field_is_unique(UserModel.telnum, data.telnum):
         return {'result': 'error', 'details': 'Указанный телефон уже используется'}
 
-    if not await check_field_is_unique(session, UserModel.telegram, data.telegram):
+    if not await check_field_is_unique(UserModel.telegram, data.telegram):
         return {'result': 'error', 'details': 'Указанный тег телеграмм уже используется'}
 
     new_user = UserModel(**data_dict)
@@ -56,7 +57,8 @@ async def login(request: Request,
                 data: Annotated[LoginSchema, Depends()],
                 user: UserModel = Depends(not_authed),
                 session: AsyncSession = Depends(get_async_session)):
-    query = select(UserModel).where(UserModel.username == data.username)
+
+    query = select(UserModel).where(UserModel.username == data.username.lower())
     db_response = await session.execute(query)
     result = db_response.scalars().all()
 

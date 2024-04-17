@@ -52,7 +52,12 @@ class OrganizationMembershipModel(Base):
         ForeignKey('organization_invitation.id', ondelete='CASCADE', onupdate='CASCADE'))
 
     user: Mapped['UserModel'] = relationship(lazy=False)
+
     organization: Mapped['OrganizationModel'] = relationship()
+
+    status: Mapped['OrganizationMembershipStatusModel'] = relationship()
+
+    invitation: Mapped['OrganizationInvitationModel'] = relationship()
 
 
 class OrganizationMembershipStatusModel(Base):
@@ -73,7 +78,7 @@ class OrganizationInvitationModel(Base):
     expires: Mapped[datetime.datetime | None]
     amount: Mapped[int | None]
 
-    usages: Mapped[list['OrganizationMembershipModel']] = relationship(primaryjoin="and_(OrganizationInvitationModel.id == OrganizationMembershipModel.invitation_id)",)
+    usages: Mapped[list['OrganizationMembershipModel']] = relationship(primaryjoin="and_(OrganizationInvitationModel.id == OrganizationMembershipModel.invitation_id)")
 
 
 

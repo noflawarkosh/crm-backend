@@ -5,7 +5,6 @@ from sqlalchemy.orm import DeclarativeBase
 import datetime
 from database import Base
 
-
 pk = Annotated[int, mapped_column(primary_key=True)]
 dt = Annotated[datetime.datetime, mapped_column(server_default=text('NOW()'))]
 
@@ -20,7 +19,6 @@ class UserModel(Base):
     telnum: Mapped[str]
     telegram: Mapped[str]
     password: Mapped[str]
-
 
 
 class UserStatusModel(Base):

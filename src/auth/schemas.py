@@ -21,6 +21,13 @@ class UserGETSchema(BaseModel):
     telegram: constr(max_length=50)
 
 
+class UserPublicSchema(BaseModel):
+    id: int
+    name: constr(max_length=100)
+    username: constr(min_length=5, max_length=20)
+    telegram: constr(max_length=50)
+
+
 class LoginSchema(BaseModel):
     username: constr(min_length=5, max_length=20)
     password: constr(min_length=8, max_length=16)

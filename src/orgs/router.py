@@ -13,7 +13,8 @@ from orgs.schemas import (
     OrganizationInvitationGETSchema,
     OrganizationInvitationRELSchema,
     OrganizationMembershipGETSchema,
-    OrganizationMembershipPOSTSchema
+    OrganizationMembershipPOSTSchema,
+    OrganizationMembershipRELSchema, OrganizationMembershipRELwOrgSchema
 )
 
 from orgs.repository import (
@@ -194,25 +195,151 @@ async def accept_invitation(code: str,
     return dto
 
 
-@router.get('/getOrgsWithMembership')
+@router.get('/getOwnedMemberships')
 async def get_user_membership_organizations(user: UserModel = Depends(authed)
-                                            ) -> list[OrganizationRELSchema]:
+                                            ) -> list[OrganizationMembershipRELwOrgSchema]:
     """
     Getting organizations in which the user has a membership
     :param user: identified user by cookie token (strictly authed)
     :return: list of organization get schemas
     """
 
-    orgs_users_statuses = await MembershipRepository.get_all_user_statuses_in_orgs(user.id)
+    memberships = await MembershipRepository.get_all_user_memberships(user.id)
+    dto = [
+        OrganizationMembershipRELwOrgSchema.model_validate(membership, from_attributes=True)
+        for membership in memberships
+    ]
 
-    list_of_orgs = []
+    return dto
 
-    for line in orgs_users_statuses:
-        if line[1] == 1:
 
-            organization = await OrganizationRepository.get_one(line[0])
+@router.get('/getMembers')
+async def get_members_of_organization(org_id: int,
+                                      user: UserModel = Depends(authed),
+                                      ):
+    organization = await OrganizationRepository.get_one(org_id)
 
-            if organization:
-                list_of_orgs.append(OrganizationRELSchema.model_validate(organization, from_attributes=True))
+    if not organization:
+        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
 
-    return list_of_orgs
+    if organization.owner_id != user.id:
+        raise HTTPException(status_code=403)
+
+    users = await MembershipRepository.get_members_of_org(org_id)
+    dto = [OrganizationMembershipRELSchema.model_validate(row, from_attributes=True) for row in users]
+
+    return dto
+
+
+@router.post('/blockMember')
+async def block_member_in_organization(user_id: int,
+                                       org_id: int,
+                                       user: UserModel = Depends(authed)
+                                       ):
+    organization = await OrganizationRepository.get_one(org_id)
+
+    if not organization:
+        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
+
+    if organization.owner_id != user.id:
+        raise HTTPException(status_code=403)
+
+    current_membership = await MembershipRepository.get_current(user_id, org_id)
+
+    if not current_membership:
+        raise HTTPException(status_code=403)
+
+    if current_membership.status_id == 4:
+        raise HTTPException(status_code=403)
+
+    data_dict = {
+        'user_id': user_id,
+        'org_id': org_id,
+        'level': 0,
+        'status_id': 4,
+        'invitation_id': None
+    }
+
+    data = OrganizationMembershipPOSTSchema.model_validate(data_dict)
+
+    new_membership = await MembershipRepository.add_one(data)
+
+    dto = OrganizationMembershipGETSchema.model_validate(new_membership, from_attributes=True)
+
+    return dto
+
+
+@router.post('/unblockMember')
+async def block_member_in_organization(user_id: int,
+                                       org_id: int,
+                                       user: UserModel = Depends(authed)
+                                       ):
+    organization = await OrganizationRepository.get_one(org_id)
+
+    if not organization:
+        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
+
+    if organization.owner_id != user.id:
+        raise HTTPException(status_code=403)
+
+    current_membership = await MembershipRepository.get_current(user_id, org_id)
+
+    if not current_membership:
+        raise HTTPException(status_code=403)
+
+    if current_membership.status_id == 5:
+        raise HTTPException(status_code=403)
+
+    data_dict = {
+        'user_id': user_id,
+        'org_id': org_id,
+        'level': 0,
+        'status_id': 5,
+        'invitation_id': None
+    }
+
+    data = OrganizationMembershipPOSTSchema.model_validate(data_dict)
+
+    new_membership = await MembershipRepository.add_one(data)
+
+    dto = OrganizationMembershipGETSchema.model_validate(new_membership, from_attributes=True)
+
+    return dto
+
+
+@router.post('/kickMember')
+async def block_member_in_organization(user_id: int,
+                                       org_id: int,
+                                       user: UserModel = Depends(authed)
+                                       ):
+    organization = await OrganizationRepository.get_one(org_id)
+
+    if not organization:
+        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
+
+    if organization.owner_id != user.id:
+        raise HTTPException(status_code=403)
+
+    current_membership = await MembershipRepository.get_current(user_id, org_id)
+
+    if not current_membership:
+        raise HTTPException(status_code=403)
+
+    if current_membership.status_id != 1:
+        raise HTTPException(status_code=403)
+
+    data_dict = {
+        'user_id': user_id,
+        'org_id': org_id,
+        'level': 0,
+        'status_id': 3,
+        'invitation_id': None
+    }
+
+    data = OrganizationMembershipPOSTSchema.model_validate(data_dict)
+
+    new_membership = await MembershipRepository.add_one(data)
+
+    dto = OrganizationMembershipGETSchema.model_validate(new_membership, from_attributes=True)
+
+    return dto

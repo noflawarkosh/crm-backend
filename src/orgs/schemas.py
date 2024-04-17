@@ -2,7 +2,7 @@ import datetime
 from typing import Optional
 from pydantic import BaseModel, constr
 
-from auth.schemas import UserGETSchema
+from auth.schemas import UserGETSchema, UserPublicSchema
 
 
 class OrganizationStatusSchema(BaseModel):
@@ -57,9 +57,20 @@ class OrganizationMembershipPOSTSchema(BaseModel):
     org_id: int
     level: int
     status_id: int
-    invitation_id: int
+    invitation_id: Optional[int | None]
 
 
 class OrganizationMembershipGETSchema(OrganizationMembershipPOSTSchema):
     id: int
     date: datetime.datetime
+
+
+class OrganizationMembershipRELSchema(BaseModel):
+    user: UserPublicSchema
+    level: int
+    status: OrganizationStatusSchema
+    date: datetime.datetime
+
+
+class OrganizationMembershipRELwOrgSchema(OrganizationMembershipGETSchema):
+    organization: OrganizationGETSchema

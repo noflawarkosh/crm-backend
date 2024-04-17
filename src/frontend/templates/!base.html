@@ -87,6 +87,7 @@
                            data-bs-placement="top" data-bs-custom-class="tooltip-primary"
                            data-bs-original-title="Добавить">
                         </i>
+
                     </a>
                 </li>
 
@@ -189,10 +190,7 @@
 
                             <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);"
                                data-bs-toggle="dropdown">
-                                <div class="avatar avatar-online">
-                                    <img src="{{ url_for('static', path='assets/img/avatars/def-avatar.jpg') }}" alt
-                                         class="w-px-40 h-auto rounded-circle">
-                                </div>
+                                <div class="avatar avatar-online" id="my-avatar-nav"></div>
                             </a>
 
                             <ul class="dropdown-menu dropdown-menu-end">
@@ -200,10 +198,7 @@
                                     <a class="dropdown-item" href="/profile">
                                         <div class="d-flex">
                                             <div class="flex-shrink-0 me-3">
-                                                <div class="avatar avatar-online">
-                                                    <img src="{{ url_for('static', path='assets/img/avatars/def-avatar.jpg') }}"
-                                                         alt
-                                                         class="w-px-40 h-auto rounded-circle">
+                                                <div class="avatar avatar-online" id="my-avatar-drop">
                                                 </div>
                                             </div>
                                             <div class="flex-grow-1">
@@ -419,7 +414,7 @@
             url: url,
             method: 'post',
             success: function (data) {
-                location.replace('/organization/'+ data.id)
+                location.replace('/organization/' + data.id)
             },
             error: function (data) {
                 console.log(data)
@@ -498,15 +493,18 @@
 <!-- Get Mine Orgs -->
 <script>
     var currentPage = window.location.pathname;
+
     $(document).ready(function () {
 
         var orgsMine = $('#orgs-mine');
         var orgMenu = [
             {'menuItemTitle': 'Управление', 'menuItemHref': '/organization/'},
-            {'menuItemTitle': 'Кошелек', 'menuItemHref': '/'},
-            {'menuItemTitle': 'Товары', 'menuItemHref': '/'},
-            {'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': '/'},
-            {'menuItemTitle': 'Статусы заказов WB', 'menuItemHref': '/'},
+            {'menuItemTitle': 'Кошелек', 'menuItemHref': '/wallet/'},
+            {'menuItemTitle': 'Реферальная программа', 'menuItemHref': '/loyalty/'},
+            {'menuItemTitle': 'Товары', 'menuItemHref': '/products/'},
+            {'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': '/tasks/'},
+            {'menuItemTitle': 'Отзывы', 'menuItemHref': '/reviews/'},
+            {'menuItemTitle': 'Статусы заказов WB', 'menuItemHref': '/orders/'},
         ]
 
         $.ajax({
@@ -569,58 +567,90 @@
 
 <!-- Get Other Orgs -->
 <script>
+    var currentPage = window.location.pathname;
 
     $(document).ready(function () {
 
         var orgsOther = $('#orgs-other');
-        var orgMenu = [
-            {'menuItemTitle': 'Баланс', 'menuItemHref': '/'},
-            {'menuItemTitle': 'Товары', 'menuItemHref': '/'},
-            {'menuItemTitle': 'Выкупы', 'menuItemHref': '/'},
-        ]
+
+        function getBitValue(number, bitPosition) {
+            return (number >> bitPosition) & 1;
+        }
 
         $.ajax({
 
-            url: '/orgs/getOrgsWithMembership',
+            url: '/orgs/getOwnedMemberships',
             type: 'GET',
 
             success: function (data) {
 
                 data.forEach(function (data) {
 
-                    var menuItem = $('<li>').addClass('menu-item');
-                    var menuItemA = $('<a>').attr({
-                        href: 'javascript:;',
-                        class: 'menu-link menu-toggle'
-                    })
-                    var menuIcon = $('<i>').addClass('menu-icon tf-icons bx bx-group');
-                    var menuTitle = $('<div>').addClass('text-truncate').attr('data-i18n', data).text(data.title);
-                    menuItemA.append(menuIcon, menuTitle);
+                    if (data.status_id === 1) {
+
+                        var menuItem = $('<li>').addClass('menu-item');
+                        var menuItemA = $('<a>').attr({
+                            href: 'javascript:;',
+                            class: 'menu-link menu-toggle'
+                        })
+                        var menuIcon = $('<i>').addClass('menu-icon tf-icons bx bx-group');
+                        var menuTitle = $('<div>').addClass('text-truncate').attr('data-i18n', data).text(data.organization.title);
+                        menuItemA.append(menuIcon, menuTitle);
 
 
-                    var menuSub = $('<ul>').addClass('menu-sub');
+                        var menuSub = $('<ul>').addClass('menu-sub');
 
-                    orgMenu.forEach(function (orgMenu) {
+                        var orgMenu = []
 
-                        var menuSubItem = $('<li>').addClass('menu-item');
+                        if (getBitValue(data.level, 1) === 1) {
+                            orgMenu.push({'menuItemTitle': 'Товары', 'menuItemHref': '/products/'})
+                        }
 
-                        var menuSubA = $('<a>').attr({
-                            href: orgMenu.menuItemHref + data.id,
-                            class: 'menu-link'
-                        });
+                        if (getBitValue(data.level, 2) === 1) {
+                            orgMenu.push({'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': '/tasks/'})
+                        }
 
-                        var menuSubDiv = $('<div>').addClass('text-truncate').text(orgMenu.menuItemTitle);
+                        if (getBitValue(data.level, 3) === 1) {
+                            orgMenu.push({'menuItemTitle': 'Отзывы', 'menuItemHref': '/reviews/'})
+                        }
 
-                        menuSubA.append(menuSubDiv);
-                        menuSubItem.append(menuSubA);
-                        menuSub.append(menuSubItem)
-
-                    })
+                        if (getBitValue(data.level, 4) === 1) {
+                            orgMenu.push({'menuItemTitle': 'Статусы заказов WB', 'menuItemHref': '/orders/'})
+                        }
 
 
-                    menuItem.append(menuItemA, menuSub);
+                        orgMenu.forEach(function (orgMenu) {
 
-                    orgsOther.after(menuItem);
+                            var ItemHREF = orgMenu.menuItemHref + data.organization.id
+                            var menuSubItemClass = 'menu-item'
+
+                            if (ItemHREF === currentPage) {
+                                menuItem.addClass('open active')
+                                menuSubItemClass = 'menu-item active'
+                            }
+
+                            var menuSubItem = $('<li>').addClass(menuSubItemClass);
+
+                            var menuSubA = $('<a>').attr({
+                                href:  orgMenu.menuItemHref + data.organization.id,
+                                class: 'menu-link'
+                            });
+
+                            var menuSubDiv = $('<div>').addClass('text-truncate').text(orgMenu.menuItemTitle);
+
+                            menuSubA.append(menuSubDiv);
+                            menuSubItem.append(menuSubA);
+                            menuSub.append(menuSubItem)
+
+                        })
+
+
+                        menuItem.append(menuItemA, menuSub);
+
+                        orgsOther.after(menuItem);
+
+                    }
+
 
                 });
             }
@@ -630,6 +660,42 @@
 
 </script>
 
+<!-- Get Self Profile -->
+<script>
+
+    $(document).ready(function () {
+
+        $.ajax({
+
+            url: '/auth/getSelfProfile',
+            method: 'get',
+
+            success: function (data) {
+                document.getElementById('nav-name').innerText = data.name
+                document.getElementById('nav-username').innerText = data.username
+
+                var host = window.location.host
+                // Получаем URL картинки
+                var imageUrl = '/storage/get/4m0Tqv66dBUakFPu.png';
+
+                var imageElement1 = $('<img class="w-px-40 h-auto rounded-circle">');
+                var imageElement2 = $('<img class="w-px-40 h-auto rounded-circle">');
+
+                imageElement1.attr('src', imageUrl);
+                imageElement2.attr('src', imageUrl);
+
+                $('#my-avatar-nav').append(imageElement1);
+
+                $('#my-avatar-drop').append(imageElement2);
+
+
+            },
+
+        });
+
+
+    });
+</script>
 
 {% block js %}{% endblock %}
 
