@@ -7,7 +7,7 @@ from auth.models import UserModel
 from auth.utils import authed
 from storage.repository import StorageRepository
 from storage.schemas import StorageGETSchema, StoragePOSTSchema
-from storage.utils import generate_filename
+from storage.utils import generate_filename, autosave_file
 from strings import *
 
 from io import BytesIO
@@ -41,69 +41,11 @@ async def save(user: UserModel = Depends(authed),
     :return: storage get schema
     """
 
-    fileinfo = file.filename.rsplit('.', maxsplit=1)
+    try:
+        storage_record = await autosave_file(file, user)
 
-    if len(fileinfo) != 2:
-        raise HTTPException(status_code=415, detail=string_storage_wrong_filetype)
-
-    filename = fileinfo[0]
-    filetype = fileinfo[1]
-
-    if len(filename) == 0:
-        raise HTTPException(status_code=415, detail=string_storage_empty_filename)
-
-    if not (filetype in OTHER_TYPES or filetype in IMAGE_TYPES or filetype in VIDEO_TYPES):
-        raise HTTPException(status_code=415, detail=string_storage_wrong_filetype)
-
-    file_content = await file.read()
-
-    if filetype in IMAGE_TYPES and len(file_content) > IMAGE_MAX_SIZE:
-        raise HTTPException(status_code=413, detail=string_storage_max_size)
-
-    if filetype in VIDEO_TYPES and len(file_content) > VIDEO_MAX_SIZE:
-        raise HTTPException(status_code=413, detail=string_storage_max_size)
-
-    if filetype in OTHER_TYPES and len(file_content) > OTHER_MAX_SIZE:
-        raise HTTPException(status_code=413, detail=string_storage_max_size)
-
-    new_filename = generate_filename()
-
-    data_dict = {
-        'title': filename,
-        'description': filename,
-        'storage_href': f'{new_filename}.{filetype}',
-        'type': filetype,
-        'owner_id': user.id
-    }
-
-    data = StoragePOSTSchema.model_validate(data_dict)
-    storage_record = await StorageRepository.save(data)
-
-    if not storage_record:
-        raise HTTPException(status_code=500, detail=string_500)
-
-    if filetype in IMAGE_TYPES:
-
-        filetype = 'jpeg' if filetype == 'jpg' else filetype
-
-        image = Image.open(BytesIO(file_content))
-        image.seek(0)
-        output = BytesIO()
-
-        if len(file_content) > 1048576:
-            quality = 20
-        else:
-            quality = 70
-
-        image.save(output, format=filetype, quality=quality, optimize=True)
-
-        with open(f'{LOCAL_STORAGE_PATH}/{storage_record.storage_href}', 'wb') as f:
-            f.write(output.getvalue())
-
-    else:
-
-        with open(f'{LOCAL_STORAGE_PATH}/{storage_record.storage_href}', 'wb') as buffer:
-            buffer.write(file_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     dto = StorageGETSchema.model_validate(storage_record, from_attributes=True)
 

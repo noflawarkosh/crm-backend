@@ -18,3 +18,22 @@ string_inv_blocked_member = 'Вы были заблокированы владе
 string_storage_max_size = 'Файл слишком большой'
 string_storage_wrong_filetype = 'Неверный формат файла'
 string_storage_empty_filename = 'Имя файла не указано'
+string_storage_saving_error_db = 'Ошибка при информации о файле'
+
+string_user_email_exist = 'Указанный адрес электронной почты уже используется'
+string_user_username_exist = 'Указанный логин уже используется'
+string_user_telnum_exist = 'Указанный номер телефона уже используется'
+string_user_telegram_exist = 'Указанный тег Telegram уже используется'
+
+string_product_parsing_error = 'Ошибка при парсинге карточки товара Wildberries'
+string_product_parsing_url_error = 'Невозможно определить артикул товара. Проверьте правильность ссылки'
+string_product_products_response_error = 'Ошибка получения данных от Wildberries'
+string_product_products_response_empty = 'Товары по артикулу не найдены'
+string_products_product_not_found = 'Товар не найден'
+
+string_product_size_not_in_stock = 'Размер товара не в наличии'
+string_product_product_not_in_stock = 'Товар не в наличии'
+string_product_multiple_sizes_error = 'Укажите размер товара (товар имеет несколько размеров)'
+string_product_size_not_found = 'Товар не найден'
+string_product_size_not_selected_but_match = 'Размер не указан'
+string_product_too_many_files = 'Максимальное количество файлов 5'

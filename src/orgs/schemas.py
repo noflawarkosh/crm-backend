@@ -41,10 +41,13 @@ class OrganizationInvitationPOSTSchema(BaseModel):
     amount: int
 
 
-class OrganizationInvitationGETSchema(OrganizationInvitationPOSTSchema):
+class OrganizationInvitationDTOSchema(OrganizationInvitationPOSTSchema):
+    code: str
+
+
+class OrganizationInvitationGETSchema(OrganizationInvitationDTOSchema):
     id: int
     org_id: int
-    code: str
     created: datetime.datetime
 
 

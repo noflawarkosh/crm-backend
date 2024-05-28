@@ -2,8 +2,7 @@ from typing import Optional
 from pydantic import BaseModel, constr
 
 
-class UserSchema(BaseModel):
-    id: Optional[int] = None
+class UserPOSTSchema(BaseModel):
     name: constr(max_length=100)
     username: constr(min_length=5, max_length=20)
     email: constr(max_length=100)

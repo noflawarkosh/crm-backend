@@ -14,7 +14,7 @@ from orgs.schemas import (
     OrganizationInvitationRELSchema,
     OrganizationMembershipGETSchema,
     OrganizationMembershipPOSTSchema,
-    OrganizationMembershipRELSchema, OrganizationMembershipRELwOrgSchema
+    OrganizationMembershipRELSchema, OrganizationMembershipRELwOrgSchema, OrganizationInvitationDTOSchema
 )
 
 from orgs.repository import (
@@ -22,6 +22,7 @@ from orgs.repository import (
     InvitationRepository,
     MembershipRepository
 )
+from orgs.utils import generate_invitation_code
 
 from strings import *
 
@@ -106,7 +107,10 @@ async def create_invitation(data: Annotated[OrganizationInvitationPOSTSchema, De
     if organization.owner_id != user.id:
         raise HTTPException(status_code=403, detail=string_403)
 
-    invitation = await InvitationRepository.add_one(data)
+    invitation = await InvitationRepository.add_one(
+        OrganizationInvitationDTOSchema(**data_dict, code=generate_invitation_code())
+    )
+
     dto = OrganizationInvitationGETSchema.model_validate(invitation, from_attributes=True)
 
     return dto

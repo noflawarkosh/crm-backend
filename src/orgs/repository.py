@@ -3,7 +3,6 @@ from sqlalchemy import select, and_, func, tuple_
 from sqlalchemy.orm import selectinload, aliased
 
 from database import async_session_factory
-from orgs.utils import generate_invitation_code
 from strings import *
 
 from orgs.models import (
@@ -138,7 +137,6 @@ class InvitationRepository:
             async with async_session_factory() as session:
 
                 data_dict = data.model_dump()
-                data_dict['code'] = generate_invitation_code()
                 new_invitation = OrganizationInvitationModel(**data_dict)
                 session.add(new_invitation)
 

@@ -125,7 +125,7 @@ async def registration_page(request: Request,
         if not membership or membership.status_id != 1 or not (membership.level & 2):
             return RedirectResponse('/403')
 
-    return templates.TemplateResponse('orgs-loyalty.html', {'request': request})
+    return templates.TemplateResponse('orgs-products.html', {'request': request})
 
 
 @router.get('/tasks/{org_id}')
@@ -167,7 +167,7 @@ async def registration_page(request: Request,
         if not membership or membership.status_id != 1 or not (membership.level & 8):
             return RedirectResponse('/403')
 
-    return templates.TemplateResponse('orgs-loyalty.html', {'request': request})
+    return templates.TemplateResponse('orgs-reviews.html', {'request': request})
 
 
 @router.get('/orders/{org_id}')

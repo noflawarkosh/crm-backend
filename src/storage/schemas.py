@@ -14,3 +14,10 @@ class StoragePOSTSchema(BaseModel):
 class StorageGETSchema(StoragePOSTSchema):
     id: int
     date: datetime.datetime
+
+
+class StorageFileSchema(BaseModel):
+    name: str
+    size: int
+    content: bytes
+    href: str

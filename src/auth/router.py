@@ -3,11 +3,13 @@ from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from auth.repository import UserRepository
 from database import get_async_session, check_field_is_unique
 
 from auth.models import UserModel, UserStatusHistoryModel, UserSessionModel
-from auth.schemas import UserSchema, LoginSchema, UserProfileSchema, UpdateProfileSchema
+from auth.schemas import LoginSchema, UserProfileSchema, UpdateProfileSchema, UserGETSchema, UserPOSTSchema
 from auth.utils import hash_password, generate_token, any, authed, not_authed
+from strings import *
 
 router = APIRouter(
     prefix="/auth",
@@ -16,39 +18,30 @@ router = APIRouter(
 
 
 @router.post('/register')
-async def register(request: Request,
-                   response: Response,
-                   data: Annotated[UserSchema, Depends()],
-                   user: UserModel = Depends(not_authed),
-                   session: AsyncSession = Depends(get_async_session)):
+async def register(data: Annotated[UserPOSTSchema, Depends()],
+                   user: UserModel = Depends(not_authed)
+                   ) -> UserGETSchema:
 
     data_dict = data.model_dump()
     data_dict['email'] = data_dict['email'].lower()
     data_dict['username'] = data_dict['username'].lower()
-    data_dict['password'] = hash_password(data_dict['password'])
 
-    if not await check_field_is_unique(UserModel.email, data.email):
-        return {'result': 'error', 'details': 'Указанная почта уже используется'}
+    if not await check_field_is_unique(UserModel.email, data_dict['email']):
+        raise HTTPException(status_code=409, detail=string_user_email_exist)
 
-    if not await check_field_is_unique(UserModel.username, data.username):
-        return {'result': 'error', 'details': 'Указанный логин уже используется'}
+    if not await check_field_is_unique(UserModel.username, data_dict['username']):
+        raise HTTPException(status_code=409, detail=string_user_username_exist)
 
-    if not await check_field_is_unique(UserModel.telnum, data.telnum):
-        return {'result': 'error', 'details': 'Указанный телефон уже используется'}
+    if not await check_field_is_unique(UserModel.telnum, data_dict['telnum']):
+        raise HTTPException(status_code=409, detail=string_user_telnum_exist)
 
-    if not await check_field_is_unique(UserModel.telegram, data.telegram):
-        return {'result': 'error', 'details': 'Указанный тег телеграмм уже используется'}
+    if not await check_field_is_unique(UserModel.telegram, data_dict['telegram']):
+        raise HTTPException(status_code=409, detail=string_user_telegram_exist)
 
-    new_user = UserModel(**data_dict)
-    session.add(new_user)
-    await session.flush()
+    new_user = await UserRepository.register(data)
+    dto = UserGETSchema.model_validate(new_user, from_attributes=True)
 
-    new_user_status = UserStatusHistoryModel(user_id=new_user.id, status_id=1)
-    session.add(new_user_status)
-
-    await session.commit()
-
-    return {'result': 'success', 'details': 'Успешная регистрация'}
+    return dto
 
 
 @router.post('/login')
