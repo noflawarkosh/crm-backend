@@ -2,5 +2,6 @@
 /.idea/
 /__pycache__/
 .env
-/src/storage/files
-/migrations/versions
+/src/storage/files/
+/migrations/versions/
+
