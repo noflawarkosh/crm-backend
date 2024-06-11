@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from auth.models import UserModel
-from auth.utils import authed
+from auth.router import authed
 from orgs.repository import OrganizationRepository
 from payments.repository import PaymentsRepository
 from payments.schemas import BalanceBillPOSTSchema, BalanceBillGETSchema, BalanceBillRELSchema, BalanceSourceGETSchema

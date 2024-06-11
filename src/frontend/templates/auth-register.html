@@ -11,7 +11,7 @@
     <title>GreedyBear - Регистрация</title>
 
 
-    <link rel="icon" type="image/x-icon" href="../../assets/img/favicon/favicon.ico"/>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='assets/img/icons/logo.ico') }}"/>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,31 +47,20 @@
 <div class="authentication-wrapper authentication-cover">
     <div class="authentication-inner row m-0">
 
-        <!-- /Left Text -->
         <div class="d-none d-lg-flex col-lg-7 col-xl-8 align-items-center p-5">
             <div class="w-100 d-flex justify-content-center">
-                <img src="{{ url_for('static', path='assets/img/illustrations/girl-with-laptop-light.png') }}"
-                     class="img-fluid" alt="Login image"
-                     width="700" data-app-dark-img="illustrations/girl-with-laptop-dark.png"
-                     data-app-light-img="illustrations/girl-with-laptop-light.png">
-
+                <img src="{{ url_for('static', path='assets/img/logos/logo_t.png') }}" class="img-fluid" width="1000">
             </div>
         </div>
-        <!-- /Left Text -->
 
-        <!-- Register -->
         <div class="d-flex col-12 col-lg-5 col-xl-4 align-items-center authentication-bg p-sm-5 p-4">
             <div class="w-px-400 mx-auto">
-                <!-- Logo -->
-                <div class="app-brand mb-5">
-                    <a href="index.html" class="app-brand-link gap-2">
+                <div class="app-brand mb-3">
+                    <p class="app-brand-link gap-2">
                         <span class="app-brand-text demo text-body fw-bold">greedybear</span>
-                    </a>
+                    </p>
                 </div>
-                <!-- /Logo -->
                 <h4 class="mb-4">Регистрация пользователя </h4>
-
-
                 <form id="reg">
 
                     <div class="mb-3">
@@ -100,7 +89,6 @@
                         </div>
                     </div>
 
-
                     <div class="mb-3">
                         <label for="telegram" class="form-label">Telegram *</label>
                         <div class="input-group">
@@ -121,7 +109,7 @@
                         </div>
                     </div>
 
-                    <div class="mb-3 form-password-toggle">
+                    <div class="mb-4 form-password-toggle">
                         <label class="form-label" for="password2">Повтор пароля *</label>
                         <div class="input-group input-group-merge">
                             <input type="password" id="password2" class="form-control" name="password2"
@@ -132,7 +120,7 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-4">
 
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="terms-conditions1" name="terms1">
@@ -156,7 +144,7 @@
                     </button>
                 </form>
 
-                <p class="text-center mt-2">
+                <p class="text-center mt-3">
                     <span>Уже зарегистрированы?</span>
                     <a href="/login">
                         <span>Войти</span>
@@ -175,8 +163,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.0.1/js/toastr.js"></script>
 
 <script>
-    // Show password buttons
+
     $(document).ready(function () {
+
         $('#password-toggle1').click(function () {
             var input = $('#password1');
             var icon = $('#password-toggle1');
@@ -188,6 +177,7 @@
                 icon.removeClass('bx-show').addClass('bx-hide');
             }
         });
+
         $('#password-toggle2').click(function () {
             var input = $('#password2');
             var icon = $('#password-toggle2');
@@ -203,7 +193,7 @@
 </script>
 
 <script>
-    // Inputmasks
+
     $(document).ready(function () {
 
         passwordOptions = {
@@ -341,20 +331,12 @@
         $.ajax({
             url: url,
             method: 'post',
-            success: function (data) {
-                if (data.result === 'success') {
-                    toastr.success(nameInput.value + ', ваша заявка на регистрацию успешно создана. Ожидайте письмо с результатом');
-                    location.reload()
-                }
-
-                if (data.result === 'error') {
-                    toastr.error(data.details)
-                }
-                submitButton.classList.remove('disabled');
+            success: function () {
+                location.replace('/success?name='+ nameInput.value)
             },
 
-            error: function () {
-                toastr.error('Произошла ошибка сервера при регистрации. Обновите страницу и повторите попытку');
+            error: function (data) {
+                toastr.error(data.responseJSON.detail);
                 submitButton.classList.remove('disabled');
             }
         });

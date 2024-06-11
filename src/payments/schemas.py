@@ -2,7 +2,7 @@ import datetime
 from typing import Optional
 from pydantic import BaseModel, constr
 
-from orgs.schemas import OrganizationGETSchema
+from orgs.schemas import OrganizationReadSchema
 from storage.schemas import StorageGETSchema
 
 
@@ -21,7 +21,7 @@ class BalanceHistoryGETSchema(BaseModel):
 
 
 class BalanceHistoryRELSchema(BalanceHistoryGETSchema):
-    organization: OrganizationGETSchema
+    organization: 'OrganizationReadSchema'
     action: BalanceActionSchema
 
 
@@ -56,7 +56,7 @@ class BalanceBillGETSchema(BalanceBillPOSTSchema):
 
 class BalanceBillRELSchema(BalanceBillGETSchema):
 
-    organization: OrganizationGETSchema
+    organization: 'OrganizationReadSchema'
     source: BalanceSourceGETSchema
     status: BalanceBillStatusSchema
-    media: StorageGETSchema | None
+    media: 'StorageGETSchema'

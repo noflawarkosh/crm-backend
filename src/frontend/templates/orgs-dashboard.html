@@ -98,8 +98,6 @@
     function setLevel(user_id, level, name, username) {
         if (confirm("Вы уверены, что установить пользователю " + name + '(@' + username + ") уровень " + level)) {
 
-
-
             $.ajax({
 
                 url: '/orgs/setMemberLevel?user_id=' + user_id + '&level=' + level,
@@ -129,7 +127,7 @@
 
         $.ajax({
 
-            url: '/orgs/getOrg?org_id=' + id,
+            url: '/organizations/readOrganization?org_id=' + id,
             method: 'get',
 
             success: function (data) {
@@ -144,7 +142,7 @@
 
         $.ajax({
 
-            url: '/orgs/getMembers?org_id=' + id,
+            url: '/organizations/readOrganizationMemberships?org_id=' + id,
             method: 'get',
 
             success: function (data) {
@@ -175,13 +173,18 @@
                             dropMenu += '<button href="##" onclick="blockUser(' + attrs + ')" class="dropdown-item">Заблокировать</button>'
                         }
 
+                        var image_href = '/storage/get/4m0Tqv66dBUakFPu.png';
+                        if (item.user.media != null) {
+                            image_href =  '/storage/get/' + item.user.media.storage_href
+                        }
+
 
                         var row = '<tr>' +
                             '<td>' +
                             '<div class="d-flex justify-content-start align-items-center user-name">' +
                             '<div class="avatar-wrapper">' +
                             '<div class="avatar avatar-sm me-3">' +
-                            '<img src="../../assets/img/avatars/2.png" alt="Avatar" class="rounded-circle">' +
+                            '<img src="'+ image_href + '" alt="Avatar" class="rounded-circle">' +
                             '</div>' +
                             '</div>' +
                             '<div class="d-flex flex-column">' +
@@ -286,7 +289,7 @@
 
 
         const currentDomain = window.location.origin;
-        const url = new URL('/orgs/createInvitation', currentDomain);
+        const url = new URL('/organizations/createInvitation', currentDomain);
         url.searchParams.append('org_id', org_id);
         url.searchParams.append('level', level);
         url.searchParams.append('expires', expiresInput.value);
@@ -321,7 +324,7 @@
 
         $.ajax({
 
-            url: '/orgs/getAllInvitations?org_id=' + org_id,
+            url: '/organizations/readInvitations?org_id=' + org_id,
             type: 'GET',
 
             success: function (data) {
@@ -495,12 +498,10 @@
                     aria-label="Закрыть"></button>
         </div>
 
-        <div class="offcanvas-body my-auto mx-0 flex-grow-0">
+        <div class="offcanvas-body my-auto mx-0 ">
 
             <form id="create-invitation-form">
 
-                <h5>Основные параметры</h5>
-                <hr>
                 <div class="mb-3 row">
 
 
@@ -509,15 +510,14 @@
                         <input class="form-control" type="number" value="5" id="inv-amount">
                     </div>
                 </div>
-                <div class="mb-5 row">
+                <div class="mb-4 row">
                     <label for="inv-expires" class="form-label">Истекает</label>
                     <div class="col-md-10">
                         <input class="form-control" type="datetime-local" id="inv-expires">
                     </div>
                 </div>
 
-                <h5>Права доступа</h5>
-                <hr>
+
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" value="1" id="R1" name="rights">
                     <label class="form-check-label" for="R1">Доступ к товарам</label>

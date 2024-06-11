@@ -1,8 +1,9 @@
 from typing import Annotated
 from sqlalchemy import text, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
-from orgs.models import Base
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 import datetime
+
+from orgs.models import Base
 
 pk = Annotated[int, mapped_column(primary_key=True)]
 dt = Annotated[datetime.datetime, mapped_column(server_default=text('NOW()'))]

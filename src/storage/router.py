@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Response, Request, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from auth.models import UserModel
-from auth.utils import authed
+from auth.router import authed
 from storage.repository import StorageRepository
 from storage.schemas import StorageGETSchema, StoragePOSTSchema
 from storage.utils import generate_filename, autosave_file

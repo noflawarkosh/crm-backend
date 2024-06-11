@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+
+<html lang="ru" class="light-style layout-navbar-fixed layout-menu-fixed layout-compact " dir="ltr"
+      data-theme="theme-default" data-assets-path="../../assets/" data-template="vertical-menu-template">
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
+
+    <title>{% block title %}{% endblock %} - GreedyBear</title>
+
+    <link rel="icon" type="image/x-icon" href=""/>
+
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap">
+
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/fonts/boxicons.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/fonts/fontawesome.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/fonts/flag-icons.css') }}"/>
+
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/css/rtl/core.css') }}"
+          class="template-customizer-core-css"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/css/rtl/theme-default.css') }}"
+          class="template-customizer-theme-css"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='assets/css/demo.css') }}"/>
+
+
+    <!-- Vendors CSS -->
+    <link rel="stylesheet"
+          href="{{ url_for('static', path='assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css') }}"/>
+    <link rel="stylesheet"
+          href="{{ url_for('static', path='assets/vendor/libs/typeahead-js/typeahead.css') }}"/>
+    <link rel="stylesheet"
+          href="{{ url_for('static', path='assets/vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css') }}">
+    <link rel="stylesheet"
+          href="{{ url_for('static', path='assets/vendor/libs/flatpickr/flatpickr.css') }}"/>
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.0.1/css/toastr.css"/>
+    <link rel="stylesheet"
+          href="{{ url_for('static', path='assets/vendor/libs/datatables-bs5/datatables.bootstrap5.css') }}">
+
+    <!-- Page CSS -->
+    {% block head %}{% endblock %}
+
+    <!-- Helpers -->
+    <script src="{{ url_for('static', path='assets/vendor/js/helpers.js') }}"></script>
+    <script src="{{ url_for('static', path='assets/js/config.js') }}"></script>
+</head>
+
+
+<body>
+<div class="layout-wrapper layout-content-navbar">
+    <div class="layout-container">
+
+        <!-- Side Menu -->
+        <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+
+            <div class="app-brand demo ">
+                <a href="/admin/dashboard" class="app-brand-link">
+                    <span class="app-brand-logo demo"></span>
+                    <span class="app-brand-text demo menu-text fw-bold ms-2">greedybear</span>
+                </a>
+                <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+                    <i class="bx bx-chevron-left bx-sm align-middle"></i>
+                </a>
+            </div>
+
+            <ul class="menu-inner py-1" id="aside-menu">
+
+                <li class="menu-header small text-uppercase">
+                    <span class="menu-header-text" data-i18n="Выкупы"></span>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/admin-tables-servers" class="menu-link">
+                        <i class="menu-icon tf-icons bx bxs-server"></i>
+                        <div class="text-truncate" data-i18n="Серверы"></div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/admin-scripts-planner" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-table"></i>
+                        <div class="text-truncate" data-i18n="Планирование"></div>
+                    </a>
+                </li>
+
+
+                <li class="menu-header small text-uppercase">
+                    <span class="menu-header-text" data-i18n="База данных"></span>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/dashboard" class="menu-link">
+                        <i class="menu-icon tf-icons bx bxs-user-account"></i>
+                        <div class="text-truncate" data-i18n="Аккаунты"></div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/dashboard" class="menu-link">
+                        <i class="menu-icon tf-icons bx bxs-cart"></i>
+                        <div class="text-truncate" data-i18n="Заказы"></div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/dashboard" class="menu-link">
+                        <i class="menu-icon tf-icons bx bxs-building"></i>
+                        <div class="text-truncate" data-i18n="Адреса"></div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/dashboard" class="menu-link">
+                        <i class="menu-icon tf-icons bx bxs-truck"></i>
+                        <div class="text-truncate" data-i18n="Подрядчики"></div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/admin-tables-users" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-user"></i>
+                        <div class="text-truncate" data-i18n="Пользователи"></div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/admin-tables-orgs" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-group"></i>
+                        <div class="text-truncate" data-i18n="Организации"></div>
+                    </a>
+                </li>
+
+                <li class="menu-header small text-uppercase">
+                    <span class="menu-header-text" data-i18n="Системные"></span>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/dashboard" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-data"></i>
+                        <div class="text-truncate" data-i18n="Хранилище">Пользователи</div>
+                        <span class="badge bg-info ms-auto">104 Gb</span>
+                    </a>
+                </li>
+
+            </ul>
+
+        </aside>
+
+        <!-- Top Nav -->
+        <div class="layout-page">
+
+            <nav class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
+                 id="layout-navbar">
+
+                <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none ">
+                    <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
+                        <i class="bx bx-menu bx-sm"></i>
+                    </a>
+                </div>
+
+                <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
+
+                    <div class="navbar-nav align-items-center me-3 me-xl-0">
+                        <a href="/admin-tables-users" class="nav-link">
+                            <i class="bx bx-user-plus bx-sm"></i>
+                            <span class="badge bg-danger rounded-pill badge-notifications" id="c-users"
+                                  style="display:none"></span>
+                        </a>
+                    </div>
+
+                    <div class="navbar-nav align-items-center me-3 me-xl-0">
+                        <a href="/admin-tables-orgs" class="nav-link">
+                            <i class="bx bx-group bx-sm"></i>
+                            <span class="badge bg-danger rounded-pill badge-notifications" id="c-orgs"
+                                  style="display:none"></span>
+                        </a>
+                    </div>
+
+                    <div class="navbar-nav align-items-center">
+                        <a href="/admin-tables-users" class="nav-link">
+                            <i class="bx bx-credit-card-front bx-sm"></i>
+                            <span class="badge bg-danger rounded-pill badge-notifications" id="c-bills"
+                                  style="display:none"></span>
+                        </a>
+                    </div>
+
+                    <ul class="navbar-nav flex-row align-items-center ms-auto">
+
+                        <!-- User -->
+                        <li class="nav-item navbar-dropdown dropdown-user dropdown">
+
+                            <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);"
+                               data-bs-toggle="dropdown">
+                                <div class="avatar avatar-online" id="my-avatar-nav">
+                                    <img class="w-px-40 rounded-circle"
+                                         src="{{ url_for('static', path='assets/img/avatars/wq69JnM9.jpg') }}">
+                                </div>
+                            </a>
+
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="admin/profile">
+                                        <div class="d-flex">
+                                            <div class="flex-shrink-0 me-3">
+                                                <div class="avatar avatar-online" id="my-avatar-drop">
+                                                    <img class="w-px-40 rounded-circle"
+                                                         src="{{ url_for('static', path='assets/img/avatars/wq69JnM9.jpg') }}">
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <span class="fw-medium d-block" id="nav-name">Ненахов А. И.</span>
+                                                <small class="text-muted" id="nav-username">Генеральный директор</small>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </li>
+                                <li>
+                                    <div class="dropdown-divider"></div>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/settings">
+                                        <i class="bx bx-cog me-2"></i>
+                                        <span class="align-middle">Настройки</span>
+                                    </a>
+                                </li>
+
+
+                                <li>
+                                    <div class="dropdown-divider"></div>
+                                </li>
+
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="logout();">
+                                        <i class="bx bx-power-off me-2"></i>
+                                        <span class="align-middle">Выйти</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+
+                    </ul>
+                </div>
+
+                <!-- Search Small Screens -->
+                <div class="navbar-search-wrapper search-input-wrapper  d-none">
+                    <input type="text" class="form-control search-input container-xxl border-0"
+                           placeholder="Введите запрос"
+                           aria-label="Введите запрос...">
+                    <i class="bx bx-x bx-sm search-toggler cursor-pointer"></i>
+                </div>
+
+            </nav>
+
+            <!-- Content -->
+            <div class="content-wrapper">
+
+                {% block content %}
+                {% endblock %}
+
+                <div class="content-backdrop fade"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay -->
+    <div class="layout-overlay layout-menu-toggle"></div>
+
+    <!-- Drag Target Area To SlideIn Menu On Small Screens -->
+    <div class="drag-target"></div>
+
+</div>
+
+<script src="{{ url_for('static', path='assets/js/app-user-view-account.js') }}"></script>
+
+<script src="{{ url_for('static', path='assets/vendor/libs/jquery/jquery.js') }}"></script>
+<script src="{{ url_for('static', path='assets/vendor/libs/popper/popper.js') }}"></script>
+<script src="{{ url_for('static', path='assets/vendor/js/bootstrap.js') }}"></script>
+<script src="{{ url_for('static', path='assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js') }}"></script>
+<script src="{{ url_for('static', path='assets/vendor/libs/hammer/hammer.js') }}"></script>
+<script src="{{ url_for('static', path='assets/vendor/libs/i18n/i18n.js') }}"></script>
+<script src="{{ url_for('static', path='assets/vendor/libs/typeahead-js/typeahead.js') }}"></script>
+<script src="{{ url_for('static', path='assets/vendor/js/menu.js') }}"></script>
+<script src="{{ url_for('static', path='assets/vendor/libs/datatables-bs5/datatables-bootstrap5.js') }}"></script>
+<script src="{{ url_for('static', path='assets/vendor/libs/moment/moment.js') }}"></script>
+<script src="{{ url_for('static', path='assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
+<script src="{{ url_for('static', path='assets/js/main.js') }}"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.0.1/js/toastr.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/3.3.4/jquery.inputmask.bundle.min.js"></script>
+
+<script>
+    function logout() {
+        $.ajax({
+            url: '/admin/logout',
+            method: 'get',
+
+            success: function () {
+                location.reload()
+            },
+
+            error: function (data) {
+                toastr.error(data.responseJSON.detail);
+            }
+        });
+    }
+</script>
+
+
+<script>
+    $.ajax({
+        url: '/admin/get/User',
+        method: 'get',
+
+        success: function (data) {
+            var amount = 0
+
+            for (var i = 0; i < data.length; i++) {
+                if (data[i].statuses[data[i].statuses.length - 1].status.id === 1) {
+                    amount += 1
+                }
+            }
+            if (amount > 0) {
+                $('#c-users').show()
+                $('#c-users').html(amount)
+            }
+
+        },
+
+        error: function (data) {
+            toastr.error(data.responseJSON.detail);
+        }
+    });
+
+    $.ajax({
+        url: '/admin/get/Organization',
+        method: 'get',
+
+        success: function (data) {
+            var amount = 0
+
+            for (var i = 0; i < data.length; i++) {
+                if (data[i].statuses[data[i].statuses.length - 1].status.id === 1) {
+                    amount += 1
+                }
+            }
+
+            if (amount > 0) {
+                $('#c-orgs').show()
+                $('#c-orgs').html(amount)
+            }
+        },
+
+        error: function (data) {
+            toastr.error(data.responseJSON.detail);
+        }
+    });
+</script>
+
+{% block js %}{% endblock %}
+
+</body>
+</html>

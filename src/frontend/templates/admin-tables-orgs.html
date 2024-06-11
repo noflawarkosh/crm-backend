@@ -1,0 +1,184 @@
+{% extends "!base-admin.html" %}
+{% block title %}Пользователи{% endblock %}
+{% block css %}
+
+{% endblock %}
+
+{% block js %}
+<script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script>
+
+    function updateUserStatus(user_id, status_id) {
+
+        $.ajax({
+            type: "POST",
+            url: '/admin/save/UserStatusHistory',
+            data: {
+                status_id: status_id,
+                user_id: user_id,
+            },
+            dataType: "json",
+            success: function () {
+                var msg = 'Данные пользователя обновлены'
+
+                if (status_id === 2) {
+                    msg = 'Пользователь разблокирован'
+                }
+
+                if (status_id === 3) {
+                    msg = 'Пользователь заблокирован'
+                }
+
+                toastr.success(msg)
+                refresh()
+
+            },
+            error: function () {
+                toastr.error('Ошибка обновления данных. Обновите страницу и повторите попытку')
+
+            }
+        })
+    }
+
+    $(document).ready(function () {
+        var table = $('#dt_users').DataTable({
+            "ajax": {
+                url: '/admin/get/User',
+                dataSrc: ''
+            },
+            "paging": true,
+            "pageLength": 10,
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+            "searching": true,
+            "ordering": true,
+
+            columns: [
+                {data: 'id'},
+                {data: 'name'},
+                {data: 'username'},
+                {data: 'email'},
+                {data: 'telnum'},
+                {data: 'telegram'},
+                {
+                    "data": "statuses",
+                    "render": function (data, type, row) {
+
+                        var c = 'warning'
+
+                        if (data[data.length - 1].status.id === 2) {
+                            c = 'success'
+                        }
+
+                        if (data[data.length - 1].status.id === 3) {
+                            c = 'danger'
+                        }
+
+                        return '<span class="badge bg-label-' + c + '">' + data[data.length - 1].status.title + '</span>'
+                    }
+                },
+                {
+                    "data": "statuses",
+                    "render": function (data, type, row) {
+
+                        var edit = '<a href="/admin-edit/User/' + data[data.length - 1].user_id + '"><i class="bx bx-edit-alt"></i></a>'
+
+                        if (data[data.length - 1].status.id === 1) {
+                            return edit + '<a href="##" onclick="updateUserStatus(' + data[data.length - 1].user_id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>' +
+                                '<a href="##" onclick="updateUserStatus(' + data[data.length - 1].user_id + ', ' + 3 + ')"><i class="bx bx-x"></i></a>'
+                        }
+
+                        if (data[data.length - 1].status.id === 2) {
+                            return edit + '<a href="##" onclick="updateUserStatus(' + data[data.length - 1].user_id + ', ' + 3 + ')"><i class="bx bx-block"></i></a>'
+                        }
+
+                        if (data[data.length - 1].status.id === 3) {
+                            return edit + '<a href="##" onclick="updateUserStatus(' + data[data.length - 1].user_id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>'
+                        }
+
+                    }
+                }
+            ],
+
+            "order": [[0, "desc"]]
+        });
+
+    })
+    ;
+
+    function exportToXLSX() {
+        var table = $('#dt_users').DataTable();
+        var data = table.data().toArray();
+        var ws = XLSX.utils.json_to_sheet(data);
+        var wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+        var wbout = XLSX.write(wb, {bookType: 'xlsx', type: 'array'});
+        saveAs(new Blob([wbout], {type: "application/octet-stream"}), "data.xlsx");
+    }
+
+    function refresh() {
+        $('#rb').hide()
+        var table = $('#dt_users').DataTable();
+        table.clear()
+        table.draw()
+
+        $.ajax({
+            type: "GET",
+            url: '/admin/get/User',
+            dataType: "json",
+            success: function (data) {
+                table.rows.add(data).draw();
+                $('#rb').show()
+
+            },
+            error: function () {
+                toastr.error('Ошибка обновления данных. Обновите страницу и повторите попытку')
+
+            }
+        })
+
+    }
+</script>
+
+
+{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+
+    <div class="row">
+
+        <div class="col">
+            <div class="card">
+
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Управление пользователями
+
+                        <a href="##" onclick="exportToXLSX()"><i class="bx bx-download"></i></a>
+                        <a href="##" id="rb" onclick="refresh()"><i class="bx bx-refresh"></i></a>
+                    </h5>
+                    <small class="card-subtitle" id="prod-cntr"></small>
+                </div>
+
+                <div class="card-datatable p-4">
+                    <table id="dt_users" class="datatables-ajax table table-bordered dataTable no-footer">
+                        <thead>
+                        <tr>
+                            <th>#ID</th>
+                            <th>Имя</th>
+                            <th>Логин</th>
+                            <th>Почта</th>
+                            <th>Телефон</th>
+                            <th>Telegram</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

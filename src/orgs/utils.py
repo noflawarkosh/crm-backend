@@ -17,15 +17,20 @@ def generate_invitation_code():
 
 
 async def check_access(org_id: int, user_id: int, level: int):
-    organization = await OrganizationRepository.get_one(org_id)
+    organizations = await OrganizationRepository.read_organizations('id', org_id)
 
-    if not organization:
+    if len(organizations) != 1:
         raise Exception(string_orgs_org_not_found)
+
+    organization = organizations[0]
+
+    if organization.statuses[-1].status_id != 2:
+        raise Exception(string_orgs_org_not_active)
 
     if organization.owner_id == user_id:
         return organization, None
 
-    membership = await MembershipRepository.get_current(user_id, organization.id)
+    membership = await MembershipRepository.read_current(user_id, organization.id)
 
     if not membership or membership.status_id != 1 or not (membership.level & level):
         raise Exception(string_403)

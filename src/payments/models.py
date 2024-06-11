@@ -3,7 +3,6 @@ from sqlalchemy import text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import datetime
 
-from orgs.models import OrganizationModel
 from storage.models import Base, StorageModel
 
 pk = Annotated[int, mapped_column(primary_key=True)]

@@ -3,15 +3,15 @@ from sqlalchemy import text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import datetime
 
-from orgs.models import OrganizationModel
-from products.models import Base, StorageModel
+from products.models import Base
 
 pk = Annotated[int, mapped_column(primary_key=True)]
 dt = Annotated[datetime.datetime, mapped_column(server_default=text('NOW()'))]
 
 
-class OrdersServerContractorsModel(Base):
-    __tablename__ = 'orders_server_contractors'
+# Server
+class OrdersServerContractorModel(Base):
+    __tablename__ = 'orders_server_contractor'
 
     id: Mapped[pk]
     load_percent: Mapped[float]
@@ -27,9 +27,12 @@ class OrdersServerContractorsModel(Base):
     contractor_id: Mapped[int] = mapped_column(
         ForeignKey('orders_contractor.id', ondelete='CASCADE', onupdate='CASCADE')
     )
+    server_id: Mapped[int] = mapped_column(
+        ForeignKey('orders_server.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
 
     # Relationships
-    contractor: Mapped['OrganizationModel'] = relationship(lazy=False)
+    contractor: Mapped['OrdersContractorModel'] = relationship(lazy=False)
 
 
 class OrdersServerScheduleModel(Base):
@@ -39,11 +42,10 @@ class OrdersServerScheduleModel(Base):
     title: Mapped[str]
     time_min_min_per_step: Mapped[float]
     time_max_min_per_step: Mapped[float]
-    time_start: Mapped[datetime.datetime]
-    time_end: Mapped[datetime.datetime]
-    time_first_point: Mapped[datetime.datetime]
-    time_second_point: Mapped[datetime.datetime]
-    time_format: Mapped[str]
+    time_start: Mapped[datetime.time]
+    time_end: Mapped[datetime.time]
+    time_first_point: Mapped[datetime.time]
+    time_second_point: Mapped[datetime.time]
 
 
 class OrdersServerModel(Base):
@@ -61,9 +63,10 @@ class OrdersServerModel(Base):
 
     # Relationships
     schedule: Mapped['OrdersServerScheduleModel'] = relationship(lazy=False)
-    contractors: Mapped[list['OrdersServerContractorsModel']] = relationship(lazy=False)
+    contractors: Mapped[list['OrdersServerContractorModel']] = relationship(lazy=False)
 
 
+# Account
 class OrdersAccountModel(Base):
     __tablename__ = 'orders_account'
 
@@ -85,6 +88,7 @@ class OrdersAccountModel(Base):
     server: Mapped['OrdersServerModel'] = relationship(lazy=False)
 
 
+# Contractor
 class OrdersContractorModel(Base):
     __tablename__ = 'orders_contractor'
 
@@ -93,6 +97,7 @@ class OrdersContractorModel(Base):
     is_active: Mapped[bool]
 
 
+# Address
 class OrdersAddressModel(Base):
     __tablename__ = 'orders_address'
 
@@ -103,6 +108,7 @@ class OrdersAddressModel(Base):
     is_active: Mapped[bool]
 
 
+# Order
 class OrdersOrderStatusHistoryModel(Base):
     __tablename__ = 'orders_order_status_history'
     id: Mapped[pk]
@@ -125,4 +131,4 @@ class OrdersOrderModel(Base):
     # FK
     product_id: Mapped[int] = mapped_column(ForeignKey('products_product.id', ondelete='CASCADE', onupdate='CASCADE'))
     size_id: Mapped[int] = mapped_column(ForeignKey('products_product_size.id', ondelete='CASCADE', onupdate='CASCADE'))
-    account_id: Mapped[int] = mapped_column(ForeignKey('account.id', ondelete='CASCADE', onupdate='CASCADE'))
+    account_id: Mapped[int] = mapped_column(ForeignKey('orders_account.id', ondelete='CASCADE', onupdate='CASCADE'))

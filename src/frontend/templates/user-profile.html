@@ -7,40 +7,39 @@
 {% endblock %}
 
 {% block js %}
+
 <script>
-    $(document).ready(function () {
+    function loadProfile(data) {
+        document.getElementById('header-name').innerText = data.name
+        document.getElementById('header-username').innerText = data.username
 
-        $.ajax({
-            url: '/auth/getSelfProfile',
-            method: 'get',
+        document.getElementById('card-name').innerText = data.name
+        document.getElementById('card-username').innerText = data.username
+        document.getElementById('card-status').innerText = 'Активный'
+        document.getElementById('card-id').innerText = data.id
 
-            success: function (data) {
-                document.getElementById('nav-name').innerText = data.name
-                document.getElementById('nav-username').innerText = data.username
+        document.getElementById('card-email').innerText = data.email
+        document.getElementById('card-telegram').innerText = data.telegram
+        document.getElementById('card-telnum').innerText = data.telnum
 
-                document.getElementById('header-name').innerText = data.name
-                document.getElementById('header-username').innerText = data.username
+        var imageUrl = '/storage/get/4m0Tqv66dBUakFPu.png';
 
-                document.getElementById('card-name').innerText = data.name
-                document.getElementById('card-username').innerText = data.username
-                document.getElementById('card-status').innerText = 'Активный'
-                document.getElementById('card-id').innerText = data.id
+        if (data.media_id !== null) {
+            imageUrl = '/storage/get/' + data.media.storage_href
+        }
 
-                document.getElementById('card-email').innerText = data.email
-                document.getElementById('card-telegram').innerText = data.telegram
-                document.getElementById('card-telnum').innerText = data.telnum
+        var imageElement1 = $('<img class="h-100 h-auto ms-0 ms-sm-4 rounded user-profile-img" style="object-fit:cover">');
 
-            },
+        imageElement1.attr('src', imageUrl);
 
-        });
+        $('#my-avatar-header').append(imageElement1);
 
-    });
-
-
+    }
 </script>
 {% endblock %}
 
 {% block content %}
+
 <div class="container-xxl flex-grow-1 container-p-y">
 
     <!-- Header -->
@@ -52,10 +51,7 @@
                          class="rounded-top">
                 </div>
                 <div class="user-profile-header d-flex flex-column flex-sm-row text-sm-start text-center mb-4">
-                    <div class="flex-shrink-0 mt-n2 mx-sm-0 mx-auto">
-                        <img src="{{ url_for('static', path='assets/img/avatars/1.png') }}" alt="user image"
-                             class="d-block h-auto ms-0 ms-sm-4 rounded user-profile-img">
-                    </div>
+                    <div class="flex-shrink-0 mt-n2 mx-sm-0 mx-auto" id="my-avatar-header"></div>
                     <div class="flex-grow-1 mt-3 mt-sm-5">
                         <div class="d-flex align-items-md-end align-items-sm-start align-items-center justify-content-md-between justify-content-start mx-4 flex-md-row flex-column gap-4">
                             <div class="user-profile-info">
@@ -149,7 +145,6 @@
             <!--/ Profile Overview -->
         </div>
         <div class="col-xl-8 col-lg-7 col-md-7">
-
 
 
         </div>

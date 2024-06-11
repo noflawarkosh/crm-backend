@@ -2,7 +2,9 @@ import datetime
 from typing import Optional
 from pydantic import BaseModel, constr
 
-from auth.schemas import UserGETSchema, UserPublicSchema
+
+# Organization status
+from auth.schemas import UserReadFullSchema
 
 
 class OrganizationStatusSchema(BaseModel):
@@ -16,46 +18,19 @@ class OrganizationStatusHistorySchema(BaseModel):
     status: OrganizationStatusSchema
 
 
-class OrganizationPOSTSchema(BaseModel):
+# Organization
+class OrganizationCreateSchema(BaseModel):
     title: constr(max_length=200)
     inn: constr(min_length=10, max_length=12)
 
 
-class OrganizationGETSchema(OrganizationPOSTSchema):
+class OrganizationReadSchema(OrganizationCreateSchema):
     id: int
-
-
-class OrganizationRELSchema(OrganizationGETSchema):
     statuses: list['OrganizationStatusHistorySchema']
 
 
-class OrganizationGETMembershipSchema(BaseModel):
-    user: UserGETSchema
-    date: datetime.datetime
-
-
-class OrganizationInvitationPOSTSchema(BaseModel):
-    org_id: int
-    level: int
-    expires: datetime.datetime
-    amount: int
-
-
-class OrganizationInvitationDTOSchema(OrganizationInvitationPOSTSchema):
-    code: str
-
-
-class OrganizationInvitationGETSchema(OrganizationInvitationDTOSchema):
-    id: int
-    org_id: int
-    created: datetime.datetime
-
-
-class OrganizationInvitationRELSchema(OrganizationInvitationGETSchema):
-    usages: list['OrganizationGETMembershipSchema'] | None
-
-
-class OrganizationMembershipPOSTSchema(BaseModel):
+# Membership
+class OrganizationMembershipCreateSchema(BaseModel):
     user_id: int
     org_id: int
     level: int
@@ -63,17 +38,25 @@ class OrganizationMembershipPOSTSchema(BaseModel):
     invitation_id: Optional[int | None]
 
 
-class OrganizationMembershipGETSchema(OrganizationMembershipPOSTSchema):
+class OrganizationMembershipReadSchema(OrganizationMembershipCreateSchema):
     id: int
     date: datetime.datetime
-
-
-class OrganizationMembershipRELSchema(BaseModel):
-    user: UserPublicSchema
-    level: int
+    user: 'UserReadFullSchema'
+    organization: 'OrganizationReadSchema'
     status: OrganizationStatusSchema
-    date: datetime.datetime
 
 
-class OrganizationMembershipRELwOrgSchema(OrganizationMembershipGETSchema):
-    organization: OrganizationGETSchema
+# Invitation
+class OrganizationInvitationCreateSchema(BaseModel):
+    org_id: int
+    level: int
+    expires: datetime.datetime
+    amount: int
+
+
+class OrganizationInvitationReadSchema(OrganizationInvitationCreateSchema):
+    id: int
+    org_id: int
+    code: str
+    created: datetime.datetime
+    usages: list['OrganizationMembershipReadSchema'] | None

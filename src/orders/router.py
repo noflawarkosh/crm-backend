@@ -2,7 +2,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from auth.models import UserModel
-from auth.utils import authed
+from auth.router import authed
 from strings import *
 
 router_tasks = APIRouter(

@@ -1,14 +1,24 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
-from sqlalchemy import select, delete, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.repository import UserRepository
-from database import get_async_session, check_field_is_unique
+from auth.repository import (
+    AuthRepository
+)
 
-from auth.models import UserModel, UserStatusHistoryModel, UserSessionModel
-from auth.schemas import LoginSchema, UserProfileSchema, UpdateProfileSchema, UserGETSchema, UserPOSTSchema
-from auth.utils import hash_password, generate_token, any, authed, not_authed
+from auth.schemas import (
+    UserReadSchema,
+    UserCreateSchema,
+    UserSessionCreateSchema,
+    UserUpdateSchema,
+    UserReadFullSchema,
+    UserSessionReadSchema
+)
+
+from auth.utils import (
+    hash_password,
+    generate_token
+)
+
 from strings import *
 
 router = APIRouter(
@@ -17,112 +27,110 @@ router = APIRouter(
 )
 
 
+async def get_session(request):
+    token = request.cookies.get(cookies_token_key)
+
+    if not token:
+        return None
+
+    return await AuthRepository.read_session(token)
+
+
+async def every(request: Request = Request):
+    session = await get_session(request)
+    if session:
+        if session.user.statuses[-1].status_id != 2:
+            return None
+
+    return session
+
+
+async def authed(request: Request = Request):
+    session = await get_session(request)
+
+    if session:
+        if session.user.statuses[-1].status_id != 2:
+            raise HTTPException(status_code=403, detail=string_user_inactive_user)
+
+        return UserSessionReadSchema.model_validate(session, from_attributes=True)
+
+    raise HTTPException(status_code=401)
+
+
+async def not_authed(request: Request = Request):
+    session = await get_session(request)
+
+    if session:
+        if session.user.statuses[-1].status_id != 2:
+            raise HTTPException(status_code=403, detail=string_user_inactive_user)
+
+        raise HTTPException(status_code=409)
+
+
 @router.post('/register')
-async def register(data: Annotated[UserPOSTSchema, Depends()],
-                   user: UserModel = Depends(not_authed)
-                   ) -> UserGETSchema:
+async def register(data: Annotated[UserCreateSchema, Depends()],
+                   session: UserSessionReadSchema = Depends(not_authed)
+                   ) -> UserReadSchema:
+    unique_fields = [
+        ('email', data.email, string_user_email_exist),
+        ('username', data.username, string_user_username_exist),
+        ('telnum', data.telnum, string_user_telnum_exist),
+        ('telegram', data.telegram, string_user_telegram_exist),
+    ]
 
-    data_dict = data.model_dump()
-    data_dict['email'] = data_dict['email'].lower()
-    data_dict['username'] = data_dict['username'].lower()
+    for field, value, error in unique_fields:
+        user_check = await AuthRepository.read_user(field, value.lower().replace(' ', ''))
+        if user_check:
+            raise HTTPException(status_code=409, detail=error)
 
-    if not await check_field_is_unique(UserModel.email, data_dict['email']):
-        raise HTTPException(status_code=409, detail=string_user_email_exist)
+    data.password = hash_password(data.password)
+    new_user = await AuthRepository.create_user(data.model_dump())
 
-    if not await check_field_is_unique(UserModel.username, data_dict['username']):
-        raise HTTPException(status_code=409, detail=string_user_username_exist)
+    if not new_user:
+        raise HTTPException(status_code=500, detail=string_user_register_error)
 
-    if not await check_field_is_unique(UserModel.telnum, data_dict['telnum']):
-        raise HTTPException(status_code=409, detail=string_user_telnum_exist)
-
-    if not await check_field_is_unique(UserModel.telegram, data_dict['telegram']):
-        raise HTTPException(status_code=409, detail=string_user_telegram_exist)
-
-    new_user = await UserRepository.register(data)
-    dto = UserGETSchema.model_validate(new_user, from_attributes=True)
-
-    return dto
+    return UserReadSchema.model_validate(new_user, from_attributes=True)
 
 
 @router.post('/login')
 async def login(request: Request,
                 response: Response,
-                data: Annotated[LoginSchema, Depends()],
-                user: UserModel = Depends(not_authed),
-                session: AsyncSession = Depends(get_async_session)):
+                username: str,
+                password: str,
+                session: UserSessionReadSchema = Depends(not_authed)
+                ):
+    user_check = await AuthRepository.read_user('username', username.lower().replace(' ', ''))
+    if not user_check:
+        raise HTTPException(status_code=403, detail=string_user_wrong_password)
 
-    query = select(UserModel).where(UserModel.username == data.username.lower())
-    db_response = await session.execute(query)
-    result = db_response.scalars().all()
+    if hash_password(password) != user_check.password:
+        raise HTTPException(status_code=403, detail=string_user_wrong_password)
 
-    if len(result) != 1:
-        return {'result': 'error', 'details': 'Неверный пользователь или пароль'}
+    if user_check.statuses[-1].status_id != 2:
+        raise HTTPException(status_code=403, detail=string_user_inactive_user)
 
-    user = result[0]
+    user_session = await AuthRepository.create_session(
+        {
+            'user_id': user_check.id,
+            'token': generate_token(128),
+            'useragent': request.headers.get('user-agent'),
+            'ip': request.client.host,
+            'is_active': True
+        }
+    )
 
-    if hash_password(data.password) != user.password:
-        return {'result': 'error', 'details': 'Неверный пользователь или пароль'}
-
-    query = select(UserStatusHistoryModel).where(UserStatusHistoryModel.user_id == user.id).order_by(
-        UserStatusHistoryModel.id.desc())
-    db_response = await session.execute(query)
-    result = db_response.scalars().all()
-
-    current_status = result[0]
-
-    if current_status.status_id != 2:
-        return {'result': 'error', 'details': 'Учетная запись не активна'}
-
-    auth_token = generate_token(64)
-
-    user_session_dict = {
-        'user_id': user.id,
-        'token': auth_token,
-        'useragent': request.headers.get('user-agent'),
-        'ip': request.client.host,
-        'is_active': True
-    }
-    user_session = UserSessionModel(**user_session_dict)
-    session.add(user_session)
-    await session.commit()
-
-    response.set_cookie(key='csrf_', value=auth_token)
-    return {'result': 'success', 'details': 'Успешная авторизация'}
+    response.set_cookie(key=cookies_token_key, value=user_session.token)
 
 
 @router.get('/logout')
 async def logout(request: Request,
                  response: Response,
-                 session: AsyncSession = Depends(get_async_session)):
-    csrf = request.cookies.get('csrf_')
-    if not csrf:
-        return {'result': 'error', 'details': 'Токен клиента отстутствует в cookies'}
-    query = update(UserSessionModel).where(UserSessionModel.token == csrf).values(is_active=False)
-    await session.execute(query)
-    await session.commit()
-
-    response.delete_cookie('csrf_')
-    return {'result': 'success', 'details': 'Успешное закрытие сессии пользователя'}
+                 session: UserSessionReadSchema = Depends(authed)
+                 ):
+    await AuthRepository.disable_session(request.cookies.get(cookies_token_key))
+    response.delete_cookie(cookies_token_key)
 
 
-@router.post('/updateSelfProfile')
-async def update_self_user_profile(request: Request,
-                                   response: Response,
-                                   data: Annotated[UpdateProfileSchema, Depends()],
-                                   user: UserModel = Depends(authed),
-                                   session: AsyncSession = Depends(get_async_session)):
-
-    user.telnum = data.telnum
-    user.email = data.email
-    user.name = data.name
-    user.telegram = data.telegram
-
-    await session.commit()
-    return {'result': 'success', 'details': 'Успешное обновление данных пользователя'}
-
-@router.get('/getSelfProfile')
-async def get_self_user_profile(request: Request,
-                                response: Response,
-                                user: UserModel = Depends(authed),
-                                session: AsyncSession = Depends(get_async_session)) -> UserProfileSchema:
-    return UserProfileSchema.model_validate(user.__dict__)
+@router.get('/myProfile')
+async def get_self_user_profile(session: UserSessionReadSchema = Depends(authed)) -> UserReadFullSchema:
+    return UserReadFullSchema.model_validate(session.user, from_attributes=True)

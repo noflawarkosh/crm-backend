@@ -3,7 +3,7 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 
 from auth.models import UserModel
-from auth.utils import authed
+from auth.router import authed
 from orgs.repository import OrganizationRepository, MembershipRepository
 from orgs.utils import check_access
 from products.repository import ProductsRepository, ReviewsRepository

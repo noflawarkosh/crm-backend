@@ -4,33 +4,33 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/3.3.4/jquery.inputmask.bundle.min.js"></script>
 
 <script>
+    function loadSettings(data) {
 
-    $(document).ready(function () {
+        document.getElementById('nav-name').innerText = data.name
+        document.getElementById('nav-username').innerText = data.username
 
-        $.ajax({
+        const inputName = document.querySelector('input[id="name"]');
+        const inputEmail = document.querySelector('input[id="email"]');
+        const inputTelegram = document.querySelector('input[id="telegram"]');
+        const inputTelnum = document.querySelector('input[id="telnum"]');
 
-            url: '/auth/getSelfProfile',
-            method: 'get',
+        inputName.setAttribute('value', data.name);
+        inputEmail.setAttribute('value', data.email);
+        inputTelegram.setAttribute('value', data.telegram);
+        inputTelnum.setAttribute('value', data.telnum);
 
-            success: function (data) {
-                document.getElementById('nav-name').innerText = data.name
-                document.getElementById('nav-username').innerText = data.username
+        var imageUrl = '/storage/get/4m0Tqv66dBUakFPu.png';
 
-                const inputName = document.querySelector('input[id="name"]');
-                const inputEmail = document.querySelector('input[id="email"]');
-                const inputTelegram = document.querySelector('input[id="telegram"]');
-                const inputTelnum = document.querySelector('input[id="telnum"]');
+        if (data.media_id !== null) {
+            imageUrl = '/storage/get/' + data.media.storage_href
+        }
 
-                inputName.setAttribute('value', data.name);
-                inputEmail.setAttribute('value', data.email);
-                inputTelegram.setAttribute('value', data.telegram);
-                inputTelnum.setAttribute('value', data.telnum);
+        var imageElement1 = $('<img alt="user-avatar" class="d-block rounded" height="100" width="100" style="object-fit: cover">');
 
-            },
+        imageElement1.attr('src', imageUrl);
 
-        });
-
-    });
+        $('#my-avatar-header').append(imageElement1);
+    }
 
 </script>
 
@@ -126,10 +126,8 @@
                 <h5 class="card-header">Настройки профиля</h5>
 
                 <div class="card-body">
-                    <div class="d-flex align-items-start align-items-sm-center gap-4">
-                        <img src="{{ url_for('static', path='assets/img/avatars/1.png') }}" alt="user-avatar"
-                             class="d-block rounded" height="100"
-                             width="100" id="uploadedAvatar">
+                    <div class="d-flex align-items-start align-items-sm-center gap-4" >
+                        <div id="my-avatar-header"></div>
                         <div class="button-wrapper">
                             <label for="upload" class="btn btn-primary me-2 mb-4" tabindex="0">
                                 <span class="d-none d-sm-block">Выбрать фото</span>
@@ -142,7 +140,7 @@
                                 <span class="d-none d-sm-block">Сброс</span>
                             </button>
 
-                            <p class="text-muted mb-0">JPG, GIF или PNG</p>
+                            <p class="text-muted mb-0">JPG, PNG</p>
                         </div>
                     </div>
                 </div>

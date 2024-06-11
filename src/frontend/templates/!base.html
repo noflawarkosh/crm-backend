@@ -406,18 +406,18 @@
         }
 
         const currentDomain = window.location.origin;
-        const url = new URL('/orgs/createOrganization', currentDomain);
+        const url = new URL('/organizations/createOrganization', currentDomain);
         url.searchParams.append('title', titleInput.value);
         url.searchParams.append('inn', innInput.value);
 
         $.ajax({
             url: url,
             method: 'post',
-            success: function (data) {
-                location.replace('/organization/' + data.id)
+            success: function () {
+                location.reload()
             },
             error: function (data) {
-                console.log(data)
+
                 toastr.error(data.responseJSON.detail)
                 submitButton.classList.remove('disabled');
             }
@@ -444,7 +444,7 @@
         }
 
         const currentDomain = window.location.origin;
-        const url = new URL('/orgs/acceptInvitation', currentDomain);
+        const url = new URL('/organizations/acceptInvitation', currentDomain);
         url.searchParams.append('code', codeInput.value);
 
         $.ajax({
@@ -471,19 +471,12 @@
             url: '/auth/logout',
             method: 'get',
 
-            success: function (data) {
-                if (data.result === 'success') {
-                    location.reload()
-                }
-
-                if (data.result === 'error') {
-                    alert(data.details)
-                    location.reload()
-                }
+            success: function () {
+                location.reload()
             },
 
-            error: function () {
-                alert('Произошла ошибка сервера. Обновите страницу');
+            error: function (data) {
+                toastr.error(data.responseJSON.detail);
             }
         });
     }
@@ -498,18 +491,18 @@
 
         var orgsMine = $('#orgs-mine');
         var orgMenu = [
-            {'menuItemTitle': 'Управление', 'menuItemHref': '/organization/'},
-            {'menuItemTitle': 'Кошелек', 'menuItemHref': '/wallet/'},
-            {'menuItemTitle': 'Реферальная программа', 'menuItemHref': '/loyalty/'},
-            {'menuItemTitle': 'Товары', 'menuItemHref': '/products/'},
-            {'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': '/tasks/'},
-            {'menuItemTitle': 'Отзывы', 'menuItemHref': '/reviews/'},
-            {'menuItemTitle': 'Статусы заказов WB', 'menuItemHref': '/orders/'},
+            {'menuItemTitle': 'Управление', 'menuItemHref': 'dashboard'},
+            {'menuItemTitle': 'Кошелек', 'menuItemHref': 'wallet'},
+            {'menuItemTitle': 'Реферальная программа', 'menuItemHref': 'loyalty'},
+            {'menuItemTitle': 'Товары', 'menuItemHref': 'products'},
+            {'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': 'tasks'},
+            {'menuItemTitle': 'Отзывы', 'menuItemHref': 'reviews'},
+            {'menuItemTitle': 'Статусы заказов WB', 'menuItemHref': 'orders'},
         ]
 
         $.ajax({
 
-            url: '/orgs/getOwned',
+            url: '/organizations/readOrganizations',
             type: 'GET',
 
             success: function (data) {
@@ -530,7 +523,7 @@
 
                     orgMenu.forEach(function (orgMenu) {
 
-                        var ItemHREF = orgMenu.menuItemHref + data.id
+                        var ItemHREF =  '/organization/' + orgMenu.menuItemHref + '/' + data.id
                         var menuSubItemClass = 'menu-item'
 
                         if (ItemHREF === currentPage) {
@@ -579,7 +572,7 @@
 
         $.ajax({
 
-            url: '/orgs/getOwnedMemberships',
+            url: '/organizations/readUserMemberships',
             type: 'GET',
 
             success: function (data) {
@@ -603,19 +596,19 @@
                         var orgMenu = []
 
                         if (getBitValue(data.level, 1) === 1) {
-                            orgMenu.push({'menuItemTitle': 'Товары', 'menuItemHref': '/products/'})
+                            orgMenu.push({'menuItemTitle': 'Товары', 'menuItemHref': 'products'})
                         }
 
                         if (getBitValue(data.level, 2) === 1) {
-                            orgMenu.push({'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': '/tasks/'})
+                            orgMenu.push({'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': 'tasks'})
                         }
 
                         if (getBitValue(data.level, 3) === 1) {
-                            orgMenu.push({'menuItemTitle': 'Отзывы', 'menuItemHref': '/reviews/'})
+                            orgMenu.push({'menuItemTitle': 'Отзывы', 'menuItemHref': 'reviews'})
                         }
 
                         if (getBitValue(data.level, 4) === 1) {
-                            orgMenu.push({'menuItemTitle': 'Статусы заказов WB', 'menuItemHref': '/orders/'})
+                            orgMenu.push({'menuItemTitle': 'Статусы заказов WB', 'menuItemHref': 'orders'})
                         }
 
 
@@ -631,8 +624,9 @@
 
                             var menuSubItem = $('<li>').addClass(menuSubItemClass);
 
+                            ItemHREF =  '/organization/' + orgMenu.menuItemHref + '/' + data.organization.id
                             var menuSubA = $('<a>').attr({
-                                href:  orgMenu.menuItemHref + data.organization.id,
+                                href: ItemHREF,
                                 class: 'menu-link'
                             });
 
@@ -663,38 +657,43 @@
 <!-- Get Self Profile -->
 <script>
 
-    $(document).ready(function () {
+    $.ajax({
 
-        $.ajax({
+        url: '/auth/myProfile',
+        method: 'get',
 
-            url: '/auth/getSelfProfile',
-            method: 'get',
+        success: function (data) {
 
-            success: function (data) {
-                document.getElementById('nav-name').innerText = data.name
-                document.getElementById('nav-username').innerText = data.username
+            document.getElementById('nav-name').innerText = data.name
+            document.getElementById('nav-username').innerText = data.username
 
-                var host = window.location.host
-                // Получаем URL картинки
-                var imageUrl = '/storage/get/4m0Tqv66dBUakFPu.png';
+            var imageUrl = '/storage/get/4m0Tqv66dBUakFPu.png';
+            if (data.media_id !== null) {
+                imageUrl = '/storage/get/' + data.media.storage_href
+            }
 
-                var imageElement1 = $('<img class="w-px-40 h-auto rounded-circle">');
-                var imageElement2 = $('<img class="w-px-40 h-auto rounded-circle">');
+            var imageElement1 = $('<img class="w-px-40 rounded-circle">');
+            var imageElement2 = $('<img class="w-px-40 rounded-circle">');
 
-                imageElement1.attr('src', imageUrl);
-                imageElement2.attr('src', imageUrl);
+            imageElement1.attr('src', imageUrl);
+            imageElement2.attr('src', imageUrl);
 
-                $('#my-avatar-nav').append(imageElement1);
+            $('#my-avatar-nav').append(imageElement1);
 
-                $('#my-avatar-drop').append(imageElement2);
+            $('#my-avatar-drop').append(imageElement2);
 
+            if (window.location.pathname.includes ('profile'))  {
+                loadProfile(data)
+            }
 
-            },
+            if (window.location.pathname.includes ('settings'))  {
+                loadSettings(data)
+            }
 
-        });
-
+        }
 
     });
+
 </script>
 
 {% block js %}{% endblock %}
