@@ -1,0 +1,168 @@
+{% extends "!base-admin.html" %}
+{% block title %}Пользователи{% endblock %}
+{% block css %}
+
+{% endblock %}
+
+{% block js %}
+<script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+
+<script>
+    var servers = []
+
+    const PFT = {
+        'l2': ['L2', 'Заказано на пвз'],
+        'l3': ['L3', 'Дата заказа на адрес'],
+        'l4': ['L4', 'Будет завтра на адресе'],
+        'l5': ['L5', 'Заказано на акке сейчас'],
+        'r2': ['R2', 'Максимум дней для расчёта'],
+        'r3': ['R3', 'Максимум дней для расчёта'],
+        'r4': ['R4', 'Будет завтра на адресе ограничение'],
+        'lo': ['LO', 'Макс кол-во дней с последнего заказа на аккаунте'],
+        'al': ['AL', 'Время жизни аккаунта в днях'],
+        'k_format': ['KF', 'Заказано на пвз'],
+    }
+
+    $.ajax({
+        type: "GET",
+        url: '/admin/get/PickerSettings?id=1',
+        success: function (data) {
+            data = data[0]
+            var rows = ''
+            for (var key in PFT) {
+
+                rows += '<tr><td>' + PFT[key][0] + '</td><td><b>' + data[key] + '</b></td><td>' + PFT[key][1] + '</td></tr>'
+            }
+
+            $('#config-table').append('<tbody>' + rows + '</tbody>').show()
+        },
+        error: function () {
+            toastr.error('Ошибка')
+
+        }
+    })
+
+    $.ajax({
+        type: "GET",
+        url: '/admin/get/OrdersServer?is_active=true',
+        success: function (data) {
+
+            var rows = ''
+            servers = data
+            for (var i in data) {
+
+                rows += '<tr>\n' +
+                    '                                    <td>' + data[i].name + '</td>\n' +
+                    '                                    <td><input class="form-control" type="file" accept=".xlsx" id="active-' + data[i].id + '"></td>\n' +
+                    '                                    <td><input class="form-control" type="file" accept=".xlsx" id="collected-' + data[i].id + '"></td>\n' +
+                    '                                </tr>'
+            }
+
+            $('#form-table-body').append(rows)
+            $('#form-table').show()
+        },
+        error: function () {
+            toastr.error('Ошибка')
+
+        }
+    })
+
+</script>
+
+
+<script>
+
+    document.getElementById('testf').addEventListener('submit', function (event) {
+
+        event.preventDefault();
+        var formData = new FormData();
+        for (var i in servers) {
+             formData.append('active-' + servers[i].id, $('#active-' + servers[i].id)[0].files[0]);
+             formData.append('collected-' + servers[i].id, $('#collected-' + servers[i].id)[0].files[0]);
+        }
+        formData.append('bad_accounts', document.getElementById('bad_accounts').value);
+
+        $.ajax({
+            type: "POST",
+            url: '/admin/test',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function (data) {
+                console.log(data)
+                toastr.success('Сохранено')
+
+            },
+            error: function (data) {
+                toastr.error(data.responseJSON.detail)
+
+            }
+        })
+    })
+
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+
+    <div class="row">
+
+        <div class="col">
+            <div class="card">
+
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Конфигурация
+                        <a href="/admin-edit/PickerSettings/1"><i class="bx bx-edit"></i></a>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table" id="config-table" style="display: none;"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col">
+            <div class="card">
+
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Подбор аккаунтов</h5>
+                    <small class="card-subtitle" id="prod-cntr"></small>
+                </div>
+                <div class="card-body">
+
+                    <form enctype="multipart/form-data" id="testf">
+                        <table class="table" id="form-table">
+                            <thead>
+                            <tr>
+                                <th></th>
+                                <th>Активные заказы</th>
+                                <th>Полученные заказы</th>
+                            </tr>
+                            </thead>
+                            <tbody id="form-table-body">
+
+                            </tbody>
+                        </table>
+                        <div class="mt-3">
+                            <label for="bad_accounts" class="form-label">Реестровые минус
+                                аккаунты</label>
+                            <textarea class="form-control" id="bad_accounts" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-4">Загрузить</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+
+
+
+
