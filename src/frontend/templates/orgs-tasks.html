@@ -1,0 +1,474 @@
+{% extends "!base.html" %}
+{% block title %}Планирование{% endblock %}
+
+{% block head %}
+
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/typeahead-js/typeahead.css') }}"/>
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/datatables-bs5/datatables.bootstrap5.css') }}">
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css') }}">
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/apex-charts/apex-charts.css') }}">
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/css/pages/card-analytics.css') }}"/>
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.css') }}"/>
+
+{% endblock %}
+
+
+{% block js %}
+<script src="{{ url_for('static', path='assets/vendor/libs/apex-charts/apexcharts.js') }}"></script>
+<script src="{{ url_for('static', path='assets/js/app-ecommerce-dashboard.js') }}"></script>
+<script src="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.js') }}"></script>
+
+<script>
+
+    var currentDate = new Date()
+    const currentHour = currentDate.getHours();
+
+
+    if (currentHour > 9) {
+        currentDate = new Date(currentDate.getTime() + 86400000)
+    } else {
+        currentDate.setDate(currentDate.getDate());
+    }
+
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(currentDate.getDate()).padStart(2, '0');
+
+    const formattedDate = `${year}-${month}-${day}`
+
+    var dateInput = document.getElementById('plan-date');
+    dateInput.value = formattedDate
+
+    dateInput.addEventListener('change', function () {
+        var selectedDate = dateInput.value;
+        console.log(selectedDate)
+        dateInput.disabled = true
+        drawPlan(selectedDate);
+    });
+
+    document.getElementById('divider-text').innerText = 'Запланированные выкупы на ' + moment(currentDate).format('DD.MM.YYYY')
+    const url = window.location.href;
+    var arr = url.split('/')
+    var id = arr[arr.length - 1]
+
+    $(document).ready(function () {
+        $.ajax({
+            url: '/orders/getPlan?org_id=' + id + '&date=' + formattedDate,
+            method: 'get',
+            success: function (data) {
+
+                $('#dt_plan').DataTable({
+                    "data": data,
+                    "paging": true,
+                    "pageLength": 10,
+                    "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                    "searching": true,
+                    "ordering": true,
+
+                    "columns": [
+                        {"data": 'id'},
+                        {
+                            "data": 'product',
+                            "render": function (data, type, row) {
+                                return data.wb_article
+                            }
+                        },
+                        {
+                            "data": 'product',
+                            "render": function (data, type, row) {
+                                return data.wb_title
+                            }
+                        },
+                        {
+                            "data": 'size',
+                            "render": function (data, type, row) {
+                                var cell = '—'
+                                if (data.wb_size_name !== null && data.wb_size_origName !== null) {
+                                    cell = data.wb_size_origName + ' (' + data.wb_size_name + ')'
+                                }
+
+                                if (data.wb_size_name !== null && data.wb_size_origName === null) {
+                                    cell = data.wb_size_name
+                                }
+
+                                if (data.wb_size_name === null && data.wb_size_origName !== null) {
+                                    cell = data.wb_size_origName
+                                }
+
+                                return cell
+                            }
+                        },
+                        {
+                            "data": 'wb_keyword',
+                        },
+                        {
+                            "render": function (data, type, row) {
+                                var cell = '—'
+                                if (row.size.wb_price !== null) {
+                                    cell = row.size.wb_price / 100
+                                }
+
+                                if (row.wb_price !== null) {
+                                    cell = row.wb_price
+                                }
+
+                                return cell
+                            }
+                        },
+                        {
+                            "render": function (data, type, row) {
+                                var status = 5
+                                var title = 'Не опознан'
+
+
+                                if (row.dt_planed !== null) {
+                                    status = 3
+                                    title = 'Запланирован'
+                                }
+
+                                if (row.size.wb_in_stock === false) {
+                                    status = 5
+                                    title = 'Не в наличии'
+                                }
+
+                                if (row.dt_ordered !== null) {
+                                    status = 3
+                                    title = 'Закзан'
+                                }
+
+                                if (row.dt_delivered !== null) {
+                                    status = 3
+                                    title = 'Доставлен в пункт выдачи'
+                                }
+
+                                if (row.dt_collected !== null) {
+                                    status = 1
+                                    title = 'Доставлен на склад'
+                                }
+
+                                if (row.dt_planed === null) {
+                                    status = 5
+                                    title = 'Отменен'
+                                }
+
+                                var statuses = {
+                                    1: 'success',
+                                    2: 'warning',
+                                    3: 'info',
+                                    4: 'danger',
+                                    5: 'secondary',
+                                }
+
+                                return '<span class="badge bg-label-' + statuses[status] + '">' + title + '</span>'
+                            }
+                        },
+                        {
+                            "render": function (data, type, row) {
+                                var cell = '—'
+                                if (row.description !== null) {
+                                    cell = row.description
+                                }
+                                return cell
+                            }
+                        },
+                        {
+                            "render": function (data, type, row) {
+                                var edit = ''
+
+                                if (row.status_id === 2) {
+                                    edit += '<a href="javascript:updateBillStatus(' + row['id'] + ', 1)"><i class="bx bx-check"></i></a>'
+                                }
+
+                                if (row.status_id === 2) {
+                                    edit += '<a href="javascript:updateBillStatus(' + row['id'] + ', 5)"><i class="bx bx-x"></i></a>'
+                                }
+                                return edit
+                            }
+                        }
+                    ],
+                    "order": [[0, "desc"]],
+                });
+            },
+
+            error: function () {
+                toastr.error('Ошибка загрузки счетов')
+
+            }
+
+        });
+    });
+
+    function drawPlan(selectedDate) {
+        $(document).ready(function () {
+            $.ajax({
+                url: '/orders/getPlan?org_id=' + id + '&date=' + selectedDate,
+                method: 'get',
+                success: function (data) {
+                    var table = $('#dt_plan').DataTable();
+                    table.clear()
+                    table.draw()
+                    table.rows.add(data).draw();
+                    document.getElementById('divider-text').innerText = 'Запланированные выкупы на ' + moment(selectedDate).format('DD.MM.YYYY')
+                    dateInput.disabled = false
+                },
+                error: function () {
+                    toastr.error('Ошибка загрузки плана. Обновите страницу и повторите попытку')
+                    dateInput.disabled = false
+
+                }
+
+            });
+
+        });
+    }
+
+    function addPlan() {
+
+        var data = {
+            'wb_keyword': document.getElementById('keywords').value,
+            'dt_planed': dateInput.value,
+            'product_id': document.getElementById('product_id').value,
+            'size_id': document.getElementById('size_id').value,
+            'org_id': id,
+        }
+
+        var amount = document.getElementById('amount').value
+
+        if (amount === null || amount === '') {
+            toastr.error('Введите кол-во')
+            return
+        }
+
+        if (amount === null || amount === '') {
+            toastr.error('Введите кол-во')
+            return
+        }
+
+        if (data['wb_keyword'] === null || data['wb_keyword'] === '') {
+            toastr.error('Введите ключевой запрос. Например: рубашка женская стеганая')
+            return
+        }
+
+        document.getElementById('add-plan-btn').classList.add('disabled')
+        const currentDomain = window.location.origin;
+        const url = new URL('/orders/savePlan', currentDomain);
+        for (var key in data) {
+            url.searchParams.append(key, data[key]);
+        }
+        url.searchParams.append('amount', amount);
+        $.ajax({
+            url: url,
+            method: 'post',
+
+            success: function () {
+                toastr.success('Задача успешно создана')
+                drawPlan(dateInput.value)
+                document.getElementById('add-plan-btn').classList.remove('disabled')
+            },
+            error: function (data) {
+                toastr.error(data.responseJSON.detail)
+                document.getElementById('add-plan-btn').classList.remove('disabled')
+
+            }
+        });
+    }
+</script>
+
+<!-- GET PRODS FOR SELECT IN FORM -->
+<script>
+
+
+    var prods = []
+
+    // Функция для добавления опций второго выпадающего списка
+    function addOptionsToSelect2(pri) {
+        var optionsArr = [];
+
+        for (var i = 0; i < prods.length; i++) {
+            if (prods[i].id == pri) {
+                optionsArr = prods[i]['sizes'];
+                break;
+            }
+        }
+
+        $("#size_id").selectpicker('destroy');
+        $("#size_id").empty();
+        $("#size_id").selectpicker("refresh");
+
+        if (optionsArr.length === 1 && optionsArr[0].wb_size_name === null && optionsArr[0].wb_size_origName === null) {
+            $("#size_id").append($('<option>').text('Товар без размеров').val(optionsArr[0].id));
+        }
+
+        for (var j = 0; j < optionsArr.length; j++) {
+
+            if (optionsArr[j].wb_size_name !== null) {
+                var op_txt = optionsArr[j].wb_size_name;
+                var op_val = optionsArr[j].id;
+                var op_sub = optionsArr[j].wb_size_origName;
+
+                var sizeOP = $('<option>').text(op_txt).attr('data-subtext', op_sub).val(op_val);
+
+                $("#size_id").append(sizeOP);
+            }
+        }
+
+        $("#size_id").selectpicker('refresh');
+    }
+
+
+    $(document).ready(function () {
+
+        const url = window.location.href;
+
+        var arr = url.split('/')
+        var id = arr[arr.length - 1]
+
+        $.ajax({
+
+            url: '/products/getOwned?org_id=' + id,
+            method: 'get',
+
+            success: function (data) {
+                var selectElement = $('#product_id');
+
+                prods = data
+
+                $.each(data, function (index, item) {
+
+                    var prod_title = item.wb_title
+
+                    if (prod_title.length >= 25) {
+                        prod_title = prod_title.slice(0, 25) + '...'
+                    }
+
+                    var optionText = prod_title
+                    var optionValue = item.id
+                    var optionDataSubtext = item.wb_article
+
+
+                    var option = $('<option>').text(optionText).attr('data-subtext', optionDataSubtext).val(optionValue);
+                    selectElement.append(option);
+
+                    if (index === 0) {
+                        addOptionsToSelect2(item.id);
+                    }
+
+                });
+
+                selectElement.selectpicker('refresh');
+
+                var select1 = document.getElementById('product_id');
+
+                $("#product_id").change(function () {
+
+                    var selectedValue = select1.value;
+                    addOptionsToSelect2(selectedValue);
+
+                });
+
+            },
+
+            error: function (data) {
+                toastr.error('Ошибка получения товаров')
+            }
+        });
+
+    });
+</script>
+
+{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+
+        <div class="col">
+            <div class="card">
+
+                <div class="card-header">
+
+                    <h5 class="card-title mb-0">Планирование выкупов</h5>
+
+                    <div class="divider text-start">
+                        <div class="divider-text">Выбрать день</div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-lg-auto col-sm">
+                            <input type="date" class="form-control" id="plan-date">
+                        </div>
+                    </div>
+
+                    <div class="divider text-start">
+                        <div class="divider-text">Добавить задачу в выбранный день</div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-lg-6 col-sm">
+                            <label for="product_id" class="form-label">Товар</label>
+                            <select id="product_id" class="selectpicker w-100" data-style="btn-default"
+                                    data-show-subtext="true">
+                            </select>
+                        </div>
+                        <div class="col-lg-6 col-sm">
+                            <label for="size_id" class="form-label">Размер</label>
+                            <select id="size_id" class="selectpicker w-100" data-style="btn-default"
+                                    data-show-subtext="true">
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-lg-6 col-sm">
+                            <label for="keywords" class="form-label">Ключевой запрос</label>
+                            <input type="text" class="form-control" id="keywords">
+                        </div>
+                        <div class="col-lg-6 col-sm">
+                            <label for="amount" class="form-label">Количество</label>
+                            <input type="number" class="form-control" id="amount" value="1">
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col">
+                            <a href="javascript:addPlan()" class="btn btn-primary" id="add-plan-btn">Добавить</a>
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="card-body table-responsive">
+                    <div class="divider text-start">
+                        <div class="divider-text" id="divider-text"></div>
+                    </div>
+                    <table id="dt_plan" class="datatables-ajax table table-bordered dataTable no-footer">
+                        <thead>
+                        <tr>
+                            <th>#ID</th>
+                            <th>Артикул</th>
+                            <th>Товар</th>
+                            <th>Размер</th>
+                            <th>Ключевой запрос</th>
+                            <th>Сумма</th>
+                            <th>Статус</th>
+                            <th>Описание</th>
+                            <th>Действия</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+{% endblock %}

@@ -1,12 +1,17 @@
+import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from auth.models import UserModel
 from auth.router import authed
+from auth.schemas import UserSessionReadSchema
 from orgs.repository import OrganizationRepository
+from orgs.utils import check_access
 from payments.repository import PaymentsRepository
-from payments.schemas import BalanceBillPOSTSchema, BalanceBillGETSchema, BalanceBillRELSchema, BalanceSourceGETSchema
+from payments.schemas import BalanceBillCreateSchema, BalanceBillReadSchema, BalanceSourceSchema, \
+    BalanceHistoryReadSchema
+
 from strings import *
 
 router = APIRouter(
@@ -16,123 +21,101 @@ router = APIRouter(
 
 
 @router.post('/createBill')
-async def create_organization(data: Annotated[BalanceBillPOSTSchema, Depends()],
-                              user: UserModel = Depends(authed)
-                              ) -> BalanceBillGETSchema:
-    data_dict = data.model_dump()
+async def create_organization(data: Annotated[BalanceBillCreateSchema, Depends()],
+                              session: UserSessionReadSchema = Depends(authed)
+                              ):
+    try:
+        await check_access(data.org_id, session.user.id, 0)
 
-    organization = await OrganizationRepository.get_one(data_dict.get('org_id'))
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
-    if not organization:
-        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
-
-    if organization.owner_id != user.id:
-        raise HTTPException(status_code=403, detail=string_403)
-
-    result = await PaymentsRepository.add_bill(data)
-    dto = BalanceBillGETSchema.model_validate(result, from_attributes=True)
-
-    return dto
+    await PaymentsRepository.create_bill(data.model_dump())
 
 
 @router.get('/getBill')
 async def create_organization(bill_id: int,
-                              user: UserModel = Depends(authed)
-                              ) -> BalanceBillRELSchema:
-    bill = await PaymentsRepository.get_bill(bill_id)
+                              session: UserSessionReadSchema = Depends(authed)
+                              ) -> BalanceBillReadSchema:
+    bills = await PaymentsRepository.read_bills('id', bill_id)
 
-    if not bill:
+    if len(bills) != 1:
         raise HTTPException(status_code=404, detail=string_404)
 
-    organization = await OrganizationRepository.get_one(bill.org_id)
+    bill = bills[0]
 
-    if not organization:
-        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
+    try:
+        await check_access(bill.org_id, session.user.id, 0)
 
-    if organization.owner_id != user.id:
-        raise HTTPException(status_code=403, detail=string_403)
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
-    dto = BalanceBillRELSchema.model_validate(bill, from_attributes=True)
-
-    return dto
-
-
-@router.post('/cancelBill')
-async def create_organization(bill_id: int,
-                              user: UserModel = Depends(authed)
-                              ) -> BalanceBillGETSchema:
-    bill = await PaymentsRepository.get_bill(bill_id)
-
-    if not bill:
-        raise HTTPException(status_code=404, detail=string_404)
-
-    organization = await OrganizationRepository.get_one(bill.org_id)
-
-    if not organization:
-        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
-
-    if organization.owner_id != user.id:
-        raise HTTPException(status_code=403, detail=string_403)
-
-    if bill.status_id != 3:
-        raise HTTPException(status_code=403, detail=string_403)
-
-    updated_bill = await PaymentsRepository.update_bill_status(bill_id, 4)
-
-    dto = BalanceBillGETSchema.model_validate(updated_bill, from_attributes=True)
-
-    return dto
-
-
-@router.post('/approveSendingMoneyBill')
-async def create_organization(bill_id: int,
-                              user: UserModel = Depends(authed)
-                              ) -> BalanceBillGETSchema:
-    bill = await PaymentsRepository.get_bill(bill_id)
-
-    if not bill:
-        raise HTTPException(status_code=404, detail=string_404)
-
-    organization = await OrganizationRepository.get_one(bill.org_id)
-
-    if not organization:
-        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
-
-    if organization.owner_id != user.id:
-        raise HTTPException(status_code=403, detail=string_403)
-
-    if bill.status_id != 3:
-        raise HTTPException(status_code=403, detail=string_403)
-
-    updated_bill = await PaymentsRepository.update_bill_status(bill_id, 2)
-
-    dto = BalanceBillGETSchema.model_validate(updated_bill, from_attributes=True)
-
-    return dto
+    return BalanceBillReadSchema.model_validate(bill, from_attributes=True)
 
 
 @router.get('/getOwnedBills')
 async def create_organization(org_id: int,
-                              user: UserModel = Depends(authed)
-                              ) -> list[BalanceBillRELSchema]:
-    organization = await OrganizationRepository.get_one(org_id)
+                              session: UserSessionReadSchema = Depends(authed)
+                              ) -> list[BalanceBillReadSchema]:
+    try:
+        await check_access(org_id, session.user.id, 0)
 
-    if not organization:
-        raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
-    if organization.owner_id != user.id:
+    bills = await PaymentsRepository.read_bills('org_id', org_id)
+
+    return [BalanceBillReadSchema.model_validate(bill, from_attributes=True) for bill in bills]
+
+
+@router.post('/updateBillStatus')
+async def create_organization(bill_id: int, status_id: int,
+                              session: UserSessionReadSchema = Depends(authed)
+                              ):
+    bills = await PaymentsRepository.read_bills('id', bill_id)
+
+    if len(bills) != 1:
+        raise HTTPException(status_code=404, detail=string_404)
+
+    bill = bills[0]
+
+    try:
+        organization, membership = await check_access(bill.org_id, session.user.id, 0)
+
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    if status_id not in [2, 4]:
         raise HTTPException(status_code=403, detail=string_403)
 
-    bills = await PaymentsRepository.get_all_by_org_id(org_id)
-    dto = [BalanceBillRELSchema.model_validate(bill, from_attributes=True) for bill in bills]
+    if status_id == 2 and bill.status_id not in [3]:
+        raise HTTPException(status_code=403, detail=string_403)
 
-    return dto
+    elif status_id == 4 and bill.status_id not in [3]:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    await PaymentsRepository.update_bill(bill_id, {'status_id': status_id})
 
 
 @router.get('/getActiveSources')
-async def create_organization(user: UserModel = Depends(authed)
-                              ) -> list[BalanceSourceGETSchema]:
-    sources = await PaymentsRepository.get_active_sources()
-    dto = [BalanceSourceGETSchema.model_validate(source, from_attributes=True) for source in sources]
+async def create_organization(session: UserSessionReadSchema = Depends(authed)
+                              ) -> list[BalanceSourceSchema]:
+    sources = await PaymentsRepository.read_active_sources()
+    return [BalanceSourceSchema.model_validate(source, from_attributes=True) for source in sources]
 
-    return dto
+
+@router.get('/getHistory')
+async def create_organization(org_id: int,
+                              session: UserSessionReadSchema = Depends(authed)
+                              ) -> list[BalanceHistoryReadSchema]:
+    try:
+        await check_access(org_id, session.user.id, 0)
+
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    history = await PaymentsRepository.read_history(org_id)
+    return [BalanceHistoryReadSchema.model_validate(line, from_attributes=True) for line in history]
+
+
+

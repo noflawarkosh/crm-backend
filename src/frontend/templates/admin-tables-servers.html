@@ -1,5 +1,5 @@
 {% extends "!base-admin.html" %}
-{% block title %}Пользователи{% endblock %}
+{% block title %}Серверы{% endblock %}
 {% block head %}
 <link rel="stylesheet"
       href="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.css') }}"/>
@@ -27,12 +27,11 @@
             time_second_point: document.getElementById('time_second_point').value,
         }
 
-
         $.ajax({
             type: "POST",
-            url: '/admin/save/OrdersServerSchedule',
-            data: data,
-            dataType: "json",
+            url: '/admin/save',
+            data: JSON.stringify({OrdersServerSchedule: [data]}),
+            contentType: "application/json",
             success: function () {
                 location.reload();
             },
@@ -62,6 +61,7 @@
             load_t_min: document.getElementById('load_t_min').value,
             load_t_max: document.getElementById('load_t_max').value,
             load_m: document.getElementById('load_m').value,
+            load_i: document.getElementById('load_i').value,
 
             contractor_id: document.getElementById('sc-contractor_id').value,
             server_id: document.getElementById('sc-server_id').value,
@@ -69,9 +69,9 @@
 
         $.ajax({
             type: "POST",
-            url: '/admin/save/OrdersServerContractor',
-            data: data,
-            dataType: "json",
+            url: '/admin/save',
+            data: JSON.stringify({OrdersServerContractor: [data]}),
+            contentType: "application/json",
             success: function () {
                 location.reload();
             },
@@ -84,37 +84,6 @@
     })
 </script>
 
-<!-- Load schedules for new server form -->
-<script>
-    $(document).ready(function () {
-
-        $.ajax({
-
-            url: '/admin/get/OrdersServerSchedule',
-            type: 'GET',
-
-            success: function (data) {
-                var selectElement = $('#new-server-schedule-id');
-
-                $.each(data, function (index, item) {
-                    var optionText = item.title
-                    var optionValue = item.id
-
-                    var option = $('<option>').text(optionText).val(optionValue);
-                    selectElement.append(option);
-                });
-
-                selectElement.selectpicker('refresh');
-
-            },
-
-            error: function () {
-                toastr.error('Ошибка получения расписания. Обновите страницу и повторите попытку')
-            }
-        });
-
-    });
-</script>
 
 <!-- Load contractors for new server contractor form -->
 <script>
@@ -188,12 +157,12 @@
             is_active: true
         }
 
-
         $.ajax({
             type: "POST",
-            url: '/admin/save/OrdersServer',
-            data: data,
-            dataType: "json",
+            url: '/admin/save',
+            data: JSON.stringify({OrdersServer: [data]}),
+            contentType: "application/json",
+
             success: function () {
                 location.reload();
             },
@@ -285,7 +254,6 @@
 
                 }
 
-
                 if (index === 0) {
                     selected = 'aria-selected="true"'
                     act_cls = 'active'
@@ -300,7 +268,8 @@
 
                 $.each(item.contractors, function (j, cntr) {
 
-                    var srv_ctr_menu = '<a href="/admin-edit/OrdersServerContractor/' + cntr.id + '"><i class="bx bx-edit"></i></a>'
+                    var srv_ctr_menu = '<a href="/admin-edit/OrdersServerContractor/' + cntr.id + '"><i class="bx bx-edit-alt"></i></a>' +
+                        '<a href="javascript: delrow(' + cntr.id + ')"><i class="bx bx-x"></i></a>'
 
                     var date = new Date(cntr.load_m);
                     var formattedDate = date.getDate().toString().padStart(2, '0') + '.' + (date.getMonth() + 1).toString().padStart(2, '0') + '.' + date.getFullYear() + ', ' + date.toLocaleTimeString();
@@ -313,6 +282,7 @@
                         '            <td>' + cntr.load_l_min + ' - ' + cntr.load_l_max + '</td>\n' +
                         '            <td>' + cntr.load_t_min + ' - ' + cntr.load_t_max + '</td>\n' +
                         '<td>' + formattedDate + '</td>' +
+                        '            <td>' + cntr.load_i + '</td>\n' +
                         '<td>' + srv_ctr_menu + '</td>' +
 
                         '        </tr>'
@@ -350,6 +320,7 @@
                     '                                    <th>L</th>\n' +
                     '                                    <th>T</th>\n' +
                     '                                    <th>M</th>\n' +
+                    '                                    <th>I</th>\n' +
 
                     '                                    <th>Действия</th>\n' +
                     '                                </tr>\n' +
@@ -400,6 +371,28 @@
 
 </script>
 
+
+<script>
+
+    function delrow(recid) {
+
+        if (!confirm('Подтвердите удаление подрядчика'))  {
+            return
+        }
+
+        $.ajax({
+            type: 'delete',
+            url: 'admin/delete/OrdersServerContractor/' + recid,
+            success: function () {
+                location.reload();
+            },
+            error: function () {
+                toastr.error('Ошибка удаления. Обновите страницу и повторите попытку')
+
+            }
+        })
+    }
+</script>
 {% endblock %}
 
 {% block content %}
@@ -611,6 +604,11 @@
                             <div class="col"><input id="load_t_max" class="form-control" type="number"
                                                     placeholder="макс, вкл"></div>
                         </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label">I</label>
+                        <input id="load_i" class="form-control" type="number">
                     </div>
 
                     <div class="mt-3">

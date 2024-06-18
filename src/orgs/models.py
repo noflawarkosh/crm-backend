@@ -24,6 +24,7 @@ class OrganizationModel(Base):
 
     # Relationships
     statuses: Mapped[list['OrganizationStatusHistoryModel']] = relationship(lazy=False)
+    owner: Mapped['UserModel'] = relationship(lazy=False)
 
 
 class OrganizationStatusModel(Base):
@@ -101,4 +102,5 @@ class OrganizationInvitationModel(Base):
 
     # FK
     org_id: Mapped[int] = mapped_column(ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE'))
-    usages: Mapped[list['OrganizationMembershipModel']] = relationship(primaryjoin="and_(OrganizationInvitationModel.id == OrganizationMembershipModel.invitation_id)", lazy=False)
+    usages: Mapped[list['OrganizationMembershipModel']] = relationship(
+        primaryjoin="and_(OrganizationInvitationModel.id == OrganizationMembershipModel.invitation_id)", lazy=False)

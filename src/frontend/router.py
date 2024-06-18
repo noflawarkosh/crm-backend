@@ -57,13 +57,34 @@ async def page(table: str,
     return templates.TemplateResponse(f'admin-tables-{table}.html', {'request': request})
 
 
-@router.get('/admin-edit/{table}/{record_id}')
-async def page(table: str, record_id: int, request: Request,
+@router.get('/admin-scripts/{script}')
+async def page(script: str,
+               request: Request,
                admin: UserReadSchema = Depends(admin_every)):
     if not admin:
         return RedirectResponse('/admin-login')
 
-    return templates.TemplateResponse(f'admin-edit-record.html', {'request': request})
+    return templates.TemplateResponse(f'admin-scripts-{script}.html', {'request': request})
+
+
+@router.get('/admin-{action}/{table}/{id}')
+async def page(action: str,
+               request: Request,
+               admin: UserReadSchema = Depends(admin_every)):
+    if not admin:
+        return RedirectResponse('/admin-login')
+
+    return templates.TemplateResponse(f'admin-record-{action}.html', {'request': request})
+
+
+@router.get('/admin-{action}/{table}')
+async def page(action: str,
+               request: Request,
+               admin: UserReadSchema = Depends(admin_every)):
+    if not admin:
+        return RedirectResponse('/admin-login')
+
+    return templates.TemplateResponse(f'admin-record-{action}.html', {'request': request})
 
 
 # AUTH PAGES
@@ -118,7 +139,6 @@ async def page(request: Request,
                section: str,
                org_id: int,
                session: UserSessionReadSchema = Depends(every)):
-
     if not session:
         return RedirectResponse('/login')
 
@@ -151,15 +171,22 @@ async def page(request: Request,
     if not session.user:
         return RedirectResponse('/login')
 
-    bill = await PaymentsRepository.get_bill(bill_id)
+    bills = await PaymentsRepository.read_bills('id', bill_id)
 
-    if not bill:
+    if len(bills) != 1:
         return RedirectResponse('/404')
 
-    organization = await OrganizationRepository.get_one(bill.org_id)
+    bill = bills[0]
 
-    if not organization:
+    organizations = await OrganizationRepository.read_organizations('id', bill.org_id)
+
+    if len(organizations) != 1:
         return RedirectResponse('/404')
+
+    organization = organizations[0]
+
+    if organization.statuses[-1].status.id != 2:
+        return RedirectResponse('/409')
 
     if organization.owner_id != session.user.id:
         return RedirectResponse('/403')

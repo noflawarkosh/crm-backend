@@ -1,5 +1,7 @@
+import json
+import urllib
 from typing import Annotated
-from fastapi import APIRouter, Depends, Response, Request, HTTPException
+from fastapi import APIRouter, Depends, Response, Request, HTTPException, UploadFile, File
 from datetime import datetime, timedelta
 from admin.repository import AdminRepository
 from admin.schemas import AdminReadSchema, AdminSessionCreateSchema
@@ -111,56 +113,79 @@ async def reading_data(model: str, request: Request, admin: AdminReadSchema = De
 
     data = await AdminRepository.read_records(model, filtration=params, limit=limit, offset=offset)
 
-    if not data:
-        raise HTTPException(status_code=404, detail=string_404)
-
     return [d.__dict__ for d in data]
 
 
 @router.get('/fields/{model}')
 async def reading_fields(model: str, admin: AdminReadSchema = Depends(authed)):
     data = await AdminRepository.read_fields(model + 'Model')
+
     if not data:
         raise HTTPException(status_code=404, detail=string_404)
 
     return data
 
 
-@router.post('/save/{model}')
-async def creating_data(model: str, request: Request, admin: AdminReadSchema = Depends(authed)):
+@router.post('/save')
+async def creating_data(data: dict[str, list[dict]], request: Request, admin: AdminReadSchema = Depends(authed)):
+    models_with_typed_records = {}
 
-    model = model + 'Model'
-    model_fields = await AdminRepository.read_fields(model)
+    for model in data:
 
-    values = dict(await request.form())
+        model_fields = await AdminRepository.read_fields(model + 'Model')
+        model_with_typed_records = []
 
-    typed_values = {}
-    print(values)
-    for field, value in values.items():
-        if model_fields[field] == 'INTEGER':
-            typed_values[field] = int(value) if value else None
+        for record in data[model]:
 
-        elif model_fields[field] == 'VARCHAR':
-            typed_values[field] = str(value) if value else None
+            model_record_with_typed_values = {}
 
-        elif model_fields[field] == 'BOOLEAN':
-            typed_values[field] = True if value == 'true' else False
+            for field, value in record.items():
+                if model_fields[field] == 'INTEGER':
+                    model_record_with_typed_values[field] = int(value) if value else None
 
-        elif model_fields[field] == 'DATETIME':
-            typed_values[field] = datetime.fromisoformat(value) if value else None
+                elif model_fields[field] == 'VARCHAR':
+                    model_record_with_typed_values[field] = str(value) if value else None
 
-        elif model_fields[field] == 'TIME':
-            typed_values[field] = datetime.strptime(value, '%H:%M:%S').time() if value else None
+                elif model_fields[field] == 'BOOLEAN':
+                    model_record_with_typed_values[field] = bool(value)
 
-        elif model_fields[field] == 'FLOAT':
-            typed_values[field] = float(value) if value else None
-    print(typed_values)
-    record_id = typed_values.get('id', None)
+                elif model_fields[field] == 'DATETIME':
+                    model_record_with_typed_values[field] = \
+                        datetime.fromisoformat(value) if value else None
 
-    if record_id:
-        del typed_values['id']
-        await AdminRepository.update_record(model, record_id, typed_values)
+                elif model_fields[field] == 'TIME':
+                    model_record_with_typed_values[field] = \
+                        datetime.strptime(value, '%H:%M:%S').time() if value else None
 
-    else:
-        await AdminRepository.create_record(model, typed_values)
+                elif model_fields[field] == 'FLOAT':
+                    model_record_with_typed_values[field] = float(value) if value else None
 
+                if field == 'password':
+                    model_record_with_typed_values[field] = hash_password(value)
+
+            model_with_typed_records.append(model_record_with_typed_values)
+        models_with_typed_records[model + 'Model'] = model_with_typed_records
+
+    await AdminRepository.save_records(models_with_typed_records)
+
+
+@router.delete('/delete/{model}/{record_id}')
+async def reading_fields(model: str, record_id: int, admin: AdminReadSchema = Depends(authed)):
+    await AdminRepository.delete_record(model + 'Model', record_id)
+
+
+@router.post('/test')
+async def test(request: Request, admin: AdminReadSchema = Depends(authed)):
+    data = dict(await request.form())
+
+    servers = await AdminRepository.read_records('OrdersServerModel', filtration={'is_active': 'true'})
+    for server in servers:
+        if not data.get(f'active-{server.id}', None) or data.get(f'active-{server.id}') == 'undefined':
+            raise HTTPException(status_code=400, detail=f'Отсутствует файл с активными заказами для {server.name}')
+
+        if not data.get(f'collected-{server.id}', None) or data.get(f'collected-{server.id}') == 'undefined':
+            raise HTTPException(status_code=400, detail=f'Отсутствует файл с полученными заказами для {server.name}')
+
+    result = await refresh_orders_and_accounts(data, servers)
+
+    return str(result)

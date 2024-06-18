@@ -21,6 +21,7 @@ class OrdersServerContractorModel(Base):
     load_l_max: Mapped[int]
     load_t_min: Mapped[int]
     load_t_max: Mapped[int]
+    load_i: Mapped[int]
     load_m: Mapped[datetime.datetime]
 
     # FK
@@ -73,6 +74,7 @@ class OrdersAccountModel(Base):
     id: Mapped[pk]
     number: Mapped[str]
     name: Mapped[str]
+    reg_date: Mapped[dt]
     is_active: Mapped[bool]
 
     # FK
@@ -104,31 +106,46 @@ class OrdersAddressModel(Base):
     id: Mapped[pk]
     address: Mapped[str]
     district: Mapped[str | None]
-    contractor: Mapped[str | None]
     is_active: Mapped[bool]
+
+    # FK
+    contractor_id: Mapped[int] = mapped_column(
+        ForeignKey('orders_contractor.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+
+    # Relationships
+    contractor: Mapped['OrdersContractorModel'] = relationship(lazy=False)
 
 
 # Order
-class OrdersOrderStatusHistoryModel(Base):
-    __tablename__ = 'orders_order_status_history'
-    id: Mapped[pk]
-    title: Mapped[str]
-    date: Mapped[dt]
-
-    order_id: Mapped[int]
-
-
 class OrdersOrderModel(Base):
     __tablename__ = 'orders_order'
 
     id: Mapped[pk]
-    wb_uuid: Mapped[str]
+    wb_uuid: Mapped[str | None]
     wb_keyword: Mapped[str]
+    wb_price: Mapped[int | None]
+    description: Mapped[str | None]
+    dt_planed: Mapped[datetime.datetime | None]
     dt_ordered: Mapped[datetime.datetime | None]
     dt_delivered: Mapped[datetime.datetime | None]
     dt_collected: Mapped[datetime.datetime | None]
 
     # FK
-    product_id: Mapped[int] = mapped_column(ForeignKey('products_product.id', ondelete='CASCADE', onupdate='CASCADE'))
-    size_id: Mapped[int] = mapped_column(ForeignKey('products_product_size.id', ondelete='CASCADE', onupdate='CASCADE'))
-    account_id: Mapped[int] = mapped_column(ForeignKey('orders_account.id', ondelete='CASCADE', onupdate='CASCADE'))
+    product_id: Mapped[int] = mapped_column(
+        ForeignKey('products_product.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+    size_id: Mapped[int] = mapped_column(
+        ForeignKey('products_product_size.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+    account_id: Mapped[int | None] = mapped_column(
+        ForeignKey('orders_account.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+
+    product: Mapped['ProductModel'] = relationship()
+    size: Mapped['ProductSizeModel'] = relationship()
+    account: Mapped['OrdersAccountModel'] = relationship()
+    organization: Mapped['OrganizationModel'] = relationship()

@@ -38,3 +38,22 @@ class CrmSettingsModel(Base):
     __tablename__ = 'admin_crm_settings'
 
     id: Mapped[pk]
+
+
+class PickerSettingsModel(Base):
+    __tablename__ = 'admin_picker_settings'
+
+    id: Mapped[pk]
+    r2: Mapped[float]
+    r3: Mapped[float]
+    r4: Mapped[float]
+
+    l2: Mapped[float]
+    l3: Mapped[float]
+    l4: Mapped[float]
+    l5: Mapped[float]
+
+    lo: Mapped[int]
+    al: Mapped[int]
+
+    k_format: Mapped[str]

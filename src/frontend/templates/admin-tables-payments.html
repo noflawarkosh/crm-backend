@@ -1,0 +1,225 @@
+{% extends "!base-admin.html" %}
+{% block title %}Платежи{% endblock %}
+{% block css %}
+
+{% endblock %}
+
+{% block js %}
+<script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script>
+
+    var d_bills = []
+
+    function updateBillStatus(id, status_id) {
+
+        var c_bill = d_bills[id]
+
+        var msgs = {
+            1: 'Подтвердите получение средств на ' + c_bill.source.title + ' (' + c_bill.source.number + ') и пополнение счета ' + c_bill.organization.title + ' на сумму ' + c_bill.amount + ' рублей',
+            5: 'Подтвердите отказ в получении средств на ' + c_bill.source.title + ' (' + c_bill.source.number + ') и отказ ' + c_bill.organization.title + ' в пополнении счета на сумму ' + c_bill.amount + ' рублей',
+        }
+
+        if (!confirm(msgs[status_id])) {
+            return
+        }
+
+        $.ajax({
+            type: "POST",
+            url: '/admin/save',
+            data: JSON.stringify({BalanceBill: [{id: id, status_id: status_id}]}),
+            contentType: "application/json; charset=utf-8",
+            success: function () {
+                if (status_id === 1) {
+                    toastr.success('Статус счета #' + c_bill.id  + ' на пополнение успешно обновлен: исполнен')
+                    $.ajax({
+                        type: "POST",
+                        url: '/admin/save',
+                        data: JSON.stringify(
+                            {
+                                BalanceHistory: [
+                                    {
+                                        amount: c_bill.amount,
+                                        org_id: c_bill.organization.id,
+                                        description: 'Пополнение по счету #' + c_bill.id,
+                                        action_id: 1,
+                                    }
+                                ]
+                            }
+                        ),
+                        contentType: "application/json; charset=utf-8",
+                        success: function () {
+
+                            toastr.info('Счет ' + c_bill.organization.title + ' успешно пополнен на сумму ' + c_bill.amount + ' рублей',)
+                            refresh()
+
+                        },
+                        error: function () {
+                            toastr.error('Ошибка зачисления средств на счет')
+
+                        }
+                    })
+                }
+                if (status_id ===  5)  {
+                    toastr.success('Статус счета #' + c_bill.id  + ' на пополнение успешно обновлен: отказ')
+                    refresh()
+                }
+
+
+
+            },
+            error: function () {
+                toastr.error('Ошибка обновления статуса счета')
+
+            }
+        })
+    }
+
+    $(document).ready(function () {
+        var table = $('#dt_payments').DataTable({
+            "ajax": {
+                url: '/admin/get/BalanceBill',
+                dataSrc: ''
+            },
+            "paging": true,
+            "pageLength": 10,
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+            "searching": true,
+            "ordering": true,
+
+            columns: [
+                {data: 'id'},
+                {
+                    data: 'organization',
+                    render: function (data, type, row) {
+                        d_bills[row.id] = row
+                        return data.title
+                    }
+                },
+                {
+                    data: 'source',
+                    render: function (data, type, row) {
+                        return data.title + ' (' + data.number + ')'
+                    }
+                },
+                {
+                    data: 'amount',
+                    "render": function (data, type, row) {
+                        return data + ' ₽'
+                    }
+                },
+                {
+                    data: 'date',
+                    "render": function (data, type, row) {
+                        return moment(data).format('DD.MM.YYYY HH:mm')
+                    }
+                },
+                {
+                    data: 'status',
+                    "render": function (data, type, row) {
+
+                        var statuses = {
+                            1: 'success',
+                            2: 'warning',
+                            3: 'info',
+                            4: 'danger',
+                            5: 'danger',
+                        }
+
+                        return '<span class="badge bg-label-' + statuses[data.id] + '">' + data.title + '</span>'
+                    }
+                },
+                {
+                    data: "media",
+                    "render": function (data, type, row) {
+                        var cell = '—'
+                        if (data !== null) {
+                            cell = '<a target="_blank" href="/storage/get/' + data.storage_href + '">' + data.title + '</a>'
+                        }
+                        return cell
+                    }
+                },
+                {
+                    "render": function (data, type, row) {
+                        var edit = ''
+
+                        if (row.status_id === 2) {
+                            edit += '<a href="javascript:updateBillStatus(' + row['id'] + ', 1)"><i class="bx bx-check"></i></a>'
+                        }
+
+                        if (row.status_id === 2) {
+                            edit += '<a href="javascript:updateBillStatus(' + row['id'] + ', 5)"><i class="bx bx-x"></i></a>'
+                        }
+                        return edit
+                    }
+                }
+            ],
+
+            "order": [[0, "desc"]]
+        });
+
+    })
+
+    function refresh() {
+        var table = $('#dt_payments').DataTable()
+        $('#rb').hide()
+        table.clear()
+        table.draw()
+        $.ajax({
+            type: "GET",
+            url: '/admin/get/BalanceBill',
+            dataType: "json",
+            success: function (data) {
+                table.rows.add(data).draw();
+                $('#rb').show()
+            },
+            error: function () {
+                toastr.error('Ошибка обновления данных. Обновите страницу и повторите попытку')
+
+            }
+        })
+
+    }
+
+</script>
+
+
+{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+
+    <div class="row">
+
+        <div class="col">
+            <div class="card">
+
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Платежи
+                        <a href="##" id="rb" onclick="refresh()"><i class="bx bx-refresh"></i></a>
+                    </h5>
+                    <small class="card-subtitle" id="prod-cntr"></small>
+                </div>
+
+                <div class="card-datatable p-4">
+                    <table id="dt_payments" class="datatables-ajax table table-bordered dataTable no-footer">
+                        <thead>
+                        <tr>
+                            <th>#ID</th>
+                            <th>Организация</th>
+                            <th>Способ</th>
+                            <th>Сумма</th>
+                            <th>Дата создания</th>
+                            <th>Статус</th>
+                            <th>Вложение</th>
+                            <th>Действия</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

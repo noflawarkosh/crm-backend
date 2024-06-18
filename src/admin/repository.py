@@ -1,20 +1,36 @@
-from sqlalchemy import select, and_, func, text, update, sql, inspect
+from sqlalchemy import select, and_, func, text, update, sql, inspect, delete
 from sqlalchemy.orm import selectinload
 from storage.models import (
     StorageModel,
 )
 from admin.models import AdminUserModel, AdminSessionModel
-from orgs.models import (OrganizationModel)
+from orgs.models import (
+    OrganizationModel,
+    OrganizationInvitationModel,
+    OrganizationStatusHistoryModel
+)
 from admin.schemas import AdminReadSchema, AdminSessionReadSchema, AdminSessionCreateSchema, AdminReadWPSchema
-from auth.models import UserStatusHistoryModel, UserModel
+from auth.models import UserStatusHistoryModel, UserModel, UserSessionModel
 from products.models import ProductModel
 from database import async_session_factory
 from orders.models import (
     OrdersServerScheduleModel,
     OrdersServerContractorModel,
     OrdersServerModel,
-    OrdersContractorModel
+    OrdersContractorModel,
+    OrdersAccountModel,
+    OrdersContractorModel,
+    OrdersAddressModel,
+    OrdersOrderModel,
 
+)
+from admin.models import PickerSettingsModel
+from payments.models import (
+    BalanceHistoryModel,
+    BalanceBillStatusModel,
+    BalanceBillModel,
+    BalanceSourceModel,
+    BalanceActionModel
 )
 
 
@@ -143,35 +159,40 @@ class AdminRepository:
             await session.close()
 
     @classmethod
-    async def read_users_statuses(cls):
-
+    async def save_records(cls, records: dict[str, list[dict]]):
+        records_to_update = {}
+        records_to_create = {}
         try:
-
             async with async_session_factory() as session:
+                for model_name, model_records in records.items():
+                    model = globals().get(model_name, None)
+                    if model is None:
+                        continue
 
-                subquery = (
-                    select(
-                        UserStatusHistoryModel.user_id,
-                        func.max(UserStatusHistoryModel.date)
-                        .label('latest_date')
-                    )
-                    .group_by(UserStatusHistoryModel.user_id).subquery()
-                )
+                    for record in model_records:
+                        if 'id' in record:
+                            records_to_update.setdefault(model_name, []).append(record)
+                        else:
+                            records_to_create.setdefault(model_name, []).append(record)
 
-                query = (
-                    select(UserModel.id, UserStatusHistoryModel.status_id)
-                    .join(UserStatusHistoryModel, UserModel.id == UserStatusHistoryModel.user_id)
-                    .join(subquery, and_(
-                        UserStatusHistoryModel.user_id == subquery.c.user_id,
-                        UserStatusHistoryModel.date == subquery.c.latest_date
-                    ))
+                for model_name, records_to_update_for_model in records_to_update.items():
+                    model = globals().get(model_name, None)
 
-                )
+                    for record in records_to_update_for_model:
+                        query = (
+                            update(model)
+                            .where(model.id == record['id'])
+                            .values(**record)
+                        )
+                        await session.execute(query)
 
-                db_response = await session.execute(query)
+                for model_name, records_to_create_for_model in records_to_create.items():
+                    model = globals().get(model_name, None)
 
-                return db_response.all()
+                    for record in records_to_create_for_model:
+                        session.add(model(**record))
 
+                await session.commit()
         finally:
             await session.close()
 
@@ -194,6 +215,8 @@ class AdminRepository:
                                 if field:
                                     if isinstance(field.type, sql.sqltypes.Integer):
                                         values = [int(value) for value in values]
+                                    if isinstance(field.type, sql.sqltypes.Boolean):
+                                        values = [bool(value) for value in values]
 
                                     subquery &= getattr(model, key).in_(values)
 
@@ -214,38 +237,6 @@ class AdminRepository:
                 await session.close()
 
     @classmethod
-    async def read_counters(cls):
-
-        try:
-            async with async_session_factory() as session:
-                subquery = (
-                    select(
-                        UserStatusHistoryModel.user_id,
-                        func.max(UserStatusHistoryModel.date)
-                        .label('latest_date')
-                    )
-                    .group_by(UserStatusHistoryModel.user_id).subquery()
-                )
-
-                query = (
-                    select(UserModel.id, UserStatusHistoryModel.status_id)
-                    .join(UserStatusHistoryModel, UserModel.id == UserStatusHistoryModel.user_id)
-                    .join(subquery, and_(
-                        UserStatusHistoryModel.user_id == subquery.c.user_id,
-                        UserStatusHistoryModel.date == subquery.c.latest_date
-                    ))
-                    .filter(UserStatusHistoryModel.status_id == 1)
-                )
-
-                db_response = await session.execute(query)
-
-                new_users = len(db_response.unique().scalars().all())
-
-
-        finally:
-            await session.close()
-
-    @classmethod
     async def read_fields(cls, model: str):
         model = globals().get(model)
         mapper = inspect(model)
@@ -256,39 +247,21 @@ class AdminRepository:
         return fields
 
     @classmethod
-    async def update_record(cls, model: str, record_id: int, values: dict):
-
+    async def delete_record(cls, model: str, record_id: int):
         model = globals().get(model, None)
 
         if model:
+
             try:
                 async with async_session_factory() as session:
+
                     query = (
-                        update(model)
+                        delete(model)
                         .where(model.id == record_id)
-                        .values(**values)
                     )
 
                     await session.execute(query)
                     await session.commit()
-
-            finally:
-                await session.close()
-
-    @classmethod
-    async def create_record(cls, model: str, values: dict):
-        model = globals().get(model, None)
-
-        if model:
-
-            try:
-                async with async_session_factory() as session:
-
-                    record = model(**values)
-                    session.add(record)
-
-                    await session.commit()
-                    await session.refresh(record)
 
             finally:
                 await session.close()

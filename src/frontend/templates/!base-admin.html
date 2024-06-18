@@ -10,7 +10,7 @@
 
     <title>{% block title %}{% endblock %} - GreedyBear</title>
 
-    <link rel="icon" type="image/x-icon" href=""/>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='assets/img/icons/logo.ico') }}"/>
 
 
     <!-- Fonts -->
@@ -88,42 +88,48 @@
                 </li>
 
                 <li class="menu-item">
-                    <a href="/admin-scripts-planner" class="menu-link">
+                    <a href="/admin-scripts/planner" class="menu-link">
                         <i class="menu-icon tf-icons bx bx-table"></i>
                         <div class="text-truncate" data-i18n="Планирование"></div>
                     </a>
                 </li>
-
 
                 <li class="menu-header small text-uppercase">
                     <span class="menu-header-text" data-i18n="База данных"></span>
                 </li>
 
                 <li class="menu-item">
-                    <a href="/dashboard" class="menu-link">
-                        <i class="menu-icon tf-icons bx bxs-user-account"></i>
-                        <div class="text-truncate" data-i18n="Аккаунты"></div>
-                    </a>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/dashboard" class="menu-link">
-                        <i class="menu-icon tf-icons bx bxs-cart"></i>
-                        <div class="text-truncate" data-i18n="Заказы"></div>
-                    </a>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/dashboard" class="menu-link">
+                    <a href="/admin-tables-addresses" class="menu-link">
                         <i class="menu-icon tf-icons bx bxs-building"></i>
                         <div class="text-truncate" data-i18n="Адреса"></div>
                     </a>
                 </li>
 
                 <li class="menu-item">
-                    <a href="/dashboard" class="menu-link">
+                    <a href="/admin-tables-accounts" class="menu-link">
+                        <i class="menu-icon tf-icons bx bxs-user-account"></i>
+                        <div class="text-truncate" data-i18n="Аккаунты"></div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/admin-table/OrdersOrder" class="menu-link">
+                        <i class="menu-icon tf-icons bx bxs-cart"></i>
+                        <div class="text-truncate" data-i18n="Заказы"></div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/admin-table/OrdersContractor" class="menu-link">
                         <i class="menu-icon tf-icons bx bxs-truck"></i>
                         <div class="text-truncate" data-i18n="Подрядчики"></div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/admin-tables-payments" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-credit-card-front"></i>
+                        <div class="text-truncate" data-i18n="Платежи"></div>
                     </a>
                 </li>
 
@@ -135,9 +141,16 @@
                 </li>
 
                 <li class="menu-item">
-                    <a href="/admin-tables-orgs" class="menu-link">
+                    <a href="/admin-table/Organization" class="menu-link">
                         <i class="menu-icon tf-icons bx bx-group"></i>
                         <div class="text-truncate" data-i18n="Организации"></div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/admin-table/OrganizationInvitation" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-list-plus"></i>
+                        <div class="text-truncate" data-i18n="Приглашения"></div>
                     </a>
                 </li>
 
@@ -146,10 +159,17 @@
                 </li>
 
                 <li class="menu-item">
-                    <a href="/dashboard" class="menu-link">
+                    <a href="/admin-table/" class="menu-link">
                         <i class="menu-icon tf-icons bx bx-data"></i>
-                        <div class="text-truncate" data-i18n="Хранилище">Пользователи</div>
+                        <div class="text-truncate" data-i18n="Хранилище"></div>
                         <span class="badge bg-info ms-auto">104 Gb</span>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="/admin-table/UserSession" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-laptop"></i>
+                        <div class="text-truncate" data-i18n="Сессии пользователей"></div>
                     </a>
                 </li>
 
@@ -188,7 +208,7 @@
                     </div>
 
                     <div class="navbar-nav align-items-center">
-                        <a href="/admin-tables-users" class="nav-link">
+                        <a href="/admin-tables-payments" class="nav-link">
                             <i class="bx bx-credit-card-front bx-sm"></i>
                             <span class="badge bg-danger rounded-pill badge-notifications" id="c-bills"
                                   style="display:none"></span>
@@ -299,6 +319,64 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.0.1/js/toastr.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/3.3.4/jquery.inputmask.bundle.min.js"></script>
 
+
+<script>
+    const FT = {
+        'name': 'Имя',
+        'username': 'Логин',
+        'telnum': 'Телефон',
+        'post': 'Должность',
+        'surname': 'Фамилия',
+        'fathername': 'Отчество',
+        'media_id': 'Медиа',
+        'storage_href': 'Название в хранилище',
+        'title': 'Название',
+        'description': 'Описание',
+        'type': 'Тип',
+        'date': 'Дата',
+        'time_min_min_per_step': 'Минимальный шаг ячеек расписания',
+        'time_max_min_per_step': 'Максимальный шаг ячеек расписания',
+        'time_start': 'Время начала',
+        'time_end': 'Время окончания (идеальное)',
+        'time_first_point': 'Время первой точки расширения',
+        'time_second_point': 'Время последней точки расширения',
+        'schedule_id': 'Расписание',
+        'is_active': 'Активный',
+        'number': 'Номер',
+        'load_percent': 'Нагрузка',
+        'load_j_min': 'J мин',
+        'load_j_max': 'J макс',
+        'load_l_min': 'L мин',
+        'load_l_max': 'L макс',
+        'load_t_min': 'T мин',
+        'load_t_max': 'T макс',
+        'load_m': 'M',
+        'address': 'Адрес',
+        'district': 'Район',
+        'contractor_id': 'Подрядчик',
+        'order_id': 'Заказ',
+        'wb_uuid': 'ID заказа на WB',
+        'wb_keyword': 'Ключевой запрос',
+        'dt_ordered': 'Дата заказа',
+        'dt_delivered': 'Дата доставки',
+        'dt_collected': 'Дата получения',
+        'product_id': 'Продукт',
+        'size_id': 'Размер',
+        'account_id': 'Аккаунт',
+        'code': 'Код приглашения',
+        'level': 'Уровень',
+        'created': 'Создано',
+        'expires': 'Истекает',
+        'amount': 'Количество',
+        'org_id': 'Организация',
+        'login_date': 'Дата входа',
+        'user_id': 'Пользователь',
+        'al': 'Дни жизни аккаунта',
+        'lo': 'Макс кол-во дней с последнего заказа на аккаунте',
+        'k_format': 'Формат записи даты в ячейку K листа плана'
+    }
+</script>
+
 <script>
     function logout() {
         $.ajax({
@@ -358,6 +436,30 @@
             if (amount > 0) {
                 $('#c-orgs').show()
                 $('#c-orgs').html(amount)
+            }
+        },
+
+        error: function (data) {
+            toastr.error(data.responseJSON.detail);
+        }
+    });
+
+    $.ajax({
+        url: '/admin/get/BalanceBill',
+        method: 'get',
+
+        success: function (data) {
+            var amount = 0
+
+            for (var i = 0; i < data.length; i++) {
+                if (data[i].status_id === 2) {
+                    amount += 1
+                }
+            }
+
+            if (amount > 0) {
+                $('#c-bills').show()
+                $('#c-bills').html(amount)
             }
         },
 

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 
 from auth.models import UserModel
 from auth.router import authed
+from auth.schemas import UserSessionReadSchema
 from orgs.repository import OrganizationRepository, MembershipRepository
 from orgs.utils import check_access
 from products.repository import ProductsRepository, ReviewsRepository
@@ -29,12 +30,12 @@ router_reviews = APIRouter(
 
 @router_products.post('/create')
 async def create_product(data: Annotated[ProductPOSTSchema, Depends()],
-                         user: UserModel = Depends(authed)
+                         session: UserSessionReadSchema = Depends(authed)
                          ) -> ProductGETSchema:
     data_dict = data.model_dump()
 
     try:
-        organization, membership = await check_access(data_dict.get('org_id'), user.id, 2)
+        organization, membership = await check_access(data_dict.get('org_id'), session.user.id, 2)
 
     except Exception as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -63,7 +64,7 @@ async def create_product(data: Annotated[ProductPOSTSchema, Depends()],
                 'description': None,
                 'storage_href': generate_filename() + '.webp',
                 'type': 'webp',
-                'owner_id': user.id
+                'owner_id': session.user.id
             }
         ) if picture_data else None
     )
@@ -80,9 +81,9 @@ async def create_product(data: Annotated[ProductPOSTSchema, Depends()],
 
 @router_products.get('/getOwned')
 async def get_owned_products(org_id: int,
-                             user: UserModel = Depends(authed)):
+                             session: UserSessionReadSchema = Depends(authed)):
     try:
-        organization, membership = await check_access(org_id, user.id, 2)
+        organization, membership = await check_access(org_id, session.user.id, 2)
 
     except Exception as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -96,14 +97,14 @@ async def get_owned_products(org_id: int,
 
 @router_products.get('/disable')
 async def disable_product(product_id: int,
-                          user: UserModel = Depends(authed)):
+                          session: UserSessionReadSchema = Depends(authed)):
     product = await ProductsRepository.get_one_by_id(product_id)
 
     if not product:
         raise HTTPException(status_code=404, detail=string_products_product_not_found)
 
     try:
-        organization, membership = await check_access(product.org_id, user.id, 2)
+        organization, membership = await check_access(product.org_id, session.user.id, 2)
 
     except Exception as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -118,7 +119,7 @@ async def disable_product(product_id: int,
 @router_reviews.post('/create')
 async def create_review(data: Annotated[ReviewPOSTSchema, Depends()],
                         files: List[UploadFile] = File(...),
-                        user: UserModel = Depends(authed)
+                        session: UserSessionReadSchema = Depends(authed)
                         ):
     data_dict = data.model_dump()
     if len(files) > 5:
@@ -130,7 +131,7 @@ async def create_review(data: Annotated[ReviewPOSTSchema, Depends()],
         raise HTTPException(status_code=404, detail=string_products_product_not_found)
 
     try:
-        organization, membership = await check_access(product.org_id, user.id, 8)
+        organization, membership = await check_access(product.org_id, session.user.id, 8)
 
     except Exception as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -182,7 +183,7 @@ async def create_review(data: Annotated[ReviewPOSTSchema, Depends()],
                 'description': None,
                 'storage_href': file.href + f".{file.name.rsplit('.', maxsplit=1)[1]}",
                 'type': file.name.rsplit('.', maxsplit=1)[1],
-                'owner_id': user.id
+                'owner_id': session.user.id
             }
         ))
 
@@ -203,10 +204,10 @@ async def create_review(data: Annotated[ReviewPOSTSchema, Depends()],
 
 @router_reviews.get('/getOwned')
 async def create_review(org_id: int,
-                        user: UserModel = Depends(authed)
+                        session: UserSessionReadSchema = Depends(authed)
                         ) -> list[ReviewGETSchema]:
     try:
-        organization, membership = await check_access(org_id, user.id, 8)
+        organization, membership = await check_access(org_id, session.user.id, 8)
 
     except Exception as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -220,14 +221,14 @@ async def create_review(org_id: int,
 
 @router_reviews.get('/disable')
 async def disable_review(review_id: int,
-                         user: UserModel = Depends(authed)):
+                         session: UserSessionReadSchema = Depends(authed)):
 
     review = await ReviewsRepository.get_one_by_id(review_id)
     if not review:
         raise HTTPException(status_code=404, detail=string_404)
 
     try:
-        organization, membership = await check_access(review.product.org_id, user.id, 8)
+        organization, membership = await check_access(review.product.org_id, session.user.id, 8)
 
     except Exception as e:
         raise HTTPException(status_code=403, detail=str(e))

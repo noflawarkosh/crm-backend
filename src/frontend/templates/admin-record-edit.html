@@ -12,6 +12,7 @@
 
 <!-- Draw Forms -->
 <script>
+
     //uneditable fields
     const UEF = [
         'id',
@@ -21,56 +22,19 @@
 
     const bools = ['is_active']
 
-    // translator
-    const FT = {
-        'name': 'Имя',
-        'username': 'Логин',
-        'telnum': 'Телефон',
-        'post': 'Должность',
-        'surname': 'Фамилия',
-        'fathername': 'Отчество',
-        'media_id': 'Медиа',
-        'storage_href': 'Название в хранилище',
-        'title': 'Название',
-        'description': 'Описание',
-        'type': 'Тип',
-        'date': 'Дата',
-        'time_min_min_per_step': 'Минимальный шаг ячеек расписания',
-        'time_max_min_per_step': 'Максимальный шаг ячеек расписания',
-        'time_start': 'Время начала',
-        'time_end': 'Время окончания (идеальное)',
-        'time_first_point': 'Время первой точки расширения',
-        'time_second_point': 'Время последней точки расширения',
-        'schedule_id': 'Расписание',
-        'is_active': 'Активный',
-        'number': 'Номер/приоритет',
-        'load_percent': 'Нагрузка',
-        'load_j_min': 'J мин',
-        'load_j_max': 'J макс',
-        'load_l_min': 'L мин',
-        'load_l_max': 'L макс',
-        'load_t_min': 'T мин',
-        'load_t_max': 'T макс',
-        'load_m': 'M'
-
-    }
-
     //fields - models
     const FML = {
         'media_id': ['Storage', 'title'],
         'schedule_id': ['OrdersServerSchedule', 'title'],
         'contractor_id': ['OrdersContractor', 'name'],
         'server_id': ['OrdersServer', 'name'],
+        'address_id': ['OrdersAddress', 'address'],
     }
-
 
     const url = window.location.href;
     var arr = url.split('/')
-
     var id = arr[arr.length - 1]
     var table = arr[arr.length - 2]
-
-
     var Ffields = {}
 
     $.ajax({
@@ -241,15 +205,17 @@
         var arr = url.split('/')
 
         var id = arr[arr.length - 1]
-        var table = arr[arr.length - 2]
-
+        var model = arr[arr.length - 2]
         b_data['id'] = id
+
+        var payload = {}
+        payload[model] = [b_data]
 
         $.ajax({
             type: "POST",
-            url: '/admin/save/' + table,
-            data: b_data,
-            dataType: "json",
+            url: '/admin/save',
+            data: JSON.stringify(payload),
+            contentType: "application/json",
             success: function () {
                 toastr.success('Изменения сохранены')
                 submitButton.classList.remove('disabled');

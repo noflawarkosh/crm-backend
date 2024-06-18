@@ -1,5 +1,5 @@
 {% extends "!base-admin.html" %}
-{% block title %}Пользователи{% endblock %}
+{% block title %}Организации{% endblock %}
 {% block css %}
 
 {% endblock %}
@@ -8,25 +8,23 @@
 <script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script>
 
-    function updateUserStatus(user_id, status_id) {
+    function updateOrgStatus(org_id, status_id) {
 
         $.ajax({
             type: "POST",
-            url: '/admin/save/UserStatusHistory',
-            data: {
-                status_id: status_id,
-                user_id: user_id,
-            },
+            url: '/admin/save',
+            data: JSON.stringify({OrganizationStatusHistory: [{org_id: org_id, status_id: status_id}]}),
             dataType: "json",
+            contentType: "application/json",
             success: function () {
-                var msg = 'Данные пользователя обновлены'
+                var msg = 'Данные обновлены'
 
                 if (status_id === 2) {
-                    msg = 'Пользователь разблокирован'
+                    msg = 'Организация активирована'
                 }
 
                 if (status_id === 3) {
-                    msg = 'Пользователь заблокирован'
+                    msg = 'Организация деактивирована'
                 }
 
                 toastr.success(msg)
@@ -41,9 +39,9 @@
     }
 
     $(document).ready(function () {
-        var table = $('#dt_users').DataTable({
+        var table = $('#dt_orgs').DataTable({
             "ajax": {
-                url: '/admin/get/User',
+                url: '/admin/get/Organization',
                 dataSrc: ''
             },
             "paging": true,
@@ -54,47 +52,51 @@
 
             columns: [
                 {data: 'id'},
-                {data: 'name'},
-                {data: 'username'},
-                {data: 'email'},
-                {data: 'telnum'},
-                {data: 'telegram'},
+                {data: 'title'},
+                {data: 'inn'},
                 {
-                    "data": "statuses",
+                    "data": "owner",
                     "render": function (data, type, row) {
 
-                        var c = 'warning'
-
-                        if (data[data.length - 1].status.id === 2) {
-                            c = 'success'
-                        }
-
-                        if (data[data.length - 1].status.id === 3) {
-                            c = 'danger'
-                        }
-
-                        return '<span class="badge bg-label-' + c + '">' + data[data.length - 1].status.title + '</span>'
+                        return '@' + data.username + ' (' + data.name + ')'
                     }
                 },
                 {
                     "data": "statuses",
                     "render": function (data, type, row) {
 
-                        var edit = '<a href="/admin-edit/User/' + data[data.length - 1].user_id + '"><i class="bx bx-edit-alt"></i></a>'
-
-                        if (data[data.length - 1].status.id === 1) {
-                            return edit + '<a href="##" onclick="updateUserStatus(' + data[data.length - 1].user_id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>' +
-                                '<a href="##" onclick="updateUserStatus(' + data[data.length - 1].user_id + ', ' + 3 + ')"><i class="bx bx-x"></i></a>'
-                        }
+                        var color = 'warning'
 
                         if (data[data.length - 1].status.id === 2) {
-                            return edit + '<a href="##" onclick="updateUserStatus(' + data[data.length - 1].user_id + ', ' + 3 + ')"><i class="bx bx-block"></i></a>'
+                            color = 'success'
                         }
 
                         if (data[data.length - 1].status.id === 3) {
-                            return edit + '<a href="##" onclick="updateUserStatus(' + data[data.length - 1].user_id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>'
+                            color = 'danger'
                         }
 
+                        return '<span class="badge bg-label-' + color + '">' + data[data.length - 1].status.title + '</span>'
+                    }
+                },
+
+                {
+                    "data": "statuses",
+                    "render": function (data, type, row) {
+
+                        var edit = '<a href="/admin-edit/Organization/' + row.id + '"><i class="bx bx-edit-alt"></i></a>'
+
+                        if (data[data.length - 1].status.id === 1) {
+                            return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>' +
+                                          '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ')"><i class="bx bx-x"></i></a>'
+                        }
+
+                        if (data[data.length - 1].status.id === 2) {
+                            return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ')"><i class="bx bx-x"></i></a>'
+                        }
+
+                        if (data[data.length - 1].status.id === 3) {
+                            return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>'
+                        }
                     }
                 }
             ],
@@ -103,27 +105,17 @@
         });
 
     })
-    ;
 
-    function exportToXLSX() {
-        var table = $('#dt_users').DataTable();
-        var data = table.data().toArray();
-        var ws = XLSX.utils.json_to_sheet(data);
-        var wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-        var wbout = XLSX.write(wb, {bookType: 'xlsx', type: 'array'});
-        saveAs(new Blob([wbout], {type: "application/octet-stream"}), "data.xlsx");
-    }
 
     function refresh() {
         $('#rb').hide()
-        var table = $('#dt_users').DataTable();
+        var table = $('#dt_orgs').DataTable();
         table.clear()
         table.draw()
 
         $.ajax({
             type: "GET",
-            url: '/admin/get/User',
+            url: '/admin/get/Organization',
             dataType: "json",
             success: function (data) {
                 table.rows.add(data).draw();
@@ -151,24 +143,20 @@
             <div class="card">
 
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Управление пользователями
-
-                        <a href="##" onclick="exportToXLSX()"><i class="bx bx-download"></i></a>
+                    <h5 class="card-title mb-0">Организации
                         <a href="##" id="rb" onclick="refresh()"><i class="bx bx-refresh"></i></a>
                     </h5>
                     <small class="card-subtitle" id="prod-cntr"></small>
                 </div>
 
                 <div class="card-datatable p-4">
-                    <table id="dt_users" class="datatables-ajax table table-bordered dataTable no-footer">
+                    <table id="dt_orgs" class="datatables-ajax table table-bordered dataTable no-footer">
                         <thead>
                         <tr>
                             <th>#ID</th>
-                            <th>Имя</th>
-                            <th>Логин</th>
-                            <th>Почта</th>
-                            <th>Телефон</th>
-                            <th>Telegram</th>
+                            <th>Название</th>
+                            <th>ИНН</th>
+                            <th>Владелец</th>
                             <th>Статус</th>
                             <th>Действия</th>
                         </tr>

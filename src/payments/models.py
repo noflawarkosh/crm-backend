@@ -20,14 +20,21 @@ class BalanceHistoryModel(Base):
     __tablename__ = 'balance_history'
 
     id: Mapped[pk]
-    action_id: Mapped[int] = mapped_column(ForeignKey('balance_action.id', ondelete='CASCADE', onupdate='CASCADE'))
     description: Mapped[str | None]
-    org_id: Mapped[int] = mapped_column(ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE'))
     amount: Mapped[int]
     date: Mapped[dt]
 
-    organization: Mapped['OrganizationModel'] = relationship()
-    action: Mapped['BalanceActionModel'] = relationship()
+    # FK
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+    action_id: Mapped[int] = mapped_column(
+        ForeignKey('balance_action.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+
+    # Relationships
+    organization: Mapped['OrganizationModel'] = relationship(lazy=False)
+    action: Mapped['BalanceActionModel'] = relationship(lazy=False)
 
 
 class BalanceBillStatusModel(Base):
@@ -41,17 +48,28 @@ class BalanceBillModel(Base):
     __tablename__ = 'balance_bill'
 
     id: Mapped[pk]
-    org_id: Mapped[int] = mapped_column(ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE'))
-    amount: Mapped[int]
-    source_id: Mapped[int] = mapped_column(ForeignKey('balance_source.id', onupdate='CASCADE'))
-    status_id: Mapped[int] = mapped_column(ForeignKey('balance_bill_status.id', ondelete='CASCADE', onupdate='CASCADE'))
-    media_id: Mapped[int | None] = mapped_column(ForeignKey('storage.id', ondelete='CASCADE', onupdate='CASCADE'))
     date: Mapped[dt]
+    amount: Mapped[int]
 
-    organization: Mapped['OrganizationModel'] = relationship()
-    source: Mapped['BalanceSourceModel'] = relationship()
-    status: Mapped['BalanceBillStatusModel'] = relationship()
-    media: Mapped['StorageModel'] = relationship()
+    # FK
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+    source_id: Mapped[int] = mapped_column(
+        ForeignKey('balance_source.id', onupdate='CASCADE')
+    )
+    status_id: Mapped[int] = mapped_column(
+        ForeignKey('balance_bill_status.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+    media_id: Mapped[int | None] = mapped_column(
+        ForeignKey('storage.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+
+    # Relationships
+    organization: Mapped['OrganizationModel'] = relationship(lazy=False)
+    source: Mapped['BalanceSourceModel'] = relationship(lazy=False)
+    status: Mapped['BalanceBillStatusModel'] = relationship(lazy=False)
+    media: Mapped['StorageModel'] = relationship(lazy=False)
 
 
 class BalanceSourceModel(Base):

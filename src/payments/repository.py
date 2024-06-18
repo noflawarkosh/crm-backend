@@ -1,80 +1,37 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
 from database import async_session_factory
-from payments.models import BalanceBillModel, BalanceSourceModel
-from payments.schemas import BalanceBillPOSTSchema
+from payments.models import BalanceBillModel, BalanceSourceModel, BalanceHistoryModel
 
 
 class PaymentsRepository:
 
     @classmethod
-    async def add_bill(cls, data: BalanceBillPOSTSchema) -> BalanceBillModel:
+    async def create_bill(cls, data: dict):
 
         try:
-
             async with async_session_factory() as session:
 
-                data_dict = data.model_dump()
-                data_dict['status_id'] = 3
+                bill = BalanceBillModel(**data, status_id=3)
 
-                bill = BalanceBillModel(**data_dict)
                 session.add(bill)
-
                 await session.commit()
-                await session.refresh(bill)
-
-                return bill
 
         finally:
             await session.close()
 
     @classmethod
-    async def get_bill(cls, bill_id: int) -> BalanceBillModel:
-
+    async def read_bills(cls, field: str, value) -> list[BalanceBillModel] | None:
         try:
-
             async with async_session_factory() as session:
-
                 query = (
                     select(BalanceBillModel)
-                    .options(
-                        selectinload(BalanceBillModel.organization),
-                        selectinload(BalanceBillModel.source),
-                        selectinload(BalanceBillModel.status),
-                        selectinload(BalanceBillModel.media),
-                    )
-                    .where(BalanceBillModel.id == bill_id)
+                    .where(getattr(BalanceBillModel, field) == value)
                 )
 
                 db_response = await session.execute(query)
-                bill = db_response.scalars().one_or_none()
-
-                return bill
-
-        finally:
-            await session.close()
-
-    @classmethod
-    async def get_all_by_org_id(cls, org_id: int) -> list[BalanceBillModel]:
-
-        try:
-
-            async with async_session_factory() as session:
-
-                query = (
-                    select(BalanceBillModel)
-                    .where(BalanceBillModel.org_id == org_id)
-                    .options(
-                        selectinload(BalanceBillModel.organization),
-                        selectinload(BalanceBillModel.source),
-                        selectinload(BalanceBillModel.status),
-                        selectinload(BalanceBillModel.media),
-                    )
-                )
-
-                db_response = await session.execute(query)
-                bills = db_response.scalars().all()
+                bills = db_response.unique().scalars().all()
 
                 return bills
 
@@ -82,38 +39,24 @@ class PaymentsRepository:
             await session.close()
 
     @classmethod
-    async def update_bill_status(cls, bill_id: int, status_id: int) -> BalanceBillModel | None:
+    async def update_bill(cls, bill_id: int, values: dict):
 
         try:
-
             async with async_session_factory() as session:
-
                 query = (
-                    select(BalanceBillModel)
+                    update(BalanceBillModel)
                     .where(BalanceBillModel.id == bill_id)
+                    .values(**values)
                 )
-
-                db_response = await session.execute(query)
-                bill = db_response.scalars().one_or_none()
-
-                if bill:
-                    bill.status_id = status_id
-
-                    await session.commit()
-                    await session.refresh(bill)
-
-                    return bill
-
-                return None
-
+                await session.execute(query)
+                await session.commit()
         finally:
             await session.close()
 
     @classmethod
-    async def get_active_sources(cls) -> list[BalanceSourceModel]:
+    async def read_active_sources(cls) -> list[BalanceSourceModel]:
 
         try:
-
             async with async_session_factory() as session:
 
                 query = (
@@ -128,3 +71,23 @@ class PaymentsRepository:
 
         finally:
             await session.close()
+
+    @classmethod
+    async def read_history(cls, org_id: int) -> list[BalanceHistoryModel]:
+
+        try:
+            async with async_session_factory() as session:
+
+                query = (
+                    select(BalanceHistoryModel)
+                    .where(BalanceHistoryModel.org_id == org_id)
+                )
+
+                db_response = await session.execute(query)
+                history = db_response.unique().scalars().all()
+
+                return history
+        finally:
+            await session.close()
+
+

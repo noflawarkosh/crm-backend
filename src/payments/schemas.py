@@ -6,12 +6,13 @@ from orgs.schemas import OrganizationReadSchema
 from storage.schemas import StorageGETSchema
 
 
+# Balance Action
 class BalanceActionSchema(BaseModel):
     id: int
     title: str
 
 
-class BalanceHistoryGETSchema(BaseModel):
+class BalanceHistoryReadSchema(BaseModel):
     id: int
     action_id: int
     description: str | None
@@ -19,44 +20,39 @@ class BalanceHistoryGETSchema(BaseModel):
     amount: int
     date: datetime.datetime
 
-
-class BalanceHistoryRELSchema(BalanceHistoryGETSchema):
     organization: 'OrganizationReadSchema'
-    action: BalanceActionSchema
+    action: 'BalanceActionSchema'
 
 
-class BalanceSourcePOSTSchema(BaseModel):
+# Balance Source
+class BalanceSourceSchema(BaseModel):
+    id: int
     title: str
     description: str | None
     number: str
     is_active: bool
 
 
-class BalanceSourceGETSchema(BalanceSourcePOSTSchema):
-    id: int
-
-
+# Balance Status
 class BalanceBillStatusSchema(BaseModel):
     id: int
     title: str
 
 
-class BalanceBillPOSTSchema(BaseModel):
+class BalanceBillCreateSchema(BaseModel):
     org_id: int
     amount: int
     source_id: int
 
 
-class BalanceBillGETSchema(BalanceBillPOSTSchema):
+class BalanceBillReadSchema(BalanceBillCreateSchema):
     id: int
     status_id: int
     media_id: int | None
     date: datetime.datetime
 
-
-class BalanceBillRELSchema(BalanceBillGETSchema):
-
     organization: 'OrganizationReadSchema'
-    source: BalanceSourceGETSchema
-    status: BalanceBillStatusSchema
-    media: 'StorageGETSchema'
+    source: 'BalanceSourceSchema'
+    status: 'BalanceBillStatusSchema'
+    media: Optional['StorageGETSchema']
+

@@ -33,7 +33,6 @@ class OrganizationRepository:
 
     @classmethod
     async def read_organizations(cls, field: str, value) -> list[OrganizationModel] | None:
-
         try:
             async with async_session_factory() as session:
                 query = (

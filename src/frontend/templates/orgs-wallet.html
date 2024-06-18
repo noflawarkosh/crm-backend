@@ -24,7 +24,6 @@
 <script src="{{ url_for('static', path='assets/js/app-ecommerce-dashboard.js') }}"></script>
 <script src="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.js') }}"></script>
 
-
 <!-- Create Bill -->
 <script>
     document.getElementById('create-bill-form').addEventListener('submit', function (event) {
@@ -109,76 +108,90 @@
 </script>
 
 <!-- Get Bills -->
-
 <script>
     $(document).ready(function () {
-
         const url = window.location.href;
-
         var arr = url.split('/')
         var id = arr[arr.length - 1]
 
         $.ajax({
-
             url: '/payments/getOwnedBills?org_id=' + id,
             method: 'get',
-
             success: function (data) {
-                if (data.length === 0) {
-                    $('#users-list tbody').append('<tr><td>Участники отсутствуют</td></tr>');
-                }
-                $.each(data, function (index, item) {
+                $('#dt_user_bills').DataTable({
+                    "data": data,
+                    "paging": true,
+                    "pageLength": 10,
+                    "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                    "searching": true,
+                    "ordering": true,
 
-                    var td_id = '<td><a href="/bill/' + item.id + '"><span class="fw-medium">#' + item.id + '</span></a></td>'
+                    columns: [
+                        {
+                            data: 'id',
+                            "render": function (data, type, row) {
+                                return '<a href="/bill/' + row.id + '">#' + row.id + '</a>'
+                            }
+                        },
+                        {
+                            data: 'date',
+                            "render": function (data, type, row) {
+                                return moment(data).format('DD.MM.YYYY HH:mm')
+                            }
+                        },
+                        {
+                            data: 'amount',
+                            "render": function (data, type, row) {
+                                return '<b>' + data + '</b>'
+                            }
+                        },
+                        {
+                            data: 'source',
+                            "render": function (data, type, row) {
+                                return data.title + ' (' + data.number + ')'
+                            }
+                        },
+                        {
+                            data: 'media',
+                            "render": function (data, type, row) {
+                                var cell = '—'
 
-                    var date = new Date(item.date);
-                    var formattedDate = date.getDate().toString().padStart(2, '0') + '.' + (date.getMonth() + 1).toString().padStart(2, '0') + '.' + date.getFullYear() + ', ' + date.toLocaleTimeString();
+                                if (data !== null) {
+                                    cell = '<a target="_blank" href="/storage/get/' + data.storage_href + '">' + data.title + '</a>'
+                                }
 
-                    var td_date = '<td>' + formattedDate + '</td>';
-                    var td_amount = '<td>' + item.amount + ' ₽</td>'
-                    var td_source = '<td>' + item.source.title + ' (' + item.source.number + ')' + '</td>'
+                                return cell
+                            }
+                        },
+                        {
+                            data: 'status',
+                            "render": function (data, type, row) {
 
-                    if (item.media !== null) {
-                        var td_att = '<td><a href="/storage/get/' + item.media.storage_href + '" target="_blank"><span class="fw-medium">' + item.media.title + '.' + item.media.type + '</span></a></td>'
-                    } else {
-                        var td_att = '<td>—</td>'
-                    }
+                                var statuses = {
+                                    1: 'success',
+                                    2: 'warning',
+                                    3: 'info',
+                                    4: 'danger',
+                                    5: 'danger',
+                                }
 
-                    var status = 'bg-label-warning'
-                    if (item.status.id === 1) {
-                        status = 'bg-label-success'
-                    }
+                                return '<span class="badge bg-label-' + statuses[data.id] + '">' + data.title + '</span>'
+                            }
+                        },
+                        {
+                            "render": function (data, type, row) {
+                                return '<a target="_blank" href="/bill/' + row.id + '"><i class="bx bx-show"></i></a>'
+                            }
+                        }
 
-                    if (item.status.id === 4) {
-                        status = 'bg-label-danger'
-                    }
+                    ],
 
-                    if (item.status.id === 5) {
-                        status = 'bg-label-danger'
-                    }
-
-                    var td_status = '<td><span class="badge ' + status + '"> ' + item.status.title + ' </span></td>'
-
-                    var td_actions =
-                        '<td>' +
-                        '<div class="d-flex align-items-center">' +
-                        '<a href="/bill/' + item.id + '" class="text-body" target="_blank"><i class="bx bx-show mx-1"></i></a>\n' +
-                        '</div>\n' +
-                        '</td>'
-
-                    var row = '<tr>' + td_id + td_date + td_amount + td_source + td_att + td_status + td_actions + '</tr>'
-
-                    $('#bills-table tbody').append(row);
-
+                    "order": [[1, "desc"]]
                 });
-
-                document.getElementById('loading-members').style.display = 'none';
-                document.getElementById('div-mems').style.display = 'block';
             },
             error: function () {
+                toastr.error('Ошибка загрузки счетов')
 
-                toastr.error('Ошибка загрузки списка пользователей')
-                document.getElementById('loading-members').style.display = 'none';
             }
 
         });
@@ -187,102 +200,196 @@
     });
 
 </script>
+
+<!-- Get History -->
+<script>
+    $(document).ready(function () {
+
+        const url = window.location.href;
+
+        var total = 0
+        var free = 0
+        var freezed = 0
+        var spent = 0
+
+        var arr = url.split('/')
+        var org_id = arr[arr.length - 1]
+
+        $.ajax({
+
+            url: '/payments/getHistory?org_id=' + org_id,
+            type: 'GET',
+
+            success: function (data) {
+
+                for (var i = 0; i < data.length; i++) {
+                    if (data[i].action_id === 1) {
+                        total += data[i].amount
+                    }
+
+                    if (data[i].action_id === 2) {
+                        freezed += data[i].amount
+                    }
+
+                    if (data[i].action_id === 3) {
+                        total -= data[i].amount
+                        spent += data[i].amount
+                    }
+                }
+
+                document.getElementById('ctr-1').innerText = '₽ ' + total
+                document.getElementById('ctr-2').innerText = '₽ ' + (total - freezed)
+                document.getElementById('ctr-3').innerText = '₽ ' + freezed
+                document.getElementById('ctr-4').innerText = '₽ ' + spent
+
+
+                $('#dt_user_history').DataTable({
+                    "data": data,
+                    "paging": true,
+                    "pageLength": 10,
+                    "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                    "searching": true,
+                    "ordering": true,
+
+                    columns: [
+                        {
+                            data: 'date',
+                            "render": function (data, type, row) {
+                                return moment(data).format('DD.MM.YYYY HH:mm')
+                            }
+                        },
+                        {
+                            data: 'amount',
+                            "render": function (data, type, row) {
+                                var sign = '-'
+
+                                if (row.action_id === 1) {
+                                    sign = '+'
+                                }
+
+                                return '<b>' + sign + data + '</b>'
+                            }
+                        },
+                        {
+                            data: 'action',
+                            "render": function (data, type, row) {
+                                var action = 'Не указано'
+                                var color = 'info'
+                                if (data.id === 1) {
+                                    action = 'Пополнение'
+                                    color = 'success'
+                                }
+
+                                if (data.id === 2) {
+                                    action = 'Заморозка'
+                                    color = 'warning'
+                                }
+
+                                if (data.id === 3) {
+                                    action = 'Списание'
+                                    color = 'danger'
+                                }
+
+                                return '<span class="badge bg-label-' + color + '">' + action + '</span>'
+                            }
+                        },
+                        {
+                            data: 'description',
+                            "render": function (data, type, row) {
+                                var ds = '—'
+
+                                if (row.description !== null) {
+                                    ds = data
+                                }
+                                return ds
+                            }
+                        },
+
+                    ],
+
+                    "order": [[0, "desc"]]
+                });
+
+            },
+
+            error: function (data) {
+                console.log(data)
+                toastr.error('Ошибка получения истории кошелька')
+            }
+        });
+
+
+    })
+</script>
+
+
 {% endblock %}
 
 
 {% block content %}
 <div class="container-xxl flex-grow-1 container-p-y">
 
-    <div class="row mb-4">
-
-        <div class="col">
-            <div class="card h-100">
-                <div class="row row-bordered g-0">
-                    <div class="col-md-9">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Отчет за неделю</h5>
-                            <small class="card-subtitle">График состояния кошелька</small>
+    <div class="row mb-4 g-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="content-left">
+                            <h3 class="mb-0" id="ctr-1"></h3>
+                            <small>Всего</small>
                         </div>
-                        <div class="card-body">
-                            <div id="totalIncomeChart"></div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-3">
-                        <div class="card-header d-flex justify-content-between">
-                            <div>
-                                <h5 class="card-title mb-0" id="org-name-card">Кошелек</h5>
-                                <small class="card-subtitle" id="org-inn-card"></small>
-                            </div>
-                            <div class="dropdown">
-                                <button class="btn p-0" type="button" id="totalIncome"
-                                        data-bs-toggle="dropdown" aria-haspopup="true"
-                                        aria-expanded="false">
-                                    <i class="bx bx-dots-vertical-rounded"></i>
-                                </button>
-                                <div class="dropdown-menu dropdown-menu-end"
-                                     aria-labelledby="totalIncome">
-                                    <a class="dropdown-item" href="javascript:void(0);">Last 28 Days</a>
-                                    <a class="dropdown-item" href="javascript:void(0);">Last Month</a>
-                                    <a class="dropdown-item" href="javascript:void(0);">Last Year</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="report-list">
-                                <div class="report-list-item rounded-2 mb-3">
-                                    <div class="d-flex align-items-start">
-                                        <div class="report-list-icon shadow-sm me-2">
-                                            <img src="{{ url_for('static', path='assets/img/icons/unicons/wallet-info.png') }}"
-                                                 width="22"
-                                                 height="22" alt="Paypal">
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-end w-100 flex-wrap gap-2">
-                                            <div class="d-flex flex-column">
-                                                <span>Всего</span>
-                                                <h5 class="mb-0">10 000 000 ₽</h5>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="report-list-item rounded-2 mb-3">
-                                    <div class="d-flex align-items-start">
-                                        <div class="report-list-icon shadow-sm me-2">
-                                            <img src="{{ url_for('static', path='assets/img/icons/unicons/wallet.png') }}"
-                                                 width="22" height="22" alt="Shopping Bag">
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-end w-100 flex-wrap gap-2">
-                                            <div class="d-flex flex-column">
-                                                <span>Заморожено</span>
-                                                <h5 class="mb-0 text-warning">1 200 000 ₽</h5>
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="report-list-item rounded-2">
-                                    <div class="d-flex align-items-start">
-                                        <div class="report-list-icon shadow-sm me-2">
-                                            <img src="{{ url_for('static', path='assets/img/icons/unicons/cc-success.png') }}"
-                                                 width="22"
-                                                 height="22" alt="Wallet">
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-end w-100 flex-wrap gap-2">
-                                            <div class="d-flex flex-column">
-                                                <span>Свободные</span>
-                                                <h5 class="mb-0 text-success">10 000 000 ₽</h5>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <span class="badge bg-label-primary rounded-circle p-2">
+            <i class="bx bx-dollar bx-sm"></i>
+          </span>
                     </div>
                 </div>
             </div>
-            <!--/ Total Income -->
         </div>
-
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="content-left">
+                            <h3 class="mb-0" id="ctr-2"></h3>
+                            <small>Свободных</small>
+                        </div>
+                        <span class="badge bg-label-success rounded-circle p-2">
+            <i class="bx bx-gift bx-sm"></i>
+          </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="content-left">
+                            <h3 class="mb-0" id="ctr-3"></h3>
+                            <small>Заморожено</small>
+                        </div>
+                        <span class="badge bg-label-danger rounded-circle p-2">
+            <i class="bx bx-user bx-sm"></i>
+          </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="content-left">
+                            <h3 class="mb-0" id="ctr-4"></h3>
+                            <small>Потрачено</small>
+                        </div>
+                        <span class="badge bg-label-info rounded-circle p-2">
+            <i class="bx bx-infinite bx-sm"></i>
+          </span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row">
@@ -292,19 +399,19 @@
 
                 <div class="card-header">
                     <h5 class="card-title mb-0">История кошелька</h5>
-
-                    <small class="card-subtitle">В этой карточке вы можете отредактировать права участников</small>
+                    <small class="card-subtitle">За весь период существования организации</small>
                 </div>
 
-                <div class="table-responsive text-nowrap">
-                    <table class="table text-nowrap" id="users-list">
+                <div class="card-body table-responsive">
+                    <table id="dt_user_history" class="datatables-ajax table table-bordered dataTable no-footer">
                         <thead>
                         <tr>
-                            <th>ID</th>
-
+                            <th>Дата</th>
+                            <th>Сумма</th>
+                            <th>Операция</th>
+                            <th>Описание</th>
                         </tr>
                         </thead>
-                        <tbody class="table-border-bottom-0"></tbody>
                     </table>
                 </div>
             </div>
@@ -315,59 +422,45 @@
     <div class="row mt-4">
 
         <div class="col">
-            <div class="row">
-                <div class="col-12 col-md-6 col-lg-12 mb-4">
-                    <div class="card h-100">
-                        <div class="row">
-                            <div class="col">
-                                <div class="card-header">
-                                    <h5 class="card-title mb-0">Счета на пополнение
-                                        <a href="#" data-bs-toggle="offcanvas"
-                                           data-bs-target="#off-create-bill"
-                                           aria-controls="off-create-bill">
-                                            <i class="bx bxs-plus-square" data-bs-toggle="tooltip"
-                                               data-bs-offset="0,8"
-                                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
-                                               data-bs-original-title="Создать">
-                                            </i>
-                                        </a>
-                                    </h5>
+            <div class="card">
 
-                                    <small class="card-subtitle">Добавьте пополнение, выполните перевод и ожидайте
-                                        подтверждения</small>
-                                </div>
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Счета на пополнение
+                        <a href="#" data-bs-toggle="offcanvas"
+                           data-bs-target="#off-create-bill"
+                           aria-controls="off-create-bill">
+                            <i class="bx bxs-plus-square" data-bs-toggle="tooltip"
+                               data-bs-offset="0,8"
+                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                               data-bs-original-title="Создать">
+                            </i>
+                        </a>
+                    </h5>
+                    <small class="card-subtitle">
+                        Создайте счет, выполните перевод и ожидайте подтверждения
+                    </small>
+                </div>
 
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col">
-                                <table class="table text-nowrap" id="bills-table">
-                                    <thead>
-                                    <tr>
-                                        <th>#ID</th>
-                                        <th>Дата создания</th>
-                                        <th>Сумма</th>
-                                        <th>Способ</th>
-                                        <th>Вложения</th>
-                                        <th>Статус</th>
-                                        <th>Действия</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody class="table-border-bottom-0">
-
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-
-                    </div>
+                <div class="card-body table-responsive">
+                    <table id="dt_user_bills" class="datatables-ajax table table-bordered dataTable no-footer">
+                        <thead>
+                        <tr>
+                            <th>#ID</th>
+                            <th>Дата создания</th>
+                            <th>Сумма</th>
+                            <th>Способ</th>
+                            <th>Вложения</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                        </thead>
+                    </table>
                 </div>
             </div>
         </div>
 
-
     </div>
+
 </div>
 
 
@@ -380,7 +473,7 @@
                     aria-label="Закрыть"></button>
         </div>
 
-        <div class="offcanvas-body my-auto mx-0 flex-grow-0">
+        <div class="offcanvas-body mx-0 flex-grow-0">
 
             <form id="create-bill-form">
 
