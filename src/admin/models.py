@@ -18,6 +18,7 @@ class AdminUserModel(Base):
     fathername: Mapped[str | None]
     username: Mapped[str]
     post: Mapped[str]
+    level: Mapped[int]
     password: Mapped[str]
 
 

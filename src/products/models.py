@@ -5,7 +5,6 @@ import datetime
 
 from payments.models import Base
 
-
 pk = Annotated[int, mapped_column(primary_key=True)]
 dt = Annotated[datetime.datetime, mapped_column(server_default=text('NOW()'))]
 
@@ -19,6 +18,7 @@ class ProductModel(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
     wb_article: Mapped[str]
     wb_title: Mapped[str]
+    last_update: Mapped[dt]
 
     # FK
     org_id: Mapped[int] = mapped_column(
@@ -29,8 +29,8 @@ class ProductModel(Base):
     )
 
     # Relationships
-    media: Mapped['StorageModel'] = relationship(lazy=False)
-    sizes: Mapped[list['ProductSizeModel']] = relationship(lazy=False)
+    media: Mapped['StorageModel'] = relationship(lazy='noload')
+    sizes: Mapped[list['ProductSizeModel']] = relationship(lazy='noload')
 
 
 class ProductSizeModel(Base):
@@ -54,6 +54,8 @@ class ReviewModel(Base):
 
     id: Mapped[pk]
     text: Mapped[str | None]
+    match: Mapped[int | None]
+    status: Mapped[str]
 
     # FK
     product_id: Mapped[int] = mapped_column(
@@ -62,23 +64,11 @@ class ReviewModel(Base):
     size_id: Mapped[int | None] = mapped_column(
         ForeignKey('products_product_size.id', ondelete='CASCADE', onupdate='CASCADE')
     )
-    match_id: Mapped[int | None] = mapped_column(
-        ForeignKey('products_review_match.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
 
     # Relationships
-    media: Mapped[list['ReviewMediaModel']] = relationship(lazy=False)
-    statuses: Mapped[list['ReviewStatusHistoryModel']] = relationship(lazy=False)
-    product: Mapped['ProductModel'] = relationship(lazy=False)
-    size: Mapped['ProductSizeModel'] = relationship(lazy=False)
-    match: Mapped['ReviewMatchModel'] = relationship(lazy=False)
-
-
-class ReviewMatchModel(Base):
-    __tablename__ = 'products_review_match'
-
-    id: Mapped[pk]
-    title: Mapped[str]
+    media: Mapped[list['ReviewMediaModel']] = relationship(lazy='noload')
+    product: Mapped['ProductModel'] = relationship(lazy='noload')
+    size: Mapped['ProductSizeModel'] = relationship(lazy='noload')
 
 
 class ReviewMediaModel(Base):
@@ -96,29 +86,3 @@ class ReviewMediaModel(Base):
 
     # Relationships
     media: Mapped['StorageModel'] = relationship(lazy=False)
-
-
-class ReviewStatusModel(Base):
-    __tablename__ = 'products_review_status'
-
-    id: Mapped[pk]
-    title: Mapped[str]
-
-
-class ReviewStatusHistoryModel(Base):
-    __tablename__ = 'products_review_status_history'
-
-    id: Mapped[pk]
-    description: Mapped[str | None]
-    date: Mapped[dt]
-
-    # FK
-    review_id: Mapped[int] = mapped_column(
-        ForeignKey('products_review.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
-    status_id: Mapped[int] = mapped_column(
-        ForeignKey('products_review_status.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
-
-    # Relationship
-    status: Mapped[ReviewStatusModel] = relationship(lazy=False)

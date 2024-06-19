@@ -50,6 +50,8 @@ string_product_multiple_sizes_error = 'Укажите размер товара 
 string_product_size_not_found = 'Товар не найден'
 string_product_size_not_selected_but_match = 'Размер не указан'
 string_product_too_many_files = 'Максимальное количество файлов 5'
+string_product_refresh_error = 'Обновлять товар можно не чаще чем 1 раз в 5 минут'
 
 string_orders_time_error = 'Задачи на текущие сутки регистрируются до 9:00. Пожалуйста, выберите один из следующих дней'
 string_orders_max_amount = 'Максимальное количество должно быть не более 500'
+string_orders_size_not_in_stock = 'Выбранный размер или товар не в наличии'

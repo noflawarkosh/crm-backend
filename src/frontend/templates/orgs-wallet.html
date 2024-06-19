@@ -64,7 +64,6 @@
             },
 
             error: function (data) {
-                console.log(data)
                 toastr.error(data.responseJSON.detail)
                 submitButton.classList.remove('disabled');
             }
@@ -75,261 +74,250 @@
 
 <!-- Get Sources -->
 <script>
-    $(document).ready(function () {
+    $.ajax({
 
-        $.ajax({
+        url: '/payments/getActiveSources',
+        type: 'GET',
 
-            url: '/payments/getActiveSources',
-            type: 'GET',
+        success: function (data) {
+            var selectElement = $('#bill-source');
 
-            success: function (data) {
-                var selectElement = $('#bill-source');
+            $.each(data, function (index, item) {
+                var optionText = item.bank;
+                var optionValue = item.id
+                var optionDataSubtext = (item.description ? item.description  : '')
 
-                $.each(data, function (index, item) {
-                    var optionText = item.title + (item.description ? ' (' + item.description + ')' : '');
-                    var optionValue = item.id;
-                    var optionDataSubtext = item.number;
+                var option = $('<option>').text(optionText).attr('data-subtext', optionDataSubtext).val(optionValue);
+                selectElement.append(option);
+            });
 
-                    var option = $('<option>').text(optionText).attr('data-subtext', optionDataSubtext).val(optionValue);
-                    selectElement.append(option);
-                });
+            selectElement.selectpicker('refresh');
 
-                selectElement.selectpicker('refresh');
+        },
 
-            },
-
-            error: function (data) {
-                console.log(data)
-                toastr.error('Ошибка получения реквизитов получателей. Обновите страницу и повторите попытку')
-            }
-        });
-
+        error: function () {
+            toastr.error('Ошибка получения реквизитов')
+        }
     });
 </script>
 
 <!-- Get Bills -->
 <script>
-    $(document).ready(function () {
-        const url = window.location.href;
-        var arr = url.split('/')
-        var id = arr[arr.length - 1]
+    const url = window.location.href;
+    var arr = url.split('/')
+    var id = arr[arr.length - 1]
 
-        $.ajax({
-            url: '/payments/getOwnedBills?org_id=' + id,
-            method: 'get',
-            success: function (data) {
-                $('#dt_user_bills').DataTable({
-                    "data": data,
-                    "paging": true,
-                    "pageLength": 10,
-                    "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-                    "searching": true,
-                    "ordering": true,
+    $.ajax({
+        url: '/payments/getOwnedBills?org_id=' + id,
+        method: 'get',
+        success: function (data) {
+            $('#dt_user_bills').DataTable({
+                "data": data,
+                "paging": true,
+                "pageLength": 10,
+                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "searching": true,
+                "ordering": true,
 
-                    columns: [
-                        {
-                            data: 'id',
-                            "render": function (data, type, row) {
-                                return '<a href="/bill/' + row.id + '">#' + row.id + '</a>'
-                            }
-                        },
-                        {
-                            data: 'date',
-                            "render": function (data, type, row) {
-                                return moment(data).format('DD.MM.YYYY HH:mm')
-                            }
-                        },
-                        {
-                            data: 'amount',
-                            "render": function (data, type, row) {
-                                return '<b>' + data + '</b>'
-                            }
-                        },
-                        {
-                            data: 'source',
-                            "render": function (data, type, row) {
-                                return data.title + ' (' + data.number + ')'
-                            }
-                        },
-                        {
-                            data: 'media',
-                            "render": function (data, type, row) {
-                                var cell = '—'
-
-                                if (data !== null) {
-                                    cell = '<a target="_blank" href="/storage/get/' + data.storage_href + '">' + data.title + '</a>'
-                                }
-
-                                return cell
-                            }
-                        },
-                        {
-                            data: 'status',
-                            "render": function (data, type, row) {
-
-                                var statuses = {
-                                    1: 'success',
-                                    2: 'warning',
-                                    3: 'info',
-                                    4: 'danger',
-                                    5: 'danger',
-                                }
-
-                                return '<span class="badge bg-label-' + statuses[data.id] + '">' + data.title + '</span>'
-                            }
-                        },
-                        {
-                            "render": function (data, type, row) {
-                                return '<a target="_blank" href="/bill/' + row.id + '"><i class="bx bx-show"></i></a>'
-                            }
+                columns: [
+                    {
+                        data: 'id',
+                        "render": function (data, type, row) {
+                            return '<a href="/bill/' + row.id + '">#' + row.id + '</a>'
                         }
+                    },
+                    {
+                        data: 'date',
+                        "render": function (data, type, row) {
+                            return moment(data).format('DD.MM.YYYY HH:mm')
+                        }
+                    },
+                    {
+                        data: 'amount',
+                        "render": function (data, type, row) {
+                            return '<b>' + data + '</b>'
+                        }
+                    },
+                    {
+                        data: 'source',
+                        "render": function (data, type, row) {
+                            return data.bank
+                        }
+                    },
+                    {
+                        data: 'media',
+                        "render": function (data, type, row) {
+                            var cell = '—'
 
-                    ],
+                            if (data !== null) {
+                                cell = '<a target="_blank" href="/storage/get/' + data.storage_href + '">' + data.title + '</a>'
+                            }
 
-                    "order": [[1, "desc"]]
-                });
-            },
-            error: function () {
-                toastr.error('Ошибка загрузки счетов')
+                            return cell
+                        }
+                    },
+                    {
+                        data: 'status',
+                        "render": function (data, type, row) {
 
-            }
+                            var statuses = {
+                                1: 'success',
+                                2: 'warning',
+                                3: 'info',
+                                4: 'danger',
+                                5: 'danger',
+                            }
 
-        });
+                            return '<span class="badge bg-label-' + statuses[data.id] + '">' + data.title + '</span>'
+                        }
+                    },
+                    {
+                        "render": function (data, type, row) {
+                            return '<a target="_blank" href="/bill/' + row.id + '"><i class="bx bx-show"></i></a>'
+                        }
+                    }
 
+                ],
 
+                "order": [[1, "desc"]]
+            });
+            document.getElementById('bls-div').style.display = 'block';
+            document.getElementById('bls-ldr').style.display = 'none';
+        },
+        error: function (data) {
+            toastr.error('Ошибка загрузки счетов: ' + data.responseJSON.detail)
+            document.getElementById('bls-ldr').style.display = 'none';
+        }
     });
-
 </script>
 
 <!-- Get History -->
 <script>
-    $(document).ready(function () {
 
-        const url = window.location.href;
+    var total = 0
+    var free = 0
+    var freezed = 0
+    var spent = 0
 
-        var total = 0
-        var free = 0
-        var freezed = 0
-        var spent = 0
+    var arr = url.split('/')
+    var org_id = arr[arr.length - 1]
 
-        var arr = url.split('/')
-        var org_id = arr[arr.length - 1]
+    $.ajax({
 
-        $.ajax({
+        url: '/payments/getHistory?org_id=' + org_id,
+        type: 'GET',
 
-            url: '/payments/getHistory?org_id=' + org_id,
-            type: 'GET',
+        success: function (data) {
 
-            success: function (data) {
-
-                for (var i = 0; i < data.length; i++) {
-                    if (data[i].action_id === 1) {
-                        total += data[i].amount
-                    }
-
-                    if (data[i].action_id === 2) {
-                        freezed += data[i].amount
-                    }
-
-                    if (data[i].action_id === 3) {
-                        total -= data[i].amount
-                        spent += data[i].amount
-                    }
+            for (var i = 0; i < data.length; i++) {
+                if (data[i].action_id === 1) {
+                    total += data[i].amount
                 }
 
-                document.getElementById('ctr-1').innerText = '₽ ' + total
-                document.getElementById('ctr-2').innerText = '₽ ' + (total - freezed)
-                document.getElementById('ctr-3').innerText = '₽ ' + freezed
-                document.getElementById('ctr-4').innerText = '₽ ' + spent
+                if (data[i].action_id === 2) {
+                    freezed += data[i].amount
+                }
 
-
-                $('#dt_user_history').DataTable({
-                    "data": data,
-                    "paging": true,
-                    "pageLength": 10,
-                    "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-                    "searching": true,
-                    "ordering": true,
-
-                    columns: [
-                        {
-                            data: 'date',
-                            "render": function (data, type, row) {
-                                return moment(data).format('DD.MM.YYYY HH:mm')
-                            }
-                        },
-                        {
-                            data: 'amount',
-                            "render": function (data, type, row) {
-                                var sign = '-'
-
-                                if (row.action_id === 1) {
-                                    sign = '+'
-                                }
-
-                                return '<b>' + sign + data + '</b>'
-                            }
-                        },
-                        {
-                            data: 'action',
-                            "render": function (data, type, row) {
-                                var action = 'Не указано'
-                                var color = 'info'
-                                if (data.id === 1) {
-                                    action = 'Пополнение'
-                                    color = 'success'
-                                }
-
-                                if (data.id === 2) {
-                                    action = 'Заморозка'
-                                    color = 'warning'
-                                }
-
-                                if (data.id === 3) {
-                                    action = 'Списание'
-                                    color = 'danger'
-                                }
-
-                                return '<span class="badge bg-label-' + color + '">' + action + '</span>'
-                            }
-                        },
-                        {
-                            data: 'description',
-                            "render": function (data, type, row) {
-                                var ds = '—'
-
-                                if (row.description !== null) {
-                                    ds = data
-                                }
-                                return ds
-                            }
-                        },
-
-                    ],
-
-                    "order": [[0, "desc"]]
-                });
-
-            },
-
-            error: function (data) {
-                console.log(data)
-                toastr.error('Ошибка получения истории кошелька')
+                if (data[i].action_id === 3) {
+                    total -= data[i].amount
+                    spent += data[i].amount
+                }
             }
-        });
+
+            document.getElementById('ctr-1').innerText = '₽ ' + total
+            document.getElementById('ctr-2').innerText = '₽ ' + (total - freezed)
+            document.getElementById('ctr-3').innerText = '₽ ' + freezed
+            document.getElementById('ctr-4').innerText = '₽ ' + spent
 
 
-    })
+            $('#dt_user_history').DataTable({
+                "data": data,
+                "paging": true,
+                "pageLength": 10,
+                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "searching": true,
+                "ordering": true,
+
+                columns: [
+                    {
+                        data: 'date',
+                        "render": function (data, type, row) {
+                            return moment(data).format('DD.MM.YYYY HH:mm')
+                        }
+                    },
+                    {
+                        data: 'amount',
+                        "render": function (data, type, row) {
+                            var sign = '-'
+
+                            if (row.action_id === 1) {
+                                sign = '+'
+                            }
+
+                            return '<b>' + sign + data + '</b>'
+                        }
+                    },
+                    {
+                        data: 'action',
+                        "render": function (data, type, row) {
+                            var action = 'Не указано'
+                            var color = 'info'
+                            if (data.id === 1) {
+                                action = 'Пополнение'
+                                color = 'success'
+                            }
+
+                            if (data.id === 2) {
+                                action = 'Заморозка'
+                                color = 'warning'
+                            }
+
+                            if (data.id === 3) {
+                                action = 'Списание'
+                                color = 'danger'
+                            }
+
+                            if (data.id ===  4)  {
+                                action =  'Разморозка'
+                                color =  'success'
+                            }
+
+                            return '<span class="badge bg-label-' + color + '">' + action + '</span>'
+                        }
+                    },
+                    {
+                        data: 'description',
+                        "render": function (data, type, row) {
+                            var ds = '—'
+
+                            if (row.description !== null) {
+                                ds = data
+                            }
+                            return ds
+                        }
+                    },
+
+                ],
+
+                "order": [[0, "desc"]]
+            });
+            document.getElementById('hst-div').style.display = 'block';
+            document.getElementById('ctrs').style.display = 'flex';
+            document.getElementById('hst-ldr').style.display = 'none';
+        },
+
+        error: function (data) {
+            toastr.error('Ошибка получения истории кошелька: ' + data.responseJSON.detail)
+            document.getElementById('hst-ldr').style.display = 'none';
+        }
+    });
 </script>
-
-
 {% endblock %}
 
 
 {% block content %}
 <div class="container-xxl flex-grow-1 container-p-y">
-
-    <div class="row mb-4 g-3">
+    <div class="row mb-4 g-3" id="ctrs" style="display: none">
         <div class="col-sm-6 col-xl-3">
             <div class="card">
                 <div class="card-body">
@@ -339,8 +327,8 @@
                             <small>Всего</small>
                         </div>
                         <span class="badge bg-label-primary rounded-circle p-2">
-            <i class="bx bx-dollar bx-sm"></i>
-          </span>
+                            <i class="bx bx-dollar bx-sm"></i>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -354,8 +342,8 @@
                             <small>Свободных</small>
                         </div>
                         <span class="badge bg-label-success rounded-circle p-2">
-            <i class="bx bx-gift bx-sm"></i>
-          </span>
+                            <i class="bx bx-gift bx-sm"></i>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -369,8 +357,8 @@
                             <small>Заморожено</small>
                         </div>
                         <span class="badge bg-label-danger rounded-circle p-2">
-            <i class="bx bx-user bx-sm"></i>
-          </span>
+                            <i class="bx bx-user bx-sm"></i>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -384,25 +372,26 @@
                             <small>Потрачено</small>
                         </div>
                         <span class="badge bg-label-info rounded-circle p-2">
-            <i class="bx bx-infinite bx-sm"></i>
-          </span>
+                            <i class="bx bx-infinite bx-sm"></i>
+                        </span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
     <div class="row">
-
         <div class="col">
             <div class="card">
-
                 <div class="card-header">
-                    <h5 class="card-title mb-0">История кошелька</h5>
+                    <h5 class="card-title mb-0">История кошелька
+                        <a href="javascript:var u = '/payments/getHistory?org_id=' + org_id; dt_refresh('dt_user_history', u)">
+                            <i class="bx bx-refresh"></i>
+                        </a>
+                        <span class="spinner-border spinner-border-sm text-primary" role="status" id="hst-ldr"></span>
+                    </h5>
                     <small class="card-subtitle">За весь период существования организации</small>
                 </div>
-
-                <div class="card-body table-responsive">
+                <div class="card-body table-responsive" id="hst-div" style="display: none">
                     <table id="dt_user_history" class="datatables-ajax table table-bordered dataTable no-footer">
                         <thead>
                         <tr>
@@ -416,39 +405,35 @@
                 </div>
             </div>
         </div>
-
     </div>
-
     <div class="row mt-4">
-
         <div class="col">
             <div class="card">
-
                 <div class="card-header">
                     <h5 class="card-title mb-0">Счета на пополнение
-                        <a href="#" data-bs-toggle="offcanvas"
+                        <a href="javascript:"
+                           data-bs-toggle="offcanvas"
                            data-bs-target="#off-create-bill"
                            aria-controls="off-create-bill">
-                            <i class="bx bxs-plus-square" data-bs-toggle="tooltip"
-                               data-bs-offset="0,8"
-                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
-                               data-bs-original-title="Создать">
-                            </i>
+                            <i class="bx bxs-plus-square"></i>
                         </a>
+                        <a href="javascript:var u = '/payments/getOwnedBills?org_id=' + id; dt_refresh('dt_user_bills', u)">
+                            <i class="bx bx-refresh"></i>
+                        </a>
+                        <span class="spinner-border spinner-border-sm text-primary" role="status" id="bls-ldr"></span>
                     </h5>
                     <small class="card-subtitle">
                         Создайте счет, выполните перевод и ожидайте подтверждения
                     </small>
                 </div>
-
-                <div class="card-body table-responsive">
+                <div class="card-body table-responsive" id="bls-div" style="display: none">
                     <table id="dt_user_bills" class="datatables-ajax table table-bordered dataTable no-footer">
                         <thead>
                         <tr>
                             <th>#ID</th>
                             <th>Дата создания</th>
                             <th>Сумма</th>
-                            <th>Способ</th>
+                            <th>Получатель</th>
                             <th>Вложения</th>
                             <th>Статус</th>
                             <th>Действия</th>
@@ -458,11 +443,8 @@
                 </div>
             </div>
         </div>
-
     </div>
-
 </div>
-
 
 <div class="mt-3">
     <div class="offcanvas offcanvas-start" id="off-create-bill">
@@ -478,7 +460,7 @@
             <form id="create-bill-form">
 
                 <div class="mb-4 row">
-                    <label for="bill-source" class="form-label">Способ</label>
+                    <label for="bill-source" class="form-label">Получатель/способ</label>
                     <select id="bill-source" class="selectpicker w-100" data-style="btn-default"
                             data-show-subtext="true">
                     </select>

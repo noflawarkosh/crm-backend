@@ -19,3 +19,4 @@ class StorageModel(Base):
     type: Mapped[str]
     date: Mapped[dt]
     owner_id: Mapped[int] = mapped_column(ForeignKey('user.id', ondelete='CASCADE', onupdate='CASCADE'))
+

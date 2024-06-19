@@ -7,6 +7,7 @@ from admin.repository import AdminRepository
 from admin.schemas import AdminReadSchema, AdminSessionCreateSchema
 
 from auth.utils import hash_password, generate_token
+from database import DefaultRepository
 from strings import *
 from inspect import iscoroutinefunction
 from typing import Any
@@ -93,17 +94,8 @@ async def logout(request: Request, response: Response, admin: AdminReadSchema = 
 
 @router.get('/get/{model}')
 async def reading_data(model: str, request: Request, admin: AdminReadSchema = Depends(authed)):
-    model = model + 'Model'
+    model = await AdminRepository.read_model(model + 'Model')
     params = request.query_params.__dict__['_dict']
-
-    limit = params.get('limit', None)
-    offset = params.get('offset', None)
-
-    if limit:
-        del params['limit']
-
-    if offset:
-        del params['offset']
 
     for key in params:
         if ',' in params[key]:
@@ -111,7 +103,7 @@ async def reading_data(model: str, request: Request, admin: AdminReadSchema = De
         else:
             params[key] = [params[key]]
 
-    data = await AdminRepository.read_records(model, filtration=params, limit=limit, offset=offset)
+    data = await DefaultRepository.get_records(model, filters=params)
 
     return [d.__dict__ for d in data]
 

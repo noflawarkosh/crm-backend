@@ -6,11 +6,10 @@ from storage.models import (
 from admin.models import AdminUserModel, AdminSessionModel
 from orgs.models import (
     OrganizationModel,
-    OrganizationInvitationModel,
-    OrganizationStatusHistoryModel
+    OrganizationInvitationModel
 )
 from admin.schemas import AdminReadSchema, AdminSessionReadSchema, AdminSessionCreateSchema, AdminReadWPSchema
-from auth.models import UserStatusHistoryModel, UserModel, UserSessionModel
+from auth.models import UserModel, UserSessionModel
 from products.models import ProductModel
 from database import async_session_factory
 from orders.models import (
@@ -265,3 +264,8 @@ class AdminRepository:
 
             finally:
                 await session.close()
+
+    @classmethod
+    async def read_model(cls, model: str):
+        model = globals().get(model, None)
+        return model

@@ -1,18 +1,22 @@
-import datetime
 from typing import Annotated
-
 from fastapi import APIRouter, Depends, HTTPException
 
-from auth.models import UserModel
-from auth.router import authed
-from auth.schemas import UserSessionReadSchema
-from orgs.repository import OrganizationRepository
-from orgs.utils import check_access
-from payments.repository import PaymentsRepository
-from payments.schemas import BalanceBillCreateSchema, BalanceBillReadSchema, BalanceSourceSchema, \
-    BalanceHistoryReadSchema
-
+from database import DefaultRepository
 from strings import *
+from auth.router import authed
+from orgs.router import check_access
+from auth.models import UserSessionModel
+from payments.models import (
+    BalanceBillModel,
+    BalanceSourceModel,
+    BalanceHistoryModel
+)
+from payments.schemas import (
+    BalanceBillCreateSchema,
+    BalanceBillReadSchema,
+    BalanceSourceSchema,
+    BalanceHistoryReadSchema
+)
 
 router = APIRouter(
     prefix="/payments",
@@ -22,100 +26,84 @@ router = APIRouter(
 
 @router.post('/createBill')
 async def create_organization(data: Annotated[BalanceBillCreateSchema, Depends()],
-                              session: UserSessionReadSchema = Depends(authed)
-                              ):
-    try:
-        await check_access(data.org_id, session.user.id, 0)
-
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
-
-    await PaymentsRepository.create_bill(data.model_dump())
+                              session: UserSessionModel = Depends(authed)):
+    await check_access(data.org_id, session.user.id, 0)
+    await DefaultRepository.save_records(
+        [{'model': BalanceBillModel, 'records': [{**data.model_dump(), 'status_id': 3}]}]
+    )
 
 
 @router.get('/getBill')
 async def create_organization(bill_id: int,
-                              session: UserSessionReadSchema = Depends(authed)
+                              session: UserSessionModel = Depends(authed)
                               ) -> BalanceBillReadSchema:
-    bills = await PaymentsRepository.read_bills('id', bill_id)
+    bills = await DefaultRepository.get_records(
+        BalanceBillModel,
+        filters={'id': bill_id},
+        select_models=[
+            BalanceBillModel.source,
+            BalanceBillModel.status,
+            BalanceBillModel.media,
+            BalanceBillModel.organization
+        ]
+    )
 
     if len(bills) != 1:
-        raise HTTPException(status_code=404, detail=string_404)
+        raise HTTPException(status_code=404, detail=string_404) if len(bills) == 0 else None
 
-    bill = bills[0]
+    await check_access(bills[0].org_id, session.user.id, 0)
 
-    try:
-        await check_access(bill.org_id, session.user.id, 0)
-
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
-
-    return BalanceBillReadSchema.model_validate(bill, from_attributes=True)
+    return BalanceBillReadSchema.model_validate(bills[0], from_attributes=True)
 
 
 @router.get('/getOwnedBills')
 async def create_organization(org_id: int,
-                              session: UserSessionReadSchema = Depends(authed)
+                              session: UserSessionModel = Depends(authed)
                               ) -> list[BalanceBillReadSchema]:
-    try:
-        await check_access(org_id, session.user.id, 0)
+    await check_access(org_id, session.user.id, 0)
+    bills = await DefaultRepository.get_records(
+        BalanceBillModel,
+        filters={'org_id': org_id},
+        select_models=[BalanceBillModel.source, BalanceBillModel.status, BalanceBillModel.media]
 
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
-
-    bills = await PaymentsRepository.read_bills('org_id', org_id)
-
-    return [BalanceBillReadSchema.model_validate(bill, from_attributes=True) for bill in bills]
+    )
+    return [BalanceBillReadSchema.model_validate(record, from_attributes=True) for record in bills]
 
 
 @router.post('/updateBillStatus')
 async def create_organization(bill_id: int, status_id: int,
-                              session: UserSessionReadSchema = Depends(authed)
-                              ):
-    bills = await PaymentsRepository.read_bills('id', bill_id)
+                              session: UserSessionModel = Depends(authed)):
+    bills = await DefaultRepository.get_records(BalanceBillModel, filters={'id': bill_id})
 
     if len(bills) != 1:
         raise HTTPException(status_code=404, detail=string_404)
 
-    bill = bills[0]
-
-    try:
-        organization, membership = await check_access(bill.org_id, session.user.id, 0)
-
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
+    await check_access(bills[0].org_id, session.user.id, 0)
 
     if status_id not in [2, 4]:
         raise HTTPException(status_code=403, detail=string_403)
 
-    if status_id == 2 and bill.status_id not in [3]:
+    if status_id == 2 and bills[0].status_id not in [3]:
         raise HTTPException(status_code=403, detail=string_403)
 
-    elif status_id == 4 and bill.status_id not in [3]:
+    elif status_id == 4 and bills[0].status_id not in [3]:
         raise HTTPException(status_code=403, detail=string_403)
 
-    await PaymentsRepository.update_bill(bill_id, {'status_id': status_id})
+    await DefaultRepository.save_records(
+        [{'model': BalanceBillModel, 'records': [{'id': bill_id, 'status_id': status_id}]}]
+    )
 
 
 @router.get('/getActiveSources')
-async def create_organization(session: UserSessionReadSchema = Depends(authed)
-                              ) -> list[BalanceSourceSchema]:
-    sources = await PaymentsRepository.read_active_sources()
-    return [BalanceSourceSchema.model_validate(source, from_attributes=True) for source in sources]
+async def create_organization(session: UserSessionModel = Depends(authed)) -> list[BalanceSourceSchema]:
+    sources = await DefaultRepository.get_records(BalanceSourceModel, filters={'is_active': True})
+    return [BalanceSourceSchema.model_validate(record, from_attributes=True) for record in sources]
 
 
 @router.get('/getHistory')
 async def create_organization(org_id: int,
-                              session: UserSessionReadSchema = Depends(authed)
+                              session: UserSessionModel = Depends(authed)
                               ) -> list[BalanceHistoryReadSchema]:
-    try:
-        await check_access(org_id, session.user.id, 0)
-
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
-
-    history = await PaymentsRepository.read_history(org_id)
-    return [BalanceHistoryReadSchema.model_validate(line, from_attributes=True) for line in history]
-
-
-
+    await check_access(org_id, session.user.id, 0)
+    history = await DefaultRepository.get_records(BalanceHistoryModel, filters={'org_id': org_id})
+    return [BalanceHistoryReadSchema.model_validate(record, from_attributes=True) for record in history]

@@ -2,14 +2,16 @@ import datetime
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
-from auth.models import UserModel
+from auth.models import UserModel, UserSessionModel
 from auth.router import authed
-from auth.schemas import UserSessionReadSchema
+
+from database import DefaultRepository
+from orders.models import OrdersOrderModel
 from orders.schemas import OrdersOrderReadModel, OrdersOrderCreateModel
-from orgs.utils import check_access
+from orgs.router import check_access
+from products.models import ProductModel
 from strings import *
 
-from orders.repository import OrdersRepository
 from products.repository import ProductsRepository
 
 router = APIRouter(
@@ -19,16 +21,15 @@ router = APIRouter(
 
 
 @router.get('/getPlan')
-async def get_data(org_id: int,
-                   date: datetime.datetime,
-                   session: UserSessionReadSchema = Depends(authed)):
-    try:
-        await check_access(org_id, session.user.id, 4)
+async def get_plan(org_id: int, date: datetime.datetime, session: UserSessionModel = Depends(authed)
+                   ) -> list[OrdersOrderReadModel]:
+    await check_access(org_id, session.user.id, 4)
 
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
-
-    records = await OrdersRepository.read_plan(org_id, date)
+    records = await DefaultRepository.get_records(
+        model=OrdersOrderModel,
+        filters={"org_id": org_id, "dt_planed": date},
+        select_models=[OrdersOrderModel.size, OrdersOrderModel.product]
+    )
 
     return [OrdersOrderReadModel.model_validate(record, from_attributes=True) for record in records]
 
@@ -36,23 +37,27 @@ async def get_data(org_id: int,
 @router.post('/savePlan')
 async def save_data(amount: int,
                     data: Annotated[OrdersOrderCreateModel, Depends()],
-                    session: UserSessionReadSchema = Depends(authed)):
-    try:
-        await check_access(data.org_id, session.user.id, 4)
+                    session: UserSessionModel = Depends(authed)):
+    await check_access(data.org_id, session.user.id, 4)
 
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
-
-    if amount > 500:
+    if amount > 100:
         raise HTTPException(status_code=400, detail=string_orders_max_amount)
 
-    product = await ProductsRepository.get_one_by_id(data.product_id)
+    products = await DefaultRepository.get_records(
+        model=ProductModel,
+        filters={'id': data.product_id},
+        select_models=[ProductModel.sizes]
+    )
+
+    for size in products[0].sizes:
+        if size.id == data.size_id and not size.wb_in_stock:
+            raise HTTPException(status_code=400, detail=string_orders_size_not_in_stock)
 
     if (
-            not product or
-            product.org_id != data.org_id or
-            not product.is_active or
-            data.size_id not in [size.id for size in product.sizes] or
+            len(products) != 1 or
+            products[0].org_id != data.org_id or
+            not products[0].is_active or
+            data.size_id not in [size.id for size in products[0].sizes] or
             data.dt_planed.date() < datetime.datetime.now().date()
     ):
         raise HTTPException(status_code=403, detail=string_403)
@@ -60,4 +65,10 @@ async def save_data(amount: int,
     if datetime.datetime.now().hour > 9 and data.dt_planed.date() == datetime.datetime.now().date():
         raise HTTPException(status_code=400, detail=string_orders_time_error)
 
-    await OrdersRepository.save_plan(data.model_dump(), amount)
+    await DefaultRepository.save_records([{
+        'model': OrdersOrderModel,
+        'records': [{
+            **data.model_dump(),
+            'is_cancelled': False,
+        }] * amount
+    }])

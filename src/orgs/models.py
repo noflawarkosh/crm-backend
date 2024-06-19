@@ -16,6 +16,7 @@ class OrganizationModel(Base):
     id: Mapped[pk]
     title: Mapped[str]
     inn: Mapped[str]
+    status: Mapped[int]
 
     # FK
     owner_id: Mapped[int] = mapped_column(
@@ -23,34 +24,7 @@ class OrganizationModel(Base):
     )
 
     # Relationships
-    statuses: Mapped[list['OrganizationStatusHistoryModel']] = relationship(lazy=False)
-    owner: Mapped['UserModel'] = relationship(lazy=False)
-
-
-class OrganizationStatusModel(Base):
-    __tablename__ = 'organization_status'
-
-    id: Mapped[pk]
-    title: Mapped[str]
-
-
-class OrganizationStatusHistoryModel(Base):
-    __tablename__ = 'organization_status_history'
-
-    id: Mapped[pk]
-    description: Mapped[str | None]
-    date: Mapped[dt]
-
-    # FK
-    org_id: Mapped[int] = mapped_column(
-        ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
-    status_id: Mapped[int] = mapped_column(
-        ForeignKey('organization_status.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
-
-    # Relationships
-    status: Mapped[OrganizationStatusModel] = relationship(lazy=False)
+    owner: Mapped['UserModel'] = relationship(lazy='noload')
 
 
 # Membership
@@ -60,6 +34,7 @@ class OrganizationMembershipModel(Base):
     id: Mapped[pk]
     date: Mapped[dt]
     level: Mapped[int]
+    status: Mapped[int]
 
     # FK
     user_id: Mapped[int] = mapped_column(
@@ -68,25 +43,14 @@ class OrganizationMembershipModel(Base):
     org_id: Mapped[int] = mapped_column(
         ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE')
     )
-    status_id: Mapped[int] = mapped_column(
-        ForeignKey('organization_membership_status.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
     invitation_id: Mapped[int | None] = mapped_column(
         ForeignKey('organization_invitation.id', ondelete='CASCADE', onupdate='CASCADE')
     )
 
     # Relationships
-    user: Mapped['UserModel'] = relationship(lazy=False)
-    status: Mapped['OrganizationMembershipStatusModel'] = relationship(lazy=False)
-    invitation: Mapped['OrganizationInvitationModel'] = relationship(lazy=False)
-    organization: Mapped['OrganizationModel'] = relationship(lazy=False)
-
-
-class OrganizationMembershipStatusModel(Base):
-    __tablename__ = 'organization_membership_status'
-
-    id: Mapped[pk]
-    title: Mapped[str]
+    user: Mapped['UserModel'] = relationship(lazy='noload')
+    invitation: Mapped['OrganizationInvitationModel'] = relationship(lazy='noload')
+    organization: Mapped['OrganizationModel'] = relationship(lazy='noload')
 
 
 # Invitation
@@ -103,4 +67,6 @@ class OrganizationInvitationModel(Base):
     # FK
     org_id: Mapped[int] = mapped_column(ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE'))
     usages: Mapped[list['OrganizationMembershipModel']] = relationship(
-        primaryjoin="and_(OrganizationInvitationModel.id == OrganizationMembershipModel.invitation_id)", lazy=False)
+        primaryjoin="OrganizationInvitationModel.id == OrganizationMembershipModel.invitation_id",
+        lazy='noload'
+    )

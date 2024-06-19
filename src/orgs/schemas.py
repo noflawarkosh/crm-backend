@@ -2,20 +2,7 @@ import datetime
 from typing import Optional
 from pydantic import BaseModel, constr
 
-
-# Organization status
-from auth.schemas import UserReadFullSchema
-
-
-class OrganizationStatusSchema(BaseModel):
-    id: int
-    title: str
-
-
-class OrganizationStatusHistorySchema(BaseModel):
-    description: str | None
-    date: datetime.datetime
-    status: OrganizationStatusSchema
+from auth.schemas import UserReadSchema
 
 
 # Organization
@@ -26,24 +13,21 @@ class OrganizationCreateSchema(BaseModel):
 
 class OrganizationReadSchema(OrganizationCreateSchema):
     id: int
-    statuses: list['OrganizationStatusHistorySchema']
+    owner: Optional['UserReadSchema']
 
 
 # Membership
-class OrganizationMembershipCreateSchema(BaseModel):
+class OrganizationMembershipReadSchema(BaseModel):
+    id: int
+    date: datetime.datetime
     user_id: int
     org_id: int
     level: int
-    status_id: int
+    status: int
     invitation_id: Optional[int | None]
 
-
-class OrganizationMembershipReadSchema(OrganizationMembershipCreateSchema):
-    id: int
-    date: datetime.datetime
-    user: 'UserReadFullSchema'
-    organization: 'OrganizationReadSchema'
-    status: OrganizationStatusSchema
+    user: Optional['UserReadSchema']
+    organization: Optional['OrganizationReadSchema']
 
 
 # Invitation
@@ -59,4 +43,5 @@ class OrganizationInvitationReadSchema(OrganizationInvitationCreateSchema):
     org_id: int
     code: str
     created: datetime.datetime
+
     usages: list['OrganizationMembershipReadSchema'] | None

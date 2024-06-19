@@ -33,7 +33,7 @@ class OrdersServerContractorModel(Base):
     )
 
     # Relationships
-    contractor: Mapped['OrdersContractorModel'] = relationship(lazy=False)
+    contractor: Mapped['OrdersContractorModel'] = relationship(lazy='noload')
 
 
 class OrdersServerScheduleModel(Base):
@@ -63,8 +63,8 @@ class OrdersServerModel(Base):
     )
 
     # Relationships
-    schedule: Mapped['OrdersServerScheduleModel'] = relationship(lazy=False)
-    contractors: Mapped[list['OrdersServerContractorModel']] = relationship(lazy=False)
+    schedule: Mapped['OrdersServerScheduleModel'] = relationship(lazy='noload')
+    contractors: Mapped[list['OrdersServerContractorModel']] = relationship(lazy='noload')
 
 
 # Account
@@ -86,8 +86,8 @@ class OrdersAccountModel(Base):
     )
 
     # Relationships
-    address: Mapped['OrdersAddressModel'] = relationship(lazy=False)
-    server: Mapped['OrdersServerModel'] = relationship(lazy=False)
+    address: Mapped['OrdersAddressModel'] = relationship(lazy='noload')
+    server: Mapped['OrdersServerModel'] = relationship(lazy='noload')
 
 
 # Contractor
@@ -114,7 +114,7 @@ class OrdersAddressModel(Base):
     )
 
     # Relationships
-    contractor: Mapped['OrdersContractorModel'] = relationship(lazy=False)
+    contractor: Mapped['OrdersContractorModel'] = relationship(lazy='noload')
 
 
 # Order
@@ -125,6 +125,8 @@ class OrdersOrderModel(Base):
     wb_uuid: Mapped[str | None]
     wb_keyword: Mapped[str]
     wb_price: Mapped[int | None]
+    wb_status: Mapped[str | None]
+    is_cancelled: Mapped[bool]
     description: Mapped[str | None]
     dt_planed: Mapped[datetime.datetime | None]
     dt_ordered: Mapped[datetime.datetime | None]
@@ -145,7 +147,7 @@ class OrdersOrderModel(Base):
         ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE')
     )
 
-    product: Mapped['ProductModel'] = relationship()
-    size: Mapped['ProductSizeModel'] = relationship()
-    account: Mapped['OrdersAccountModel'] = relationship()
-    organization: Mapped['OrganizationModel'] = relationship()
+    product: Mapped['ProductModel'] = relationship(lazy='noload')
+    size: Mapped['ProductSizeModel'] = relationship(lazy='noload')
+    account: Mapped['OrdersAccountModel'] = relationship(lazy='noload')
+    organization: Mapped['OrganizationModel'] = relationship(lazy='noload')

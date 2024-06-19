@@ -1,25 +1,19 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
+from sqlalchemy import func
 
-from auth.repository import (
-    AuthRepository
-)
-
+from database import DefaultRepository
+from strings import *
+from auth.models import UserModel, UserSessionModel
+from auth.repository import AuthRepository
 from auth.schemas import (
     UserReadSchema,
     UserCreateSchema,
-    UserSessionCreateSchema,
-    UserUpdateSchema,
-    UserReadFullSchema,
-    UserSessionReadSchema
 )
-
 from auth.utils import (
     hash_password,
     generate_token
 )
-
-from strings import *
 
 router = APIRouter(
     prefix="/auth",
@@ -27,50 +21,37 @@ router = APIRouter(
 )
 
 
-async def get_session(request):
+async def every(request: Request = Request):
     token = request.cookies.get(cookies_token_key)
 
     if not token:
         return None
 
-    return await AuthRepository.read_session(token)
+    session = await AuthRepository.read_session(token)
 
-
-async def every(request: Request = Request):
-    session = await get_session(request)
     if session:
-        if session.user.statuses[-1].status_id != 2:
+        if session.user.status_id != 2:
             return None
 
     return session
 
 
 async def authed(request: Request = Request):
-    session = await get_session(request)
+    session = await every(request)
 
     if session:
-        if session.user.statuses[-1].status_id != 2:
-            raise HTTPException(status_code=403, detail=string_user_inactive_user)
-
-        return UserSessionReadSchema.model_validate(session, from_attributes=True)
+        return session
 
     raise HTTPException(status_code=401)
 
 
 async def not_authed(request: Request = Request):
-    session = await get_session(request)
-
-    if session:
-        if session.user.statuses[-1].status_id != 2:
-            raise HTTPException(status_code=403, detail=string_user_inactive_user)
-
+    if await every(request):
         raise HTTPException(status_code=409)
 
 
 @router.post('/register')
-async def register(data: Annotated[UserCreateSchema, Depends()],
-                   session: UserSessionReadSchema = Depends(not_authed)
-                   ) -> UserReadSchema:
+async def register(data: Annotated[UserCreateSchema, Depends()], session: UserSessionModel = Depends(not_authed)):
     unique_fields = [
         ('email', data.email, string_user_email_exist),
         ('username', data.username, string_user_username_exist),
@@ -79,34 +60,28 @@ async def register(data: Annotated[UserCreateSchema, Depends()],
     ]
 
     for field, value, error in unique_fields:
-        user_check = await AuthRepository.read_user(field, value.lower().replace(' ', ''))
+        user_check = await DefaultRepository.get_records(UserModel, filters={field: value})
         if user_check:
             raise HTTPException(status_code=409, detail=error)
 
     data.password = hash_password(data.password)
-    new_user = await AuthRepository.create_user(data.model_dump())
 
-    if not new_user:
-        raise HTTPException(status_code=500, detail=string_user_register_error)
-
-    return UserReadSchema.model_validate(new_user, from_attributes=True)
+    await DefaultRepository.save_records([{'model': UserModel, 'records': [{**data.model_dump(), 'status_id': 1}]}])
 
 
 @router.post('/login')
-async def login(request: Request,
-                response: Response,
-                username: str,
-                password: str,
-                session: UserSessionReadSchema = Depends(not_authed)
-                ):
-    user_check = await AuthRepository.read_user('username', username.lower().replace(' ', ''))
-    if not user_check:
+async def login(request: Request, response: Response, username: str, password: str,
+                session: UserSessionModel = Depends(not_authed)):
+    user_check = await DefaultRepository.get_records(UserModel, filters={'username': username.lower().replace(' ', '')})
+    if len(user_check) != 1:
         raise HTTPException(status_code=403, detail=string_user_wrong_password)
+
+    user_check = user_check[0]
 
     if hash_password(password) != user_check.password:
         raise HTTPException(status_code=403, detail=string_user_wrong_password)
 
-    if user_check.statuses[-1].status_id != 2:
+    if user_check.status_id != 2:
         raise HTTPException(status_code=403, detail=string_user_inactive_user)
 
     user_session = await AuthRepository.create_session(
@@ -115,7 +90,6 @@ async def login(request: Request,
             'token': generate_token(128),
             'useragent': request.headers.get('user-agent'),
             'ip': request.client.host,
-            'is_active': True
         }
     )
 
@@ -123,14 +97,12 @@ async def login(request: Request,
 
 
 @router.get('/logout')
-async def logout(request: Request,
-                 response: Response,
-                 session: UserSessionReadSchema = Depends(authed)
-                 ):
-    await AuthRepository.disable_session(request.cookies.get(cookies_token_key))
+async def logout(request: Request, response: Response, session: UserSessionModel = Depends(authed)):
+    await DefaultRepository.save_records(
+        [{'model': UserSessionModel, 'records': [{'id': session.id, 'expires': func.now()}]}])
     response.delete_cookie(cookies_token_key)
 
 
 @router.get('/myProfile')
-async def get_self_user_profile(session: UserSessionReadSchema = Depends(authed)) -> UserReadFullSchema:
-    return UserReadFullSchema.model_validate(session.user, from_attributes=True)
+async def get_self_user_profile(session: UserSessionModel = Depends(authed)) -> UserReadSchema:
+    return UserReadSchema.model_validate(session.user, from_attributes=True)

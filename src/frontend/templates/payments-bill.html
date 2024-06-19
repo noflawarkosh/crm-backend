@@ -1,31 +1,15 @@
 {% extends "!base.html" %}
 {% block title %}Пополнение{% endblock %}
-
-{% block head %}
-
-
-<link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/libs/typeahead-js/typeahead.css') }}"/>
-<link rel="stylesheet"
-      href="{{ url_for('static', path='assets/vendor/libs/datatables-bs5/datatables.bootstrap5.css') }}">
-<link rel="stylesheet"
-      href="{{ url_for('static', path='assets/vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css') }}">
-<link rel="stylesheet"
-      href="{{ url_for('static', path='assets/vendor/libs/apex-charts/apex-charts.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', path='assets/vendor/css/pages/card-analytics.css') }}"/>
-
-{% endblock %}
-
-
 {% block js %}
-<script src="{{ url_for('static', path='assets/vendor/libs/apex-charts/apexcharts.js') }}"></script>
-<script src="{{ url_for('static', path='assets/js/app-ecommerce-dashboard.js') }}"></script>
-
 <script>
     function cancelBill() {
         const url = window.location.href;
 
         var arr = url.split('/')
         var id = arr[arr.length - 1]
+        document.getElementById('page_ldr').style.display = 'block';
+        document.getElementById('btn_approve').classList.add('disabled')
+        document.getElementById('btn_cancel').classList.add('disabled')
 
         $.ajax({
 
@@ -37,11 +21,12 @@
             },
 
             error: function (data) {
-                console.log(data)
-                toastr.error('Ошибка загрузки данных. Обновите страницу')
+                document.getElementById('page_ldr').style.display = 'none';
+                document.getElementById('btn_approve').classList.remove('disabled')
+                document.getElementById('btn_cancel').classList.remove('disabled')
+                toastr.error('Ошибка выполнения операции: ' + data.responseJSON.detail)
 
             }
-
         });
     }
 
@@ -53,6 +38,9 @@
 
         var arr = url.split('/')
         var id = arr[arr.length - 1]
+        document.getElementById('page_ldr').style.display = 'block';
+        document.getElementById('btn_approve').classList.add('disabled')
+        document.getElementById('btn_cancel').classList.add('disabled')
 
         $.ajax({
 
@@ -64,21 +52,21 @@
             },
 
             error: function (data) {
-                console.log(data)
-                toastr.error('Ошибка загрузки данных. Обновите страницу')
+                document.getElementById('page_ldr').style.display = 'none';
+                document.getElementById('btn_approve').classList.remove('disabled')
+                document.getElementById('btn_cancel').classList.remove('disabled')
+                toastr.error('Ошибка выполнения операции: ' + data.responseJSON.detail)
 
             }
-
         });
     }
 
 </script>
 
-
 <script>
 
     $(document).ready(function () {
-
+        document.getElementById('page_ldr').style.display = 'block';
         const url = window.location.href;
 
         var arr = url.split('/')
@@ -91,7 +79,7 @@
 
             success: function (data) {
 
-                if (data.length ===  0)  {
+                if (data.length === 0) {
                     location.replace('/404')
                 }
 
@@ -113,14 +101,14 @@
 
                 if (data.status.id === 3) {
                     bill_buttons = bill_buttons + '' +
-                        '<button class="btn btn-primary d-grid w-100 mb-3" onclick="approveBill()" ' +
+                        '<button class="btn btn-primary d-grid w-100 mb-3" onclick="approveBill()" id="btn_approve"' +
                         '<span class="d-flex align-items-center justify-content-center text-nowrap">' +
                         'Подтвердить перевод\n' +
                         '</span>\n' +
                         '</button>'
 
                     bill_buttons = bill_buttons + '' +
-                        '<button class="btn btn-label-danger d-grid w-100 mb-3" onclick="cancelBill()"' +
+                        '<button class="btn btn-label-danger d-grid w-100 mb-3" onclick="cancelBill()" id="btn_cancel"' +
                         '<span class="d-flex align-items-center justify-content-center text-nowrap">' +
                         'Аннулировать\n' +
                         '</span>\n' +
@@ -162,17 +150,20 @@
                 document.getElementById('bill-org-inn').innerText = 'ИНН ' + data.organization.inn
 
 
-                document.getElementById('bill-src-title').innerText = data.source.title
+                document.getElementById('bill-src-bank').innerText = data.source.bank
+                document.getElementById('bill-src-recipient').innerText = data.source.recipient
+
                 document.getElementById('bill-src-number').innerText = data.source.number
+                document.getElementById('bill-src-bill').innerText = data.source.bill
+
+
                 document.getElementById('bill-src-descr').innerText = data.source.description
 
                 document.getElementById('bill-total').innerText = data.amount + ' ₽'
                 document.getElementById('bill-status-bottom').innerHTML = bill_status
 
-                document.getElementById('loading-members').style.display = 'none';
-                document.getElementById('div-mems').style.display = 'block';
-
-                document.getElementById('div-full-card').style.display = 'block';
+                document.getElementById('div-full-card').style.display = 'flex';
+                document.getElementById('page_ldr').style.display = 'none';
             },
 
 
@@ -188,16 +179,12 @@
     });
 
 </script>
-
-
 {% endblock %}
 
-
 {% block content %}
-
 <div class="container-xxl flex-grow-1 container-p-y">
 
-    <div class="row invoice-preview" id="div-full-card">
+    <div class="row invoice-preview" id="div-full-card" style="display:none">
         <!-- Invoice -->
         <div class="col-xl-9 col-md-8 col-12 mb-md-0 mb-4">
             <div class="card invoice-preview-card">
@@ -231,10 +218,14 @@
                             <p class="mb-1" id="bill-org-inn"></p>
                         </div>
                         <div class="col-xl-6 col-md-12 col-sm-7 col-12">
-                            <h6 class="pb-2">Способ:</h6>
-                            <p class="mb-1" id="bill-src-title"></p>
-                            <p class="mb-1" id="bill-src-number"></p>
-                            <p class="mb-1 mt-2" id="bill-src-descr"></p>
+                            <h6 class="pb-2">Получатель:</h6>
+                            <p class="mb-1" id="bill-src-bank"></p>
+                            <p class="mb-1" id="bill-src-recipient"></p>
+
+                            <b><p class="mb-1 mt-3" id="bill-src-number"></p>
+                            <p class="mb-1" id="bill-src-bill"></p></b>
+
+                            <small class="mb-1 mt-3" id="bill-src-descr"></small>
 
                         </div>
                     </div>

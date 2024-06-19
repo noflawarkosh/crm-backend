@@ -1,18 +1,21 @@
+import datetime
 from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlalchemy import func
 
-from auth.models import UserModel
+from auth.models import UserSessionModel
 from auth.router import authed
-from auth.schemas import UserSessionReadSchema
-from orgs.repository import OrganizationRepository, MembershipRepository
-from orgs.utils import check_access
+from database import DefaultRepository
+
+from orgs.router import check_access
+from products.models import ProductModel, ReviewModel, ProductSizeModel
 from products.repository import ProductsRepository, ReviewsRepository
-from products.schemas import ProductPOSTSchema, ProductGETSchema, ProductInsertSchema, ProductSizeInsertSchema, \
-    ReviewPOSTSchema, ReviewGETSchema, ProductNonRelGETSchema
+from products.schemas import ProductPOSTSchema, ProductReadSchema, ProductCreateSchema, ReviewCreateSchema, \
+    ReviewReadSchema
 
 from products.utils import parse_wildberries_card
-from storage.repository import StorageRepository
+
 from storage.schemas import StoragePOSTSchema, StorageFileSchema
 from storage.utils import autosave_file, generate_filename, verify_file
 from strings import *
@@ -29,35 +32,24 @@ router_reviews = APIRouter(
 
 
 @router_products.post('/create')
-async def create_product(data: Annotated[ProductPOSTSchema, Depends()],
-                         session: UserSessionReadSchema = Depends(authed)
-                         ) -> ProductGETSchema:
-    data_dict = data.model_dump()
+async def create_product(data: Annotated[ProductPOSTSchema, Depends()], session: UserSessionModel = Depends(authed)):
+    organization, membership = await check_access(data.org_id, session.user.id, 2)
 
     try:
-        organization, membership = await check_access(data_dict.get('org_id'), session.user.id, 2)
-
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
-
-    try:
-        title, article, sizes, picture_data = parse_wildberries_card(data_dict.get('wb_url'))
-
+        title, article, sizes, picture_data = parse_wildberries_card(data.wb_url)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    product_record = await ProductsRepository.add_one(
-        ProductInsertSchema.model_validate(
+    product_record = await ProductsRepository.create_product(
+        ProductCreateSchema.model_validate(
             {
                 'org_id': organization.id,
-                'barcode': data_dict.get('barcode'),
+                'barcode': data.barcode,
                 'wb_article': article,
                 'wb_title': title,
             }
         ),
-
         sizes,
-
         StoragePOSTSchema.model_validate(
             {
                 'title': title,
@@ -72,90 +64,167 @@ async def create_product(data: Annotated[ProductPOSTSchema, Depends()],
     if not product_record:
         raise HTTPException(status_code=500, detail=string_500)
 
-    await autosave_file(product_record.media.storage_href, picture_data)
+    new_product = await DefaultRepository.get_records(
+        ProductModel,
+        filters={'id': product_record.id},
+        select_models=[ProductModel.media, ProductModel.sizes]
+    )
 
-    dto = ProductGETSchema.model_validate(product_record, from_attributes=True)
+    await autosave_file(new_product[0].media.storage_href, picture_data)
 
-    return dto
+
+@router_products.get('/refresh')
+async def refresh_product(product_id: int,
+                          session: UserSessionModel = Depends(authed)):
+    products = await DefaultRepository.get_records(
+        ProductModel,
+        filters={'id': product_id, 'is_active': True},
+        select_models=[ProductModel.sizes]
+    )
+
+    if len(products) != 1:
+        raise HTTPException(status_code=404, detail=string_products_product_not_found)
+
+    await check_access(products[0].org_id, session.user.id, 2)
+
+    if products[0].last_update + datetime.timedelta(minutes=5) > datetime.datetime.now():
+        remaining = (products[0].last_update + datetime.timedelta(minutes=5)) - datetime.datetime.now()
+
+        raise HTTPException(
+            status_code=403,
+            detail=string_product_refresh_error + f'. Вы сможете обновить этот товар через {remaining}'
+        )
+
+    try:
+        title, article, sizes, picture_data = parse_wildberries_card(
+            f'https://www.wildberries.ru/catalog/{products[0].wb_article}/detail.aspx'
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    current_sizes = products[0].sizes
+    new_sizes = sizes
+
+    records = []
+
+    for new_size in new_sizes:
+        found = False
+        for current_size in current_sizes:
+            if new_size.wb_size_optionId == current_size.wb_size_optionId:
+                records.append(
+                    {
+                        'id': current_size.id,
+                        'wb_size_name': new_size.wb_size_name,
+                        'wb_size_origName': new_size.wb_size_origName,
+                        'wb_in_stock': new_size.wb_in_stock,
+                        'wb_price': new_size.wb_price,
+                    }
+                )
+                found = True
+                break
+
+        if not found:
+            records.append(
+                {
+                    'wb_size_optionId': new_size.wb_size_optionId,
+                    'wb_size_name': new_size.wb_size_name,
+                    'wb_size_origName': new_size.wb_size_origName,
+                    'wb_in_stock': new_size.wb_in_stock,
+                    'wb_price': new_size.wb_price,
+                    'product_id': products[0].id,
+                }
+            )
+
+    for current_size in current_sizes:
+        found = False
+
+        for new_size in new_sizes:
+            if current_size.wb_size_optionId == new_size.wb_size_optionId:
+                found = True
+                break
+
+        if not found:
+            records.append(
+                {
+                    'id': current_size.id,
+                    'wb_in_stock': False,
+                }
+            )
+
+    await DefaultRepository.save_records(
+        [
+            {'model': ProductSizeModel, 'records': records},
+            {'model': ProductModel, 'records': [
+                {
+                    'id': products[0].id,
+                    'last_update': func.now(),
+                    'wb_article': article,
+                    'wb_title': title,
+                }
+            ]}
+        ]
+
+    )
+
+    await check_access(products[0].org_id, session.user.id, 2)
 
 
 @router_products.get('/getOwned')
-async def get_owned_products(org_id: int,
-                             session: UserSessionReadSchema = Depends(authed)):
-    try:
-        organization, membership = await check_access(org_id, session.user.id, 2)
-
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
-
-    products = await ProductsRepository.get_owned_by_org_id(org_id)
-
-    dto = [ProductGETSchema.model_validate(product, from_attributes=True) for product in products]
-
-    return dto
+async def get_owned_products(org_id: int, session: UserSessionModel = Depends(authed)):
+    await check_access(org_id, session.user.id, 2)
+    products = await DefaultRepository.get_records(
+        ProductModel,
+        filters={'org_id': org_id, 'is_active': True},
+        select_models=[ProductModel.media, ProductModel.sizes]
+    )
+    return [ProductReadSchema.model_validate(product, from_attributes=True) for product in products]
 
 
 @router_products.get('/disable')
 async def disable_product(product_id: int,
-                          session: UserSessionReadSchema = Depends(authed)):
-    product = await ProductsRepository.get_one_by_id(product_id)
+                          session: UserSessionModel = Depends(authed)):
+    products = await DefaultRepository.get_records(
+        ProductModel,
+        filters={'id': product_id, 'is_active': True},
+    )
 
-    if not product:
+    if len(products) != 1:
         raise HTTPException(status_code=404, detail=string_products_product_not_found)
 
-    try:
-        organization, membership = await check_access(product.org_id, session.user.id, 2)
+    await check_access(products[0].org_id, session.user.id, 2)
 
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
-
-    new_product = await ProductsRepository.disable_one(product_id)
-
-    dto = ProductNonRelGETSchema.model_validate(new_product, from_attributes=True)
-
-    return dto
+    await DefaultRepository.save_records([{'model': ProductModel, 'records': [{'id': product_id, 'is_active': False}]}])
 
 
 @router_reviews.post('/create')
-async def create_review(data: Annotated[ReviewPOSTSchema, Depends()],
+async def create_review(data: Annotated[ReviewCreateSchema, Depends()],
                         files: List[UploadFile] = File(...),
-                        session: UserSessionReadSchema = Depends(authed)
+                        session: UserSessionModel = Depends(authed)
                         ):
-    data_dict = data.model_dump()
     if len(files) > 5:
         raise HTTPException(status_code=400, detail=string_product_too_many_files)
 
-    product = await ProductsRepository.get_one_by_id(data_dict.get('product_id'))
+    products = await DefaultRepository.get_records(ProductModel, filters={'id': data.product_id})
 
-    if not product or not product.is_active:
+    if len(products) != 1:
         raise HTTPException(status_code=404, detail=string_products_product_not_found)
 
-    try:
-        organization, membership = await check_access(product.org_id, session.user.id, 8)
+    await check_access(products[0].org_id, session.user.id, 8)
 
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
+    if data.size_id not in [size.id for size in products[0].sizes]:
+        raise HTTPException(status_code=400, detail=string_403)
 
-    if data_dict.get('size_id'):
-        sizes = [size.id for size in product.sizes]
-        if data_dict.get('size_id') not in sizes:
-            raise HTTPException(status_code=400, detail=string_403)
-
-    if data_dict.get('match_id'):
-        if not data_dict.get('size_id'):
+    if data.match:
+        if not data.size_id:
             raise HTTPException(status_code=400, detail=string_product_size_not_selected_but_match)
 
-        match = await ReviewsRepository.get_match_by_id(data_dict.get('match_id'))
-        if not match:
+        if data.match not in [1, 2, 3]:
             raise HTTPException(status_code=404, detail=string_404)
 
     ordered_files = []
-
     for file in files:
-
         if file.size > 0:
             content = await file.read()
-
             ordered_files.append(
                 StorageFileSchema.model_validate(
                     {
@@ -170,7 +239,6 @@ async def create_review(data: Annotated[ReviewPOSTSchema, Depends()],
     for file in ordered_files:
         try:
             await verify_file(file)
-
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"{file.name}: {str(e)}")
 
@@ -187,7 +255,7 @@ async def create_review(data: Annotated[ReviewPOSTSchema, Depends()],
             }
         ))
 
-    review_record = await ReviewsRepository.add_one(data, media_schemas)
+    review_record = await ReviewsRepository.create_review(data, media_schemas)
 
     if not review_record:
         raise HTTPException(status_code=500, detail=string_500)
@@ -195,46 +263,27 @@ async def create_review(data: Annotated[ReviewPOSTSchema, Depends()],
     for file in ordered_files:
         await autosave_file(file.href + f".{file.name.rsplit('.', maxsplit=1)[1]}", file.content)
 
-    review_record = await ReviewsRepository.get_one_by_id(review_record.id)
-
-    dto = ReviewGETSchema.model_validate(review_record, from_attributes=True)
-
-    return dto
-
 
 @router_reviews.get('/getOwned')
-async def create_review(org_id: int,
-                        session: UserSessionReadSchema = Depends(authed)
-                        ) -> list[ReviewGETSchema]:
-    try:
-        organization, membership = await check_access(org_id, session.user.id, 8)
-
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
-
+async def get_reviews_of_organization(org_id: int, session: UserSessionModel = Depends(authed)
+                                      ) -> list[ReviewReadSchema]:
+    await check_access(org_id, session.user.id, 8)
     reviews = await ReviewsRepository.get_owned_by_org_id(org_id)
-
-    dto = [ReviewGETSchema.model_validate(review, from_attributes=True) for review in reviews]
-
-    return dto
+    return [ReviewReadSchema.model_validate(record, from_attributes=True) for record in reviews]
 
 
 @router_reviews.get('/disable')
 async def disable_review(review_id: int,
-                         session: UserSessionReadSchema = Depends(authed)):
+                         session: UserSessionModel = Depends(authed)):
+    reviews = await DefaultRepository.get_records(
+        ReviewModel,
+        filters={'id': review_id},
+        select_models=[ReviewModel.product]
+    )
 
-    review = await ReviewsRepository.get_one_by_id(review_id)
-    if not review:
+    if len(reviews) != 1:
         raise HTTPException(status_code=404, detail=string_404)
 
-    try:
-        organization, membership = await check_access(review.product.org_id, session.user.id, 8)
+    await check_access(reviews[0].product.org_id, session.user.id, 8)
 
-    except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
-
-    new_review = await ReviewsRepository.disable_one(review_id)
-
-    dto = ReviewGETSchema.model_validate(new_review, from_attributes=True)
-
-    return dto
+    await DefaultRepository.save_records([{'model': ReviewModel, 'records': [{'id': review_id, 'status': 4}]}])

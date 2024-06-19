@@ -27,9 +27,11 @@ class BalanceHistoryReadSchema(BaseModel):
 # Balance Source
 class BalanceSourceSchema(BaseModel):
     id: int
-    title: str
-    description: str | None
+    bank: str
+    recipient: str
     number: str
+    bill: str
+    description: str | None
     is_active: bool
 
 
@@ -51,8 +53,8 @@ class BalanceBillReadSchema(BalanceBillCreateSchema):
     media_id: int | None
     date: datetime.datetime
 
-    organization: 'OrganizationReadSchema'
-    source: 'BalanceSourceSchema'
-    status: 'BalanceBillStatusSchema'
+    organization: Optional['OrganizationReadSchema']
+    source: Optional['BalanceSourceSchema']
+    status: Optional['BalanceBillStatusSchema']
     media: Optional['StorageGETSchema']
 

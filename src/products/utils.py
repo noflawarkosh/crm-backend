@@ -2,7 +2,7 @@ import json
 
 import requests
 
-from products.schemas import ProductSizeInsertSchema
+from products.schemas import ProductSizeCreateSchema
 from strings import *
 
 
@@ -68,7 +68,7 @@ def parse_wildberries_card(url):
         raise Exception(string_product_products_response_empty)
 
     for size in data['data']['products'][0]['sizes']:
-        sizes.append(ProductSizeInsertSchema.model_validate({
+        sizes.append(ProductSizeCreateSchema.model_validate({
             'wb_size_name': None if size['name'] == '' else size['name'],
             'wb_size_origName': None if size['origName'] == '0' else size['origName'],
             'wb_size_optionId': size['optionId'],

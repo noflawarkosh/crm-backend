@@ -1,7 +1,7 @@
 import datetime
 from typing import Optional
 from pydantic import BaseModel, constr
-from products.schemas import ProductGETSchema, ProductSizeGETSchema
+from products.schemas import ProductReadSchema, ProductSizeReadSchema
 
 
 class OrdersOrderCreateModel(BaseModel):
@@ -20,5 +20,5 @@ class OrdersOrderReadModel(OrdersOrderCreateModel):
     dt_delivered: Optional[datetime.datetime]
     dt_collected: Optional[datetime.datetime]
 
-    product: 'ProductGETSchema'
-    size: 'ProductSizeGETSchema'
+    product: 'ProductReadSchema'
+    size: 'ProductSizeReadSchema'

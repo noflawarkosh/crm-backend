@@ -152,8 +152,7 @@
                                     title = 'Доставлен на склад'
                                 }
 
-                                if (row.dt_planed === null) {
-                                    status = 5
+                                if (row.is_canceled === true) {
                                     title = 'Отменен'
                                 }
 
@@ -286,7 +285,7 @@
 
     var prods = []
 
-    // Функция для добавления опций второго выпадающего списка
+
     function addOptionsToSelect2(pri) {
         var optionsArr = [];
 

@@ -120,17 +120,21 @@
                 <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
 
                     <div class="navbar-nav align-items-center">
+                        <span class="spinner-border spinner-border-sm text-primary" role="status" id="page_ldr"
+                              style="display: none;"></span>
+                        <!--
                         <div class="nav-item navbar-search-wrapper mb-0">
                             <a class="nav-item nav-link search-toggler px-0" href="javascript:void(0);">
                                 <i class="bx bx-search bx-sm"></i>
                                 <span class="d-none d-md-inline-block text-muted">Поиск (Ctrl+/)</span>
                             </a>
                         </div>
+                        -->
                     </div>
 
                     <ul class="navbar-nav flex-row align-items-center ms-auto">
 
-                        <!-- Notifications -->
+                        <!-- Notifications
                         <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3 me-xl-1">
 
                             <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);"
@@ -184,7 +188,7 @@
                                 </li>
                             </ul>
                         </li>
-
+                        -->
                         <!-- User -->
                         <li class="nav-item navbar-dropdown dropdown-user dropdown">
 
@@ -493,7 +497,7 @@
         var orgMenu = [
             {'menuItemTitle': 'Управление', 'menuItemHref': 'dashboard'},
             {'menuItemTitle': 'Кошелек', 'menuItemHref': 'wallet'},
-            {'menuItemTitle': 'Реферальная программа', 'menuItemHref': 'loyalty'},
+            //{'menuItemTitle': 'Реферальная программа', 'menuItemHref': 'loyalty'},
             {'menuItemTitle': 'Товары', 'menuItemHref': 'products'},
             {'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': 'tasks'},
             {'menuItemTitle': 'Отзывы', 'menuItemHref': 'reviews'},
@@ -523,7 +527,7 @@
 
                     orgMenu.forEach(function (orgMenu) {
 
-                        var ItemHREF =  '/organization/' + orgMenu.menuItemHref + '/' + data.id
+                        var ItemHREF = '/organization/' + orgMenu.menuItemHref + '/' + data.id
                         var menuSubItemClass = 'menu-item'
 
                         if (ItemHREF === currentPage) {
@@ -579,7 +583,7 @@
 
                 data.forEach(function (data) {
 
-                    if (data.status_id === 1) {
+                    if (data.status === 1) {
 
                         var menuItem = $('<li>').addClass('menu-item');
                         var menuItemA = $('<a>').attr({
@@ -624,7 +628,7 @@
 
                             var menuSubItem = $('<li>').addClass(menuSubItemClass);
 
-                            ItemHREF =  '/organization/' + orgMenu.menuItemHref + '/' + data.organization.id
+                            ItemHREF = '/organization/' + orgMenu.menuItemHref + '/' + data.organization.id
                             var menuSubA = $('<a>').attr({
                                 href: ItemHREF,
                                 class: 'menu-link'
@@ -667,7 +671,7 @@
             document.getElementById('nav-name').innerText = data.name
             document.getElementById('nav-username').innerText = data.username
 
-            var imageUrl = '/storage/get/4m0Tqv66dBUakFPu.png';
+            var imageUrl = "{{ url_for('static', path='assets/img/avatars/def-avatar.jpg') }}";
             if (data.media_id !== null) {
                 imageUrl = '/storage/get/' + data.media.storage_href
             }
@@ -682,11 +686,11 @@
 
             $('#my-avatar-drop').append(imageElement2);
 
-            if (window.location.pathname.includes ('profile'))  {
+            if (window.location.pathname.includes('profile')) {
                 loadProfile(data)
             }
 
-            if (window.location.pathname.includes ('settings'))  {
+            if (window.location.pathname.includes('settings')) {
                 loadSettings(data)
             }
 
@@ -696,7 +700,28 @@
 
 </script>
 
-{% block js %}{% endblock %}
+<script>
+    function dt_refresh(table_id, url) {
+        var table = $('#' + table_id).DataTable()
+        document.getElementById('page_ldr').style.display = 'block'
 
+        $.ajax({
+            type: "GET",
+            url: url,
+            dataType: "json",
+            success: function (data) {
+                table.clear()
+                table.draw()
+                table.rows.add(data).draw();
+                document.getElementById('page_ldr').style.display = 'none'
+            },
+            error: function () {
+                toastr.error('Ошибка обновления данных. Обновите страницу')
+
+            }
+        })
+    }
+</script>
+{% block js %}{% endblock %}
 </body>
 </html>

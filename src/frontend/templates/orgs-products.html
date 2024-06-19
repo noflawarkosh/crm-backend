@@ -27,22 +27,48 @@
 
 <script>
 
+    const url = window.location.href;
+    var arr = url.split('/')
+    var org_id = arr[arr.length - 1]
+
     function disableProduct(id) {
         if (confirm('Подтвердите удаление товара #' + id)) {
-
+            document.getElementById('page_ldr').style.display = 'block'
             $.ajax({
 
                 url: '/products/disable?product_id=' + id,
                 method: 'get',
 
                 success: function (data) {
-                    document.getElementById('line-' + id).style.display = 'none'
+                    document.getElementById('page_ldr').style.display = 'none'
+                    dt_refresh('dt_user_products', '/products/getOwned?org_id=' + org_id)
                     toastr.success('Товар успешно удален')
 
                 },
                 error: function (data) {
-                    console.log(data)
-                    toastr.error('Ошибка загрузки списка товаров. ' + data.responseJSON.detail)
+                    document.getElementById('page_ldr').style.display = 'none'
+                    toastr.error('Ошибка удаления товара: ' + data.responseJSON.detail)
+                }
+            })
+        }
+    }
+
+    function refreshProduct(id) {
+        if (confirm('Подтвердите обновление данных товара #' + id)) {
+
+            document.getElementById('page_ldr').style.display = 'block'
+            $.ajax({
+
+                url: '/products/refresh?product_id=' + id,
+                method: 'get',
+
+                success: function () {
+                    dt_refresh('dt_user_products', '/products/getOwned?org_id=' + org_id)
+                    toastr.success('Товар успешно обновлен. Обновление размеров отобразится после обновлении страницы')
+                },
+                error: function (data) {
+                    document.getElementById('page_ldr').style.display = 'none'
+                    toastr.error('Ошибка обновления товара: ' + data.responseJSON.detail)
                 }
             })
         }
@@ -52,9 +78,9 @@
     $(document).ready(function () {
 
         const url = window.location.href;
-
         var arr = url.split('/')
         var id = arr[arr.length - 1]
+        var modal = ''
 
         $.ajax({
 
@@ -63,151 +89,153 @@
 
             success: function (data) {
 
-                if (data.length !== 0) {
-                    $('#product-list').show();
-                }
+                $('#dt_user_products').DataTable({
+                    "data": data,
+                    "paging": true,
+                    "pageLength": 10,
+                    "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                    "searching": true,
+                    "ordering": true,
 
-                $.each(data, function (index, item) {
-                    var pichref = '/storage/get/4m0Tqv66dBUakFPu.png'
-                    var ext_url = 'https://www.wildberries.ru/catalog/' + item.wb_article + '/detail.aspx'
-                    var price = null
+                    columns: [
+                        {
+                            data: 'id'
+                        },
+                        {
+                            render: function (data, type, row) {
 
+                                var avatar_src = "{{ url_for('static', path='assets/img/avatars/def-avatar.jpg') }}"
 
-                    if (item.media_id !== null) {
-                        pichref = '/storage/get/' + item.media.storage_href
-                    }
+                                if (row.media !== null) {
+                                    avatar_src = '/storage/get/' + row.media.storage_href
+                                }
 
+                                var wb_url = 'https://www.wildberries.ru/catalog/' + row.wb_article + '/detail.aspx'
 
-                    if (item.sizes.length === 1) {
-                        if (item.sizes[0].wb_size_name == null) {
-
-                            if (item.sizes[0].wb_in_stock === false) {
-                                price = 'Нет в наличии'
-
-                            } else {
-                                price = item.sizes[0].wb_price / 100 + ' руб.'
+                                return '' +
+                                    '<div class="d-flex justify-content-start align-items-center product-name">' +
+                                    '   <div class="avatar-wrapper">' +
+                                    '       <div class="avatar avatar me-2 rounded-2 bg-label-secondary">' +
+                                    '           <img src="' + avatar_src + '">' +
+                                    '       </div>' +
+                                    '   </div>' +
+                                    '   <div class="d-flex flex-column">' +
+                                    '       <h6 class="text-body text-nowrap mb-0"><a target="_blank" href="' + wb_url + '">' + row.wb_title + '</a></h6>' +
+                                    '       <small class="text-muted text-truncate d-none d-sm-block">' + row.wb_article + '</small>' +
+                                    '   </div>' +
+                                    '</div>'
                             }
+                        },
+                        {
+                            data: 'barcode'
+                        },
+                        {
+                            render: function (data, type, row) {
+                                var price = ''
 
-                        }
+                                if (row.sizes.length === 1) {
+                                    if (row.sizes[0].wb_size_name == null) {
+
+                                        if (row.sizes[0].wb_in_stock === false) {
+                                            price = 'Нет в наличии'
+
+                                        } else {
+                                            price = row.sizes[0].wb_price / 100 + ' руб.'
+                                        }
+
+                                    }
+
+                                } else {
+                                    var trs = ''
+
+                                    $.each(row.sizes, function (i, size) {
+                                        var p = null
+
+                                        var bdc = 'success'
+                                        var bdt = 'В наличии'
+
+                                        if (size.wb_in_stock === false) {
+                                            p = '—'
+                                            bdc = 'danger'
+                                            bdt = 'Не в наличии'
+
+                                        } else {
+                                            p = size.wb_price / 100 + ' руб.'
+                                        }
+
+                                        trs = trs + '                        <tr>\n' +
+                                            '                            <td>' + size.wb_size_origName + ' (' + size.wb_size_name + ')</td>\n' +
+                                            '                            <td>' + p + '</td>\n' +
+                                            '                            <td><span class="badge bg-label-' + bdc + '">' + bdt + '</span></td>\n' +
+                                            '                        </tr>\n'
+
+                                    })
 
 
-                    } else {
-                        var trs = ''
+                                    modal += '<div class="modal fade" id="modalToggle-' + row.id + '" aria-labelledby="modalToggleLabel-' + row.id + '" tabindex="-1" style="display: none;"\n' +
+                                        '         aria-hidden="true">\n' +
+                                        '        <div class="modal-dialog modal-dialog-centered">\n' +
+                                        '            <div class="modal-content">\n' +
+                                        '                <div class="modal-header">\n' +
+                                        '                    <h5 class="modal-title" id="modalToggleLabel-' + row.id + '">' + row.wb_article + '</h5>\n' +
+                                        '                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
+                                        '                </div>\n' +
+                                        '                <div class="modal-body">\n' +
+                                        '                  <div class="table-responsive text-nowrap" >' +
+                                        '                    <table class="table text-nowrap">\n' +
+                                        '                        <thead>\n' +
+                                        '                        <tr>\n' +
+                                        '                            <th>Размер</th>\n' +
+                                        '                            <th>Стоимость</th>\n' +
+                                        '                            <th>Наличие</th>\n' +
+                                        '                        </tr>\n' +
+                                        '                        </thead>\n' +
+                                        '                        <tbody class="table-border-bottom-0">\n' + trs +
+                                        '                        </tbody>\n' +
+                                        '                    </table>\n' +
+                                        '                </div>\n</div>' +
+                                        '            </div>\n' +
+                                        '        </div>\n' +
+                                        '    </div>'
 
-                        $.each(item.sizes, function (i, size) {
-                            var p = null
+                                    price = '<div><a href="##" data-bs-toggle="modal" data-bs-target="#modalToggle-' + row.id + '">Размеров: ' + row.sizes.length + '</a></div>'
+                                }
 
-                            var bdc = 'success'
-                            var bdt = 'В наличии'
+                                return price
 
-                            if (size.wb_in_stock === false) {
-                                p = '—'
-                                bdc = 'danger'
-                                bdt = 'Не в наличии'
 
-                            } else {
-                                p = size.wb_price / 100 + ' руб.'
+                                return '<b>' + row.level + '</b>'
                             }
+                        },
+                        {
+                            render: function (data, type, row) {
+                                return '<span class="text-nowrap">' + moment(row.last_update).format('DD.MM.YYYY HH:mm') + '</span>'
+                            }
+                        },
+                        {
+                            render: function (data, type, row) {
+                                var actions = ''
 
-                            trs = trs + '                        <tr>\n' +
-                                '                            <td>' + size.wb_size_origName + ' (' + size.wb_size_name + ')</td>\n' +
-                                '                            <td>' + p + '</td>\n' +
-                                '                            <td><span class="badge bg-label-' + bdc + '">' + bdt + '</span></td>\n' +
-                                '                        </tr>\n'
+                                actions += '<a href="javascript:disableProduct(' + row.id + ')"><i class="bx bx-x"></i></a>'
+                                actions += '<a href="javascript:refreshProduct(' + row.id + ')"><i class="bx bx-refresh"></i></a>'
 
-                        })
-
-
-                        var modal = '<div class="modal fade" id="modalToggle-' + item.id + '" aria-labelledby="modalToggleLabel-' + item.id + '" tabindex="-1" style="display: none;"\n' +
-                            '         aria-hidden="true">\n' +
-                            '        <div class="modal-dialog modal-dialog-centered">\n' +
-                            '            <div class="modal-content">\n' +
-                            '                <div class="modal-header">\n' +
-                            '                    <h5 class="modal-title" id="modalToggleLabel-' + item.id + '">' + item.wb_article + '</h5>\n' +
-                            '                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
-                            '                </div>\n' +
-                            '                <div class="modal-body">\n' +
-                            '                  <div class="table-responsive text-nowrap" >' +
-                            '                    <table class="table text-nowrap">\n' +
-                            '                        <thead>\n' +
-                            '                        <tr>\n' +
-                            '                            <th>Размер</th>\n' +
-                            '                            <th>Стоимость</th>\n' +
-                            '                            <th>Наличие</th>\n' +
-                            '                        </tr>\n' +
-                            '                        </thead>\n' +
-                            '                        <tbody class="table-border-bottom-0">\n' + trs +
-                            '                        </tbody>\n' +
-                            '                    </table>\n' +
-                            '                </div>\n</div>' +
-                            '\n' +
-                            '            </div>\n' +
-                            '        </div>\n' +
-                            '    </div>'
-
-                        price = '<div><a href="##" data-bs-toggle="modal" data-bs-target="#modalToggle-' + item.id + '">Размеров: ' + item.sizes.length + '</a>\n' + modal + '\n</div>'
-
-                    }
-
-
-                    var row = '<tr id="line-' + item.id + '">\n' +
-                        '                                        <td>' + item.id + '</td>\n' +
-                        '                                        <td>\n' +
-                        '                                            <div class="d-flex justify-content-start align-items-center product-name">\n' +
-                        '                                                <div class="avatar-wrapper">\n' +
-                        '                                                    <div class="avatar avatar me-2 rounded-2 bg-label-secondary">\n' +
-                        '                                                        <img src="' + pichref + '">\n' +
-                        '                                                    </div>\n' +
-                        '                                                </div>\n' +
-                        '                                                <div class="d-flex flex-column">\n' +
-                        '                                                    <h6 class="text-body text-nowrap mb-0"><a target="_blank" href="' + ext_url + '">' + item.wb_title + '</a></h6>\n' +
-                        '                                                    <small class="text-muted text-truncate d-none d-sm-block">' + item.wb_article + '</small>\n' +
-                        '                                                </div>\n' +
-                        '                                            </div>\n' +
-                        '                                        </td>\n' +
-                        '                                        <td><span>' + item.barcode + '</span></td>\n' +
-                        '                                        <td>' + price + '</td>\n' +
-                        '\n' +
-                        '                                        <td>\n' +
-                        '                                            <div class="d-inline-block text-nowrap">\n' +
-                        '                                                <a href="##" onclick="disableProduct(' + item.id + ')" class="btn btn-sm btn-icon">\n' +
-                        '                                                    <i class="bx bx-x"\n' +
-                        '                                                       data-bs-toggle="tooltip"\n' +
-                        '                                                       data-bs-offset="0,8"\n' +
-                        '                                                       data-bs-placement="top"\n' +
-                        '                                                       data-bs-custom-class="tooltip-primary"\n' +
-                        '                                                       data-bs-original-title="Удалить">\n' +
-                        '                                                    </i>\n' +
-                        '                                                </a>\n<a href="' + ext_url + '" target="_blank" class="btn btn-sm btn-icon">\n' +
-                        '                                                    <i class="bx bx-link-external"\n' +
-                        '                                                       data-bs-toggle="tooltip"\n' +
-                        '                                                       data-bs-offset="0,8"\n' +
-                        '                                                       data-bs-placement="top"\n' +
-                        '                                                       data-bs-custom-class="tooltip-primary"\n' +
-                        '                                                       data-bs-original-title="Открыть на WB">\n' +
-                        '\n' +
-                        '                                                    </i>\n' +
-                        '                                                </a>\n' +
-                        '\n' +
-                        '                                            </div>\n' +
-                        '                                        </td>\n' +
-                        '                                    </tr>'
-
-                    $('#pr-l-b').append(row);
-
-
+                                return actions
+                            }
+                        },
+                    ],
+                    "order": [[0, "desc"]]
                 });
-                document.getElementById('prod-cntr').innerText = 'Всего: ' + data.length
-                document.getElementById('loading-prods').style.display = 'none';
+                document.getElementById('size_modals').innerHTML = modal;
+                document.getElementById('prd-ldr').style.display = 'none';
+                document.getElementById('prd-div').style.display = 'block';
             },
-            error: function () {
 
-                toastr.error('Ошибка загрузки списка товаров')
-                document.getElementById('loading-prods').style.display = 'none';
+            error: function (data) {
+                toastr.error('Ошибка загрузки товаров: ' + data.responseJSON.detail)
+                document.getElementById('loading-members').style.display = 'none';
             }
 
         });
-
 
     });
 
@@ -266,61 +294,47 @@
 
     });
 </script>
-
 {% endblock %}
-
 
 {% block content %}
 <div class="container-xxl flex-grow-1 container-p-y">
-
     <div class="row">
-
         <div class="col">
             <div class="card">
-
                 <div class="card-header">
                     <h5 class="card-title mb-0">Товары организации
-                        <a href="#" data-bs-toggle="offcanvas"
+                        <a href="javascript:"
+                           data-bs-toggle="offcanvas"
                            data-bs-target="#off-create-prod"
                            aria-controls="off-create-prod">
-                            <i class="bx bxs-plus-square" data-bs-toggle="tooltip"
-                               data-bs-offset="0,8"
-                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
-                               data-bs-original-title="Добавить">
-                            </i>
+                            <i class="bx bxs-plus-square"></i>
                         </a>
-                        <div class="spinner-border spinner-border-sm text-primary" role="status"
-                             id="loading-prods">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
+                        <a href="javascript:var u = '/products/getOwned?org_id=' + org_id; dt_refresh('dt_user_products', u)">
+                            <i class="bx bx-refresh"></i>
+                        </a>
+                        <span class="spinner-border spinner-border-sm text-primary" role="status" id="prd-ldr"></span>
                     </h5>
                     <small class="card-subtitle" id="prod-cntr"></small>
                 </div>
-
-                <div class="table-responsive text-nowrap" id="div-mems">
-                    <table class="table text-nowrap" id="product-list" style="display: none;">
+                <div class="card-body table-responsive" id="prd-div" style="display: none;">
+                    <table id="dt_user_products" class="datatables-ajax table table-bordered dataTable no-footer">
                         <thead>
                         <tr>
                             <th>#ID</th>
                             <th>Товар</th>
                             <th>Баркод</th>
                             <th>Стоимость</th>
+                            <th>Обновление</th>
                             <th>Действия</th>
                         </tr>
                         </thead>
-                        <tbody class="table-border-bottom-0" id="pr-l-b">
-
-                        </tbody>
                     </table>
                 </div>
             </div>
         </div>
-
     </div>
-
 </div>
-
-
+<div id="size_modals"></div>
 <div class="mt-3">
     <div class="offcanvas offcanvas-start" id="off-create-prod">
 
@@ -358,6 +372,4 @@
         </div>
     </div>
 </div>
-
-
 {% endblock %}

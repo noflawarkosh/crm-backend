@@ -5,7 +5,7 @@ from storage.schemas import StorageGETSchema
 
 
 # Product Size schemas
-class ProductSizeInsertSchema(BaseModel):
+class ProductSizeCreateSchema(BaseModel):
     wb_size_name: str | None
     wb_size_origName: str | None
     wb_size_optionId: int
@@ -13,7 +13,7 @@ class ProductSizeInsertSchema(BaseModel):
     wb_price: int | None
 
 
-class ProductSizeGETSchema(ProductSizeInsertSchema):
+class ProductSizeReadSchema(ProductSizeCreateSchema):
     id: int
 
 
@@ -24,82 +24,50 @@ class ProductPOSTSchema(BaseModel):
     wb_url: str
 
 
-class ProductInsertSchema(BaseModel):
+class ProductCreateSchema(BaseModel):
     org_id: int
     barcode: str
     wb_article: str
     wb_title: str
 
 
-class ProductNonRelGETSchema(BaseModel):
+class ProductReadSchema(BaseModel):
     id: int
     barcode: str
     date: datetime.datetime
     is_active: bool
     wb_article: str
     wb_title: str
-
     org_id: int
     media_id: int | None
 
-
-class ProductGETSchema(BaseModel):
-    id: int
-    barcode: str
-    date: datetime.datetime
-    is_active: bool
-    wb_article: str
-    wb_title: str
-
-    org_id: int
-
-    media: StorageGETSchema | None
-    sizes: list[ProductSizeGETSchema]
+    media: Optional[StorageGETSchema]
+    sizes: Optional[list[ProductSizeReadSchema]]
 
 
 # Review schemas
-class ReviewMediaGETSchema(BaseModel):
+class ReviewMediaReadSchema(BaseModel):
     id: int
-
     review_id: int
     media_id: int
 
     media: StorageGETSchema
 
 
-class ReviewStatusGETSchema(BaseModel):
-    id: int
-    title: str
-
-
-class ReviewMatchGETSchema(BaseModel):
-    id: int
-    title: str
-
-
-class ReviewStatusHistoryGETSchema(BaseModel):
-    id: int
-    review_id: int
-    status_id: int
-    description: str | None
-    date: datetime.datetime
-    status: ReviewStatusGETSchema
-
-
-class ReviewPOSTSchema(BaseModel):
+class ReviewCreateSchema(BaseModel):
     text: Optional[str] = None
-
     product_id: int
     size_id: Optional[int] = None
-    match_id: Optional[int] = None
+    match: Optional[int] = None
 
 
-class ReviewGETSchema(ReviewPOSTSchema):
+class ReviewReadSchema(ReviewCreateSchema):
     id: int
     text: str | None
+    match: int | None
+    status: int
 
-    media: list[ReviewMediaGETSchema] | None
-    statuses: list[ReviewStatusHistoryGETSchema]
-    product: ProductGETSchema
-    size: ProductSizeGETSchema | None
-    match: ReviewMatchGETSchema | None
+    media: Optional[list[ReviewMediaReadSchema]]
+    product: Optional[ProductReadSchema]
+    size: Optional[ProductSizeReadSchema]
+
