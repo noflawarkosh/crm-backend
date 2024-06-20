@@ -27,8 +27,8 @@ async def get_plan(org_id: int, date: datetime.datetime, session: UserSessionMod
 
     records = await DefaultRepository.get_records(
         model=OrdersOrderModel,
-        filters={"org_id": org_id, "dt_planed": date},
-        select_models=[OrdersOrderModel.size, OrdersOrderModel.product]
+        filters=[OrdersOrderModel.org_id == org_id, OrdersOrderModel.dt_planed == date],
+        prefetch_related=[OrdersOrderModel.size, OrdersOrderModel.product]
     )
 
     return [OrdersOrderReadModel.model_validate(record, from_attributes=True) for record in records]
@@ -45,8 +45,8 @@ async def save_data(amount: int,
 
     products = await DefaultRepository.get_records(
         model=ProductModel,
-        filters={'id': data.product_id},
-        select_models=[ProductModel.sizes]
+        filters=[ProductModel.id == data.product_id],
+        select_related=[ProductModel.sizes]
     )
 
     for size in products[0].sizes:

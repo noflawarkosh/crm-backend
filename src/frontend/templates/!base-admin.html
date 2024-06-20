@@ -8,7 +8,7 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
 
-    <title>{% block title %}{% endblock %} - GreedyBear</title>
+    <title>{% block title %}{% endblock %}GreedyBear</title>
 
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='assets/img/icons/logo.ico') }}"/>
 
@@ -74,104 +74,7 @@
                 </a>
             </div>
 
-            <ul class="menu-inner py-1" id="aside-menu">
-
-                <li class="menu-header small text-uppercase">
-                    <span class="menu-header-text" data-i18n="Выкупы"></span>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/admin-tables-servers" class="menu-link">
-                        <i class="menu-icon tf-icons bx bxs-server"></i>
-                        <div class="text-truncate" data-i18n="Серверы"></div>
-                    </a>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/admin-scripts/planner" class="menu-link">
-                        <i class="menu-icon tf-icons bx bx-table"></i>
-                        <div class="text-truncate" data-i18n="Планирование"></div>
-                    </a>
-                </li>
-
-                <li class="menu-header small text-uppercase">
-                    <span class="menu-header-text" data-i18n="База данных"></span>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/admin-tables-addresses" class="menu-link">
-                        <i class="menu-icon tf-icons bx bxs-building"></i>
-                        <div class="text-truncate" data-i18n="Адреса"></div>
-                    </a>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/admin-tables-accounts" class="menu-link">
-                        <i class="menu-icon tf-icons bx bxs-user-account"></i>
-                        <div class="text-truncate" data-i18n="Аккаунты"></div>
-                    </a>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/admin-table/OrdersOrder" class="menu-link">
-                        <i class="menu-icon tf-icons bx bxs-cart"></i>
-                        <div class="text-truncate" data-i18n="Заказы"></div>
-                    </a>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/admin-table/OrdersContractor" class="menu-link">
-                        <i class="menu-icon tf-icons bx bxs-truck"></i>
-                        <div class="text-truncate" data-i18n="Подрядчики"></div>
-                    </a>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/admin-tables-payments" class="menu-link">
-                        <i class="menu-icon tf-icons bx bx-credit-card-front"></i>
-                        <div class="text-truncate" data-i18n="Платежи"></div>
-                    </a>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/admin-tables-users" class="menu-link">
-                        <i class="menu-icon tf-icons bx bx-user"></i>
-                        <div class="text-truncate" data-i18n="Пользователи"></div>
-                    </a>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/admin-table/Organization" class="menu-link">
-                        <i class="menu-icon tf-icons bx bx-group"></i>
-                        <div class="text-truncate" data-i18n="Организации"></div>
-                    </a>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/admin-table/OrganizationInvitation" class="menu-link">
-                        <i class="menu-icon tf-icons bx bx-list-plus"></i>
-                        <div class="text-truncate" data-i18n="Приглашения"></div>
-                    </a>
-                </li>
-
-                <li class="menu-header small text-uppercase">
-                    <span class="menu-header-text" data-i18n="Системные"></span>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/admin-table/" class="menu-link">
-                        <i class="menu-icon tf-icons bx bx-data"></i>
-                        <div class="text-truncate" data-i18n="Хранилище"></div>
-                        <span class="badge bg-info ms-auto">104 Gb</span>
-                    </a>
-                </li>
-
-                <li class="menu-item">
-                    <a href="/admin-table/UserSession" class="menu-link">
-                        <i class="menu-icon tf-icons bx bx-laptop"></i>
-                        <div class="text-truncate" data-i18n="Сессии пользователей"></div>
-                    </a>
-                </li>
+            <ul class="menu-inner py-1" id="aside-admin-menu">
 
             </ul>
 
@@ -215,6 +118,10 @@
                         </a>
                     </div>
 
+                    <div class="navbar-nav align-items-center">
+                        <span class="spinner-border spinner-border-sm text-primary" role="status" id="admin_ldr"></span>
+                    </div>
+
                     <ul class="navbar-nav flex-row align-items-center ms-auto">
 
                         <!-- User -->
@@ -224,7 +131,7 @@
                                data-bs-toggle="dropdown">
                                 <div class="avatar avatar-online" id="my-avatar-nav">
                                     <img class="w-px-40 rounded-circle"
-                                         src="{{ url_for('static', path='assets/img/avatars/wq69JnM9.jpg') }}">
+                                         src="{{ url_for('static', path='assets/img/avatars/def-avatar.jpg') }}">
                                 </div>
                             </a>
 
@@ -235,12 +142,12 @@
                                             <div class="flex-shrink-0 me-3">
                                                 <div class="avatar avatar-online" id="my-avatar-drop">
                                                     <img class="w-px-40 rounded-circle"
-                                                         src="{{ url_for('static', path='assets/img/avatars/wq69JnM9.jpg') }}">
+                                                         src="{{ url_for('static', path='assets/img/avatars/def-avatar.jpg') }}">
                                                 </div>
                                             </div>
                                             <div class="flex-grow-1">
-                                                <span class="fw-medium d-block" id="nav-name">Ненахов А. И.</span>
-                                                <small class="text-muted" id="nav-username">Генеральный директор</small>
+                                                <span class="fw-medium d-block" id="nav-name">Администратор</span>
+                                                <small class="text-muted" id="nav-username"></small>
                                             </div>
                                         </div>
                                     </a>
@@ -248,20 +155,9 @@
                                 <li>
                                     <div class="dropdown-divider"></div>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="/settings">
-                                        <i class="bx bx-cog me-2"></i>
-                                        <span class="align-middle">Настройки</span>
-                                    </a>
-                                </li>
-
 
                                 <li>
-                                    <div class="dropdown-divider"></div>
-                                </li>
-
-                                <li>
-                                    <a class="dropdown-item" href="#" onclick="logout();">
+                                    <a class="dropdown-item" href="##" onclick="logout();">
                                         <i class="bx bx-power-off me-2"></i>
                                         <span class="align-middle">Выйти</span>
                                     </a>
@@ -319,7 +215,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.0.1/js/toastr.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/3.3.4/jquery.inputmask.bundle.min.js"></script>
 
-
+<!-- const -->
 <script>
     const FT = {
         'name': 'Имя',
@@ -373,10 +269,251 @@
         'user_id': 'Пользователь',
         'al': 'Дни жизни аккаунта',
         'lo': 'Макс кол-во дней с последнего заказа на аккаунте',
-        'k_format': 'Формат записи даты в ячейку K листа плана'
+        'k_format': 'Формат записи даты в ячейку K листа плана',
+        'wb_price': 'Цена',
+        'wb_status': 'Статус',
+        'is_cancelled': 'Отменен',
+        'dt_planed': 'Дата планирования',
+        'wb_article': 'Артикул',
+        'wb_title': 'Название',
+        'bank': 'Банк',
+        'recipient': 'Получатель',
+        'bill': 'Номер счета',
+        'last_update': 'Последнее обновление',
+    }
+
+    const ASIDE = [
+        {
+            'title': 'Выкупы',
+            'items': [
+                {
+                    'title': 'Серверы',
+                    'href': '/admin-tables/servers',
+                    'icon': 'bx bxs-server',
+                    'level': 1,
+                },
+                {
+                    'title': 'Планирование',
+                    'href': '/admin-scripts/planner',
+                    'icon': 'bx bx-table',
+                    'level': 2,
+                }
+            ]
+        },
+        {
+            'title': 'Логистика',
+            'items': [
+                {
+                    'title': 'Адреса ПВЗ',
+                    'href': '/admin-tables/addresses',
+                    'icon': 'bx bx-building',
+                    'level': 4,
+                },
+                {
+                    'title': 'Подрядчики',
+                    'href': '/admin-tables/contractors',
+                    'icon': 'bx bxs-truck',
+                    'level': 8,
+                },
+            ]
+        },
+        {
+            'title': 'Товары, заказы',
+            'items': [
+                {
+                    'title': 'Заказы',
+                    'href': '/admin-tables/orders',
+                    'icon': 'bx bx-cart',
+                    'level': 16,
+                },
+                {
+                    'title': 'Аккаунты',
+                    'href': '/admin-tables/accounts',
+                    'icon': 'bx bx-phone',
+                    'level': 32,
+                },
+                {
+                    'title': 'Товары',
+                    'href': '/admin-tables/products',
+                    'icon': 'bx bx-box',
+                    'level': 64,
+                },
+                {
+                    'title': 'Отзывы',
+                    'href': '/admin-tables/reviews',
+                    'icon': 'bx bx-comment',
+                    'level': 128,
+                },
+            ]
+        },
+        {
+            'title': 'Пользователи',
+            'items': [
+                {
+                    'title': 'Касса',
+                    'href': '/admin-tables/payments',
+                    'icon': 'bx bx-money',
+                    'level': 256,
+                },
+                {
+                    'title': 'Услуги',
+                    'href': '/admin-tables/prices',
+                    'icon': 'bx bx-list-check',
+                    'level': 512,
+                },
+                {
+                    'title': 'Банки',
+                    'href': '/admin-tables/banks',
+                    'icon': 'bx bxs-bank',
+                    'level': 1024,
+                },
+                {
+                    'title': 'Организации',
+                    'href': '/admin-tables/organizations',
+                    'icon': 'bx bxs-group',
+                    'level': 2048,
+                },
+                {
+                    'title': 'Пользователи',
+                    'href': '/admin-tables/users',
+                    'icon': 'bx bx-user',
+                    'level': 4096,
+                },
+            ]
+        },
+        {
+            'title': 'Система',
+            'items': [
+                {
+                    'title': 'Администраторы',
+                    'href': '/admin-tables/admins',
+                    'icon': 'bx bx-shield',
+                    'level': 16384,
+                },
+                {
+                    'title': 'Хранилище',
+                    'href': '/admin-tables/storage',
+                    'icon': 'bx bx-server',
+                    'level': 32768,
+                },
+                {
+                    'title': 'Сессии пользователей',
+                    'href': '/admin-tables/usersessions',
+                    'icon': 'bx bx-laptop',
+                    'level': 65536,
+                },
+                {
+                    'title': 'Сессии администраторов',
+                    'href': '/admin-tables/adminsessions',
+                    'icon': 'bx bx-laptop',
+                    'level': 131072,
+                },
+                {
+                    'title': 'Конфигурация',
+                    'href': '/admin-tables/settings',
+                    'icon': 'bx bx-edit',
+                    'level': 262144,
+                },
+            ]
+        },
+    ]
+
+    const TITLES = {
+        'servers': 'Серверы',
+        'planner': 'Планирование',
+        'addresses': 'Адреса',
+        'contractors': 'Подрядчики',
+        'orders': 'Заказы',
+        'accounts': 'Аккаунты',
+        'products': 'Товары',
+        'reviews': 'Отзывы',
+        'payments': 'Касса',
+        'prices': 'Цены',
+        'banks': 'Банки',
+        'organizations': 'Организации',
+        'users': 'Пользователи',
+        'admins': 'Администраторы',
+        'storage': 'Хранилище',
+        'usersessions': 'Сессии пользователей',
+        'adminsessions': 'Сессии администраторов',
+        'settings': 'Настройки',
+    }
+
+    // non-editable fields
+    const UEF = [
+        'id',
+        'owner_id'
+    ]
+
+    const bools = ['is_active']
+
+    // deep load
+    const FML = {
+        'media_id': ['storage', 'title'],
+        'schedule_id': ['schedules', 'title'],
+        'contractor_id': ['contractors', 'name'],
+        'server_id': ['servers', 'name'],
+        'address_id': ['addresses', 'address'],
     }
 </script>
 
+<!-- profile and aside -->
+<script>
+    $.ajax({
+        url: '/admin/profile',
+        method: 'get',
+
+        success: function (data) {
+
+            document.getElementById('nav-name').innerText = data.name + ' ' + data.surname[0] + '.'
+            document.getElementById('nav-username').innerHTML = '<span class="badge bg-label-secondary">' + data.post + '</span>'
+
+            var sideMenu = ''
+            for (var i = 0; i < ASIDE.length; i++) {
+
+                var access = false
+
+                for (var j = 0; j < ASIDE[i].items.length; j++) {
+                    if (ASIDE[i].items[j].level & data.level) {
+                        access = true
+                        break
+                    }
+                }
+
+                if (access === true) {
+                    sideMenu += '' +
+                        '<li class="menu-header small text-uppercase">' +
+                        '   <span class="menu-header-text">' + ASIDE[i].title + '</span>' +
+                        '</li>'
+
+                    for (j = 0; j < ASIDE[i].items.length; j++) {
+                        var href = ASIDE[i].items[j].href ? ASIDE[i].items[j].href : 'javascript:toastr.error("Раздел не найден")';
+                        var icon = ASIDE[i].items[j].icon ? ASIDE[i].items[j].icon : 'bx bx-list';
+
+                        if (ASIDE[i].items[j].level & data.level) {
+                            sideMenu += '' +
+                                '<li class="menu-item">' +
+                                '   <a href="' + href + '" class="menu-link">' +
+                                '       <i class="menu-icon tf-icons ' + icon + '"></i>' +
+                                '       <div class="text-truncate">' + ASIDE[i].items[j].title + '</div>' +
+                                '   </a>' +
+                                '</li>'
+                        }
+                    }
+                }
+            }
+            document.getElementById('aside-admin-menu').innerHTML = sideMenu
+            document.getElementById('admin_ldr').style.display = 'none'
+        },
+
+        error: function (data) {
+            toastr.error(data.responseJSON.detail);
+        }
+    });
+
+</script>
+
+<!-- logout -->
 <script>
     function logout() {
         $.ajax({
@@ -394,17 +531,17 @@
     }
 </script>
 
-
+<!-- counters -->
 <script>
     $.ajax({
-        url: '/admin/get/User',
+        url: '/admin/get/users',
         method: 'get',
 
         success: function (data) {
             var amount = 0
 
             for (var i = 0; i < data.length; i++) {
-                if (data[i].statuses[data[i].statuses.length - 1].status.id === 1) {
+                if (data[i].status === 1) {
                     amount += 1
                 }
             }
@@ -421,14 +558,14 @@
     });
 
     $.ajax({
-        url: '/admin/get/Organization',
+        url: '/admin/get/orgs',
         method: 'get',
 
         success: function (data) {
             var amount = 0
 
             for (var i = 0; i < data.length; i++) {
-                if (data[i].statuses[data[i].statuses.length - 1].status.id === 1) {
+                if (data[i].status === 1) {
                     amount += 1
                 }
             }
@@ -445,7 +582,7 @@
     });
 
     $.ajax({
-        url: '/admin/get/BalanceBill',
+        url: '/admin/get/bills',
         method: 'get',
 
         success: function (data) {

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 
+from admin.models import AdminSessionModel
 from auth.models import UserSessionModel
 from auth.schemas import UserReadSchema
 from auth.router import every
@@ -25,11 +26,32 @@ sections = {
     'orders': 16,
 }
 
+pages_levels = {
+    'servers': 1,
+    'planner': 2,
+    'addresses': 4,
+    'contractors': 8,
+    'orders': 16,
+    'accounts': 32,
+    'products': 64,
+    'reviews': 128,
+    'payments': 256,
+    'prices': 512,
+    'banks': 1024,
+    'organizations': 2048,
+    'users': 4096,
+    'admins': 16384,
+    'storage': 32768,
+    'usersessions': 65536,
+    'adminsessions': 131072,
+    'settings': 262144,
+}
+
 
 @router.get('/admin')
 async def page(request: Request,
-               admin: UserReadSchema = Depends(admin_every)):
-    if not admin:
+               session: AdminSessionModel = Depends(admin_every)):
+    if not session:
         return RedirectResponse('/admin-login')
 
     return templates.TemplateResponse('admin-dashboard.html', {'request': request})
@@ -37,51 +59,53 @@ async def page(request: Request,
 
 @router.get('/admin-login')
 async def page(request: Request,
-               admin: UserReadSchema = Depends(admin_every)):
-    if admin:
+               session: AdminSessionModel = Depends(admin_every)):
+    if session:
         return RedirectResponse('/admin')
 
     return templates.TemplateResponse('admin-login.html', {'request': request})
 
 
-@router.get('/admin-tables-{table}')
-async def page(table: str,
+@router.get('/admin-{action}/{section}')
+async def page(section: str,
+               action: str,
                request: Request,
-               admin: UserReadSchema = Depends(admin_every)):
-    if not admin:
+               session: AdminSessionModel = Depends(admin_every)):
+    if not session:
         return RedirectResponse('/admin-login')
 
-    return templates.TemplateResponse(f'admin-tables-{table}.html', {'request': request})
+    if not pages_levels.get(section, None):
+        return RedirectResponse('/404')
+
+    if not pages_levels[section] & session.admin.level:
+        return RedirectResponse('/403')
+
+    if action == 'tables':
+        try:
+            return templates.TemplateResponse(f'admin-tables-{section}.html', {'request': request})
+        except:
+            return templates.TemplateResponse(f'admin-record-tables.html', {'request': request})
+
+    if action == 'scripts':
+        try:
+            return templates.TemplateResponse(f'admin-scripts-{section}.html', {'request': request})
+        except:
+            return RedirectResponse('/404')
+
+    if action == 'create':
+        return templates.TemplateResponse(f'admin-record-create.html', {'request': request})
 
 
-@router.get('/admin-scripts/{script}')
-async def page(script: str,
-               request: Request,
-               admin: UserReadSchema = Depends(admin_every)):
-    if not admin:
+    return RedirectResponse('/404')
+
+
+@router.get('/admin-edit/{table}/{id}')
+async def page(request: Request,
+               session: AdminSessionModel = Depends(admin_every)):
+    if not session:
         return RedirectResponse('/admin-login')
 
-    return templates.TemplateResponse(f'admin-scripts-{script}.html', {'request': request})
-
-
-@router.get('/admin-{action}/{table}/{id}')
-async def page(action: str,
-               request: Request,
-               admin: UserReadSchema = Depends(admin_every)):
-    if not admin:
-        return RedirectResponse('/admin-login')
-
-    return templates.TemplateResponse(f'admin-record-{action}.html', {'request': request})
-
-
-@router.get('/admin-{action}/{table}')
-async def page(action: str,
-               request: Request,
-               admin: UserReadSchema = Depends(admin_every)):
-    if not admin:
-        return RedirectResponse('/admin-login')
-
-    return templates.TemplateResponse(f'admin-record-{action}.html', {'request': request})
+    return templates.TemplateResponse(f'admin-record-edit.html', {'request': request})
 
 
 # AUTH PAGES
@@ -139,7 +163,10 @@ async def page(request: Request,
     if not session:
         return RedirectResponse('/login')
 
-    organizations = await DefaultRepository.get_records(OrganizationModel, filters={'id': org_id})
+    organizations = await DefaultRepository.get_records(
+        OrganizationModel,
+        filters=[OrganizationModel.id == org_id]
+    )
 
     if len(organizations) != 1:
         return RedirectResponse('/404')
@@ -165,14 +192,20 @@ async def page(request: Request,
     if not session.user:
         return RedirectResponse('/login')
 
-    bills = await DefaultRepository.get_records(BalanceBillModel, filters={'id': bill_id})
+    bills = await DefaultRepository.get_records(
+        BalanceBillModel,
+        filters=[BalanceBillModel.id == bill_id]
+    )
 
     if len(bills) != 1:
         return RedirectResponse('/404')
 
     bill = bills[0]
 
-    organizations = await DefaultRepository.get_records(OrganizationModel, filters={'id': bill.org_id})
+    organizations = await DefaultRepository.get_records(
+        OrganizationModel,
+        filters=[OrganizationModel.id == bill.org_id]
+    )
 
     if len(organizations) != 1:
         return RedirectResponse('/404')
@@ -223,4 +256,3 @@ async def page(request: Request,
         return RedirectResponse('/login')
 
     return templates.TemplateResponse('misc-404.html', {'request': request})
-

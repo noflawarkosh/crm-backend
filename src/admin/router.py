@@ -1,173 +1,236 @@
-import json
-import urllib
-from typing import Annotated
 from fastapi import APIRouter, Depends, Response, Request, HTTPException, UploadFile, File
 from datetime import datetime, timedelta
+
+from sqlalchemy import func, inspect
+
+from admin.models import AdminSessionModel, AdminUserModel
 from admin.repository import AdminRepository
-from admin.schemas import AdminReadSchema, AdminSessionCreateSchema
+from admin.schemas import AdminSessionCreateSchema
+from admin.utils import set_type
+from auth.models import UserModel, UserSessionModel
 
 from auth.utils import hash_password, generate_token
 from database import DefaultRepository
+from orders.models import OrdersAddressModel, OrdersOrderModel, OrdersContractorModel, OrdersServerScheduleModel, \
+    OrdersServerModel, OrdersServerContractorModel
+from orgs.models import OrganizationModel
+from payments.models import BalanceBillModel, BalanceSourceModel, BalancePricesModel
+from products.models import ProductModel, ReviewModel
+from storage.models import StorageModel
 from strings import *
-from inspect import iscoroutinefunction
-from typing import Any
 
 router = APIRouter(
     prefix="/admin",
     tags=["Admin"]
 )
 
+tables_access = {
+    'users': (UserModel, 4096, {}),
+    'orgs': (OrganizationModel, 2048, {}),
+    'bills': (BalanceBillModel, 256, {}),
+    'orders': (OrdersOrderModel, 16, {}),
+    'addresses': (OrdersAddressModel, 256, {}),
+    'products': (ProductModel, 64, {}),
+    'reviews': (ReviewModel, 128, {}),
+    'admins': (AdminUserModel, 16384, {}),
+    'usersessions': (UserSessionModel, 65536, {}),
+    'adminsessions': (AdminSessionModel, 131072, {}),
+    'contractors': (OrdersContractorModel, 8, {}),
+    'banks': (BalanceSourceModel, 1024, {}),
+    'prices': (BalancePricesModel, 512, {}),
+    'storage': (StorageModel, 524288, {}),
+    'schedules': (OrdersServerScheduleModel, 524288, {}),
+    'servercontractors': (OrdersServerContractorModel, 8, {}),
+    'servers': (
+        OrdersServerModel, 1,
+        {
+            'prefetch_related': [
+                OrdersServerModel.schedule,
+                OrdersServerModel.contractors,
+            ],
+        }
+    ),
+}
 
-async def get_admin(request):
+
+async def every(request: Request = Request):
     token = request.cookies.get(cookies_admin_token_key)
 
     if not token:
         return None
 
-    session = await AdminRepository.read_session(token)
+    sessions = await DefaultRepository.get_records(
+        AdminSessionModel,
+        filters=[AdminSessionModel.token == token, AdminSessionModel.expires > func.now()],
+        select_related=[AdminSessionModel.admin]
+    )
 
-    if not session:
+    if len(sessions) != 1:
         return None
 
-    if session.ip != request.client.host or session.user_agent != request.headers.get('user-agent'):
+    session = sessions[0]
+
+    if not session or session.ip != request.client.host or session.user_agent != request.headers.get('user-agent'):
         return None
 
-    admin = await AdminRepository.read_admin_by_token(token)
-
-    return admin
+    return session
 
 
 async def authed(request: Request = Request):
-    result = await get_admin(request)
-
-    if result:
-        return result
-    else:
+    result = await every(request)
+    if not result:
         raise HTTPException(status_code=401, detail=string_401)
+    return result
 
 
 async def not_authed(request: Request = Request):
-    result = await get_admin(request)
-
+    result = await every(request)
     if result:
-        raise HTTPException(status_code=409, detail=string_400_already_authed)
-    else:
-        return result
-
-
-async def every(request: Request = Request):
-    result = await get_admin(request)
+        raise HTTPException(status_code=409, detail=string_409)
     return result
 
 
 @router.post('/login')
 async def login(request: Request, response: Response, username: str, password: str,
-                admin: AdminReadSchema = Depends(not_authed)):
-    admin_check = await AdminRepository.read_admin_by_attribute('username', username.lower().replace(' ', ''), True)
-
-    if not admin_check:
-        raise HTTPException(status_code=403, detail=string_user_wrong_password)
-
-    if hash_password(password) != admin_check.password:
-        raise HTTPException(status_code=403, detail=string_user_wrong_password)
-
-    admin_session = await AdminRepository.create_session(
-        AdminSessionCreateSchema.model_validate(
-            {
-                'user_id': admin_check.id,
-                'token': generate_token(256),
-                'user_agent': request.headers.get('user-agent'),
-                'ip': request.client.host,
-                'expires': datetime.now() + timedelta(days=3)
-            }
-        )
+                session: AdminSessionModel = Depends(not_authed)):
+    admin_check = await DefaultRepository.get_records(
+        AdminUserModel,
+        filters=[AdminUserModel.username == username.lower().replace(' ', '')]
     )
 
-    response.set_cookie(key=cookies_admin_token_key, value=admin_session.token)
+    if len(admin_check) != 1:
+        raise HTTPException(status_code=403, detail=string_user_wrong_password)
+
+    if hash_password(password) != admin_check[0].password:
+        raise HTTPException(status_code=403, detail=string_user_wrong_password)
+
+    token = generate_token(256)
+    await DefaultRepository.save_records([
+        {
+            'model': AdminSessionModel,
+            'records': [
+                {
+                    'user_id': admin_check[0].id,
+                    'token': token,
+                    'user_agent': request.headers.get('user-agent'),
+                    'ip': request.client.host,
+                    'expires': datetime.now() + timedelta(days=3)
+                }
+            ]
+        }
+    ])
+
+    response.set_cookie(key=cookies_admin_token_key, value=token)
 
 
 @router.get('/logout')
-async def logout(request: Request, response: Response, admin: AdminReadSchema = Depends(authed)):
-    await AdminRepository.update_deactivate_session(request.cookies.get(cookies_admin_token_key))
+async def logout(response: Response, session: AdminSessionModel = Depends(authed)):
+    await DefaultRepository.save_records([
+        {'model': AdminSessionModel, 'records': [{'id': session.id, 'expires': func.now()}]}
+    ])
     response.delete_cookie(cookies_admin_token_key)
 
 
-@router.get('/get/{model}')
-async def reading_data(model: str, request: Request, admin: AdminReadSchema = Depends(authed)):
-    model = await AdminRepository.read_model(model + 'Model')
-    params = request.query_params.__dict__['_dict']
-
-    for key in params:
-        if ',' in params[key]:
-            params[key] = params[key].replace(' ', '').split(',')
-        else:
-            params[key] = [params[key]]
-
-    data = await DefaultRepository.get_records(model, filters=params)
-
-    return [d.__dict__ for d in data]
-
-
-@router.get('/fields/{model}')
-async def reading_fields(model: str, admin: AdminReadSchema = Depends(authed)):
-    data = await AdminRepository.read_fields(model + 'Model')
-
-    if not data:
-        raise HTTPException(status_code=404, detail=string_404)
-
+@router.get('/profile')
+async def logout(response: Response, session: AdminSessionModel = Depends(authed)):
+    data = session.admin.__dict__
+    del data['password']
     return data
 
 
+@router.get('/get/{section}')
+async def reading_data(request: Request, section: str, session: AdminSessionModel = Depends(authed)):
+    if not tables_access.get(section, None):
+        raise HTTPException(status_code=404, detail=string_404)
+
+    model, level, default_kwargs = tables_access[section]
+
+    if not level & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    kwargs = default_kwargs.copy()
+    params = request.query_params.multi_items()
+
+    if params:
+        filters = []
+        for key, value in params:
+            field = getattr(model, key)
+            filters.append(field == set_type(value, str(field.type)))
+
+        if kwargs.get('filters', None):
+            kwargs['filters'] = kwargs['filters'] + filters
+
+        else:
+            kwargs['filters'] = filters
+
+    records = await DefaultRepository.get_records(model, **kwargs)
+
+    return [record.__dict__ for record in records]
+
+
+@router.get('/fields/{section}')
+async def reading_fields(section: str, session: AdminSessionModel = Depends(authed)):
+    if not tables_access.get(section, None):
+        raise HTTPException(status_code=404, detail=string_404)
+
+    model, level, select_models = tables_access[section]
+
+    if not level & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    mapper = inspect(model)
+    fields = {}
+
+    for column in mapper.columns:
+        fields[column.name] = str(column.type)
+
+    return fields
+
+
 @router.post('/save')
-async def creating_data(data: dict[str, list[dict]], request: Request, admin: AdminReadSchema = Depends(authed)):
-    models_with_typed_records = {}
+async def creating_data(data: dict[str, list[dict]], request: Request, session: AdminSessionModel = Depends(authed)):
+    models_with_typed_records = []
 
-    for model in data:
+    for section in data:
 
-        model_fields = await AdminRepository.read_fields(model + 'Model')
+        model, level, select_models = tables_access[section]
+
+        if not level & session.admin.level:
+            raise HTTPException(status_code=403, detail=string_403)
+
+        mapper = inspect(model)
+        model_fields = {}
+
+        for column in mapper.columns:
+            model_fields[column.name] = str(column.type)
+
         model_with_typed_records = []
 
-        for record in data[model]:
-
+        for record in data[section]:
             model_record_with_typed_values = {}
-
             for field, value in record.items():
-                if model_fields[field] == 'INTEGER':
-                    model_record_with_typed_values[field] = int(value) if value else None
-
-                elif model_fields[field] == 'VARCHAR':
-                    model_record_with_typed_values[field] = str(value) if value else None
-
-                elif model_fields[field] == 'BOOLEAN':
-                    model_record_with_typed_values[field] = bool(value)
-
-                elif model_fields[field] == 'DATETIME':
-                    model_record_with_typed_values[field] = \
-                        datetime.fromisoformat(value) if value else None
-
-                elif model_fields[field] == 'TIME':
-                    model_record_with_typed_values[field] = \
-                        datetime.strptime(value, '%H:%M:%S').time() if value else None
-
-                elif model_fields[field] == 'FLOAT':
-                    model_record_with_typed_values[field] = float(value) if value else None
-
-                if field == 'password':
-                    model_record_with_typed_values[field] = hash_password(value)
+                print(model_fields)
+                model_record_with_typed_values[field] = set_type(value, model_fields[field])
 
             model_with_typed_records.append(model_record_with_typed_values)
-        models_with_typed_records[model + 'Model'] = model_with_typed_records
 
-    await AdminRepository.save_records(models_with_typed_records)
+        models_with_typed_records.append({
+            'model': model,
+            'records': model_with_typed_records
+        })
+
+    print(models_with_typed_records)
+
+    await DefaultRepository.save_records(models_with_typed_records)
 
 
 @router.delete('/delete/{model}/{record_id}')
-async def reading_fields(model: str, record_id: int, admin: AdminReadSchema = Depends(authed)):
+async def reading_fields(model: str, record_id: int, session: AdminSessionModel = Depends(authed)):
     await AdminRepository.delete_record(model + 'Model', record_id)
 
 
 @router.post('/test')
-async def test(request: Request, admin: AdminReadSchema = Depends(authed)):
+async def test(request: Request, session: AdminSessionModel = Depends(authed)):
     data = dict(await request.form())
 
     servers = await AdminRepository.read_records('OrdersServerModel', filtration={'is_active': 'true'})

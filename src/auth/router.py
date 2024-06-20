@@ -60,7 +60,10 @@ async def register(data: Annotated[UserCreateSchema, Depends()], session: UserSe
     ]
 
     for field, value, error in unique_fields:
-        user_check = await DefaultRepository.get_records(UserModel, filters={field: value})
+        user_check = await DefaultRepository.get_records(
+            UserModel,
+            filters=[getattr(UserModel, field) == value]
+        )
         if user_check:
             raise HTTPException(status_code=409, detail=error)
 
@@ -72,7 +75,11 @@ async def register(data: Annotated[UserCreateSchema, Depends()], session: UserSe
 @router.post('/login')
 async def login(request: Request, response: Response, username: str, password: str,
                 session: UserSessionModel = Depends(not_authed)):
-    user_check = await DefaultRepository.get_records(UserModel, filters={'username': username.lower().replace(' ', '')})
+    user_check = await DefaultRepository.get_records(
+        UserModel,
+        filters=[UserModel.username == username.lower().replace(' ', '')]
+    )
+
     if len(user_check) != 1:
         raise HTTPException(status_code=403, detail=string_user_wrong_password)
 

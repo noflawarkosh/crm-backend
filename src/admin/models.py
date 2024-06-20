@@ -32,7 +32,11 @@ class AdminSessionModel(Base):
     date: Mapped[dt]
     expires: Mapped[datetime.datetime]
 
-    user_id: Mapped[int] = mapped_column(ForeignKey('admin_user.id', ondelete='CASCADE', onupdate='CASCADE'))
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey('admin_user.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+
+    admin: Mapped[AdminUserModel] = relationship(lazy=False)
 
 
 class CrmSettingsModel(Base):

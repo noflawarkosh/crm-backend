@@ -28,7 +28,10 @@ router = APIRouter(
 
 
 async def check_access(org_id: int, user_id: int, level: int):
-    organizations = await DefaultRepository.get_records(OrganizationModel, filters={'id': org_id})
+    organizations = await DefaultRepository.get_records(
+        OrganizationModel,
+        filters=[OrganizationModel.id == org_id]
+    )
 
     if len(organizations) != 1:
         raise HTTPException(status_code=404, detail=string_orgs_org_not_found)
@@ -60,7 +63,10 @@ async def create_organization(data: Annotated[OrganizationCreateSchema, Depends(
 
 @router.get('/readOrganizations')
 async def read_user_organizations(session: UserSessionModel = Depends(authed)) -> list[OrganizationReadSchema]:
-    organizations = await DefaultRepository.get_records(OrganizationModel, filters={'owner_id': session.user.id})
+    organizations = await DefaultRepository.get_records(
+        OrganizationModel,
+        filters=[OrganizationModel.owner_id == session.user.id]
+    )
     return [OrganizationReadSchema.model_validate(organization, from_attributes=True) for organization in organizations]
 
 
@@ -80,7 +86,10 @@ async def create_invitation(data: Annotated[OrganizationInvitationCreateSchema, 
     if data.expires <= datetime.datetime.now():
         raise HTTPException(status_code=400, detail=string_inv_wrong_expires)
 
-    invitations = await DefaultRepository.get_records(OrganizationInvitationModel, filters={'org_id': data.org_id})
+    invitations = await DefaultRepository.get_records(
+        OrganizationInvitationModel,
+        filters=[OrganizationInvitationModel.org_id == data.org_id]
+    )
 
     if len(invitations) >= 5:
         raise HTTPException(status_code=403, detail=string_inv_max_invitations)
@@ -98,9 +107,8 @@ async def read_invitations(org_id: int,
 
     invitations = await DefaultRepository.get_records(
         OrganizationInvitationModel,
-        filters={'org_id': org_id},
-        greater_than={'expires': func.now()},
-        select_models=[OrganizationInvitationModel.usages]
+        filters=[OrganizationInvitationModel.org_id == org_id, OrganizationInvitationModel.expires > func.now()],
+        prefetch_related=[OrganizationInvitationModel.usages]
     )
 
     return [OrganizationInvitationReadSchema.model_validate(
@@ -110,7 +118,10 @@ async def read_invitations(org_id: int,
 @router.post('/disableInvitation')
 async def disable_invitations(invitation_id: int,
                               session: UserSessionModel = Depends(authed)):
-    invitations = await DefaultRepository.get_records(OrganizationInvitationModel, filters={'id': invitation_id})
+    invitations = await DefaultRepository.get_records(
+        OrganizationInvitationModel,
+        filters=[OrganizationInvitationModel.id == invitation_id]
+    )
 
     if len(invitations) != 1:
         raise HTTPException(status_code=404, detail=string_inv_not_found)
@@ -127,7 +138,10 @@ async def disable_invitations(invitation_id: int,
 @router.post('/acceptInvitation')
 async def accept_invitation(code: str,
                             session: UserSessionModel = Depends(authed)):
-    invitations = await DefaultRepository.get_records(OrganizationInvitationModel, filters={'code': code})
+    invitations = await DefaultRepository.get_records(
+        OrganizationInvitationModel,
+        filters=[OrganizationInvitationModel.code == code]
+    )
 
     if len(invitations) != 1:
         raise HTTPException(status_code=404, detail=string_inv_not_found)
@@ -138,13 +152,17 @@ async def accept_invitation(code: str,
         raise HTTPException(status_code=403, detail=string_inv_expired)
 
     invitation_usages = await DefaultRepository.get_records(
-        OrganizationMembershipModel, filters={'invitation_id': invitation.id}
+        OrganizationMembershipModel,
+        filters=[OrganizationMembershipModel.invitation_id == invitation.id]
     )
 
     if len(invitation_usages) >= invitation.amount:
         raise HTTPException(status_code=403, detail=string_inv_max_usages)
 
-    organizations = await DefaultRepository.get_records(OrganizationModel, filters={'id': invitation.org_id})
+    organizations = await DefaultRepository.get_records(
+        OrganizationModel,
+        filters=[OrganizationModel.id == invitation.org_id]
+    )
 
     if len(organizations) != 1:
         raise HTTPException(status_code=404, detail=string_orgs_org_not_found)

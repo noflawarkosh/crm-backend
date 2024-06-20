@@ -33,7 +33,7 @@ class OrdersServerContractorModel(Base):
     )
 
     # Relationships
-    contractor: Mapped['OrdersContractorModel'] = relationship(lazy='noload')
+    contractor: Mapped['OrdersContractorModel'] = relationship(lazy='selectin')
 
 
 class OrdersServerScheduleModel(Base):

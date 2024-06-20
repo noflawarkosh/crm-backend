@@ -13,23 +13,6 @@
 <!-- Draw Forms -->
 <script>
 
-    //uneditable fields
-    const UEF = [
-        'id',
-    ]
-
-    const bools = ['is_active']
-
-    //fields - models
-    const FML = {
-        'media_id': ['Storage', 'title'],
-        'schedule_id': ['OrdersServerSchedule', 'title'],
-        'contractor_id': ['OrdersContractor', 'name'],
-        'server_id': ['OrdersServer', 'name'],
-        'address_id': ['OrdersAddress', 'address'],
-
-    }
-
     const url = window.location.href;
     var arr = url.split('/')
     var table = arr[arr.length - 1]

@@ -2,8 +2,33 @@ import pandas as pd
 from io import BytesIO
 from admin.repository import AdminRepository
 import datetime
+
+from auth.utils import hash_password
 from strings import *
 
+
+def set_type(value, field_type):
+    if field_type == 'INTEGER':
+        return int(value) if value else None
+
+    elif field_type == 'VARCHAR':
+        if field_type == 'password':
+            return hash_password(str(value))
+        return str(value) if value else None
+
+    elif field_type == 'BOOLEAN':
+        return bool(value)
+
+    elif field_type == 'DATETIME':
+        return datetime.datetime.fromisoformat(value) if value else None
+
+    elif field_type == 'TIME':
+        return datetime.datetime.strptime(value, '%H:%M:%S').time() if value else None
+
+    elif field_type == 'FLOAT':
+        return float(value) if value else None
+
+    return value
 
 def detect_date(string_date):
     result = None
@@ -93,7 +118,6 @@ async def refresh_orders_by_id(data, servers):
 
         for order in orders_to_update:
             pass
-
 
 
 async def refresh_orders_by_uuid(data, servers):

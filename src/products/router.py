@@ -66,8 +66,8 @@ async def create_product(data: Annotated[ProductPOSTSchema, Depends()], session:
 
     new_product = await DefaultRepository.get_records(
         ProductModel,
-        filters={'id': product_record.id},
-        select_models=[ProductModel.media, ProductModel.sizes]
+        filters=[ProductModel.id == product_record.id],
+        select_related=[ProductModel.media, ProductModel.sizes]
     )
 
     await autosave_file(new_product[0].media.storage_href, picture_data)
@@ -78,8 +78,8 @@ async def refresh_product(product_id: int,
                           session: UserSessionModel = Depends(authed)):
     products = await DefaultRepository.get_records(
         ProductModel,
-        filters={'id': product_id, 'is_active': True},
-        select_models=[ProductModel.sizes]
+        filters=[ProductModel.id == product_id, ProductModel.is_active],
+        select_related=[ProductModel.sizes]
     )
 
     if len(products) != 1:
@@ -174,8 +174,8 @@ async def get_owned_products(org_id: int, session: UserSessionModel = Depends(au
     await check_access(org_id, session.user.id, 2)
     products = await DefaultRepository.get_records(
         ProductModel,
-        filters={'org_id': org_id, 'is_active': True},
-        select_models=[ProductModel.media, ProductModel.sizes]
+        filters=[ProductModel.org_id == org_id, ProductModel.is_active],
+        select_related=[ProductModel.media, ProductModel.sizes]
     )
     return [ProductReadSchema.model_validate(product, from_attributes=True) for product in products]
 
@@ -185,7 +185,7 @@ async def disable_product(product_id: int,
                           session: UserSessionModel = Depends(authed)):
     products = await DefaultRepository.get_records(
         ProductModel,
-        filters={'id': product_id, 'is_active': True},
+        filters=[ProductModel.id == product_id, ProductModel.is_active],
     )
 
     if len(products) != 1:
@@ -204,7 +204,10 @@ async def create_review(data: Annotated[ReviewCreateSchema, Depends()],
     if len(files) > 5:
         raise HTTPException(status_code=400, detail=string_product_too_many_files)
 
-    products = await DefaultRepository.get_records(ProductModel, filters={'id': data.product_id})
+    products = await DefaultRepository.get_records(
+        ProductModel,
+        filters=[ProductModel.id == data.product_id, ProductModel.is_active],
+    )
 
     if len(products) != 1:
         raise HTTPException(status_code=404, detail=string_products_product_not_found)
@@ -277,8 +280,8 @@ async def disable_review(review_id: int,
                          session: UserSessionModel = Depends(authed)):
     reviews = await DefaultRepository.get_records(
         ReviewModel,
-        filters={'id': review_id},
-        select_models=[ReviewModel.product]
+        filters=[ReviewModel.id == review_id],
+        select_related=[ReviewModel.product]
     )
 
     if len(reviews) != 1:

@@ -1,6 +1,6 @@
 from sqlalchemy import update, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase, selectinload
+from sqlalchemy.orm import DeclarativeBase, selectinload, joinedload
 from config import DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER
 
 DATABASE_URL = f'postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
@@ -39,38 +39,45 @@ class DefaultRepository:
             await session.close()
 
     @classmethod
-    async def get_records(cls, model, filters=None, select_models=None, less_than=None, greater_than=None):
-        """
-        :param model: class
-        :param filters: {field: value, ...}
-        :param select_models: [class.field, ...]
-        :return: list[class]
-        """
+    async def get_records(cls, model, filters=None, joins=None, select_related=None, prefetch_related=None,
+                          order_by=None, limit=None, offset=None):
+
         try:
             async with async_session_factory() as session:
                 query = select(model)
 
                 if filters:
-                    for filter_field, filter_value in filters.items():
-                        query = query.where(getattr(model, filter_field) == filter_value)
+                    for condition in filters:
+                        query = query.where(condition)
 
-                if less_than:
-                    for filter_field, filter_value in less_than.items():
-                        query = query.where(getattr(model, filter_field) < filter_value)
+                if joins:
+                    for join in joins:
+                        query = query.join(join)
 
-                if greater_than:
-                    for filter_field, filter_value in greater_than.items():
-                        query = query.where(getattr(model, filter_field) > filter_value)
-
-                if select_models:
-                    for select_model in select_models:
+                if select_related:
+                    for select_model in select_related:
                         query = query.options(selectinload(select_model))
 
+                if prefetch_related:
+                    for prefetch_model in prefetch_related:
+                        query = query.options(joinedload(prefetch_model))
+
+                if order_by:
+                    query = query.order_by(*order_by)
+
+                if limit:
+                    query = query.limit(limit)
+
+                if offset:
+                    query = query.offset(offset)
+
                 result = await session.execute(query)
-                records = result.scalars().all()
+                records = result.unique().scalars().all()
                 return records
+
         except Exception as e:
             await session.rollback()
             raise e
+
         finally:
             await session.close()

@@ -30,7 +30,7 @@
         $.ajax({
             type: "POST",
             url: '/admin/save',
-            data: JSON.stringify({OrdersServerSchedule: [data]}),
+            data: JSON.stringify({schedules: [data]}),
             contentType: "application/json",
             success: function () {
                 location.reload();
@@ -70,7 +70,7 @@
         $.ajax({
             type: "POST",
             url: '/admin/save',
-            data: JSON.stringify({OrdersServerContractor: [data]}),
+            data: JSON.stringify({servercontractors: [data]}),
             contentType: "application/json",
             success: function () {
                 location.reload();
@@ -84,14 +84,13 @@
     })
 </script>
 
-
 <!-- Load contractors for new server contractor form -->
 <script>
     $(document).ready(function () {
 
         $.ajax({
 
-            url: '/admin/get/OrdersServerSchedule',
+            url: '/admin/get/schedules',
             type: 'GET',
 
             success: function (data) {
@@ -116,7 +115,7 @@
 
         $.ajax({
 
-            url: '/admin/get/OrdersContractor',
+            url: '/admin/get/contractors',
             type: 'GET',
 
             success: function (data) {
@@ -160,7 +159,7 @@
         $.ajax({
             type: "POST",
             url: '/admin/save',
-            data: JSON.stringify({OrdersServer: [data]}),
+            data: JSON.stringify({servers: [data]}),
             contentType: "application/json",
 
             success: function () {
@@ -177,40 +176,48 @@
 
 <!-- Draw schedules -->
 <script>
-    $(document).ready(function () {
-        var sch_table = $('#dt_schedules').DataTable({
-            "ajax": {
-                url: '/admin/get/OrdersServerSchedule',
-                dataSrc: ''
-            },
-            "paging": true,
-            "pageLength": 10,
-            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-            "searching": true,
-            "ordering": true,
+    $.ajax({
+        type: "GET",
+        url: '/admin/get/schedules',
+        success: function (data) {
+            $('#dt_schedules').DataTable({
+                data: data,
+                "paging": true,
+                "pageLength": 10,
+                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "searching": true,
+                "ordering": true,
 
-            columns: [
-                {data: 'id'},
-                {data: 'title'},
-                {data: 'time_min_min_per_step'},
-                {data: 'time_max_min_per_step'},
-                {data: 'time_start'},
-                {data: 'time_end'},
-                {data: 'time_first_point'},
-                {data: 'time_second_point'},
-                {
-                    "data": "id",
-                    "render": function (data, type, row) {
-                        return '<a href="/admin-edit/OrdersServerSchedule/' + data + '"><i class="bx bx-edit-alt"></i></a>'
+                columns: [
+                    {data: 'id'},
+                    {data: 'title'},
+                    {data: 'time_min_min_per_step'},
+                    {data: 'time_max_min_per_step'},
+                    {data: 'time_start'},
+                    {data: 'time_end'},
+                    {data: 'time_first_point'},
+                    {data: 'time_second_point'},
+                    {
+                        "data": "id",
+                        "render": function (data, type, row) {
+                            return '<a href="/admin-edit/schedules/' + data + '"><i class="bx bx-edit-alt"></i></a>'
 
+                        }
                     }
-                }
-            ],
+                ],
 
-            "order": [[0, "desc"]]
-        });
+                "order": [[0, "desc"]]
+            });
 
+        },
+        error: function () {
+            toastr.error('Ошибка получения расписания')
+            submitButton.classList.remove('disabled');
+
+        }
     })
+
+
 </script>
 
 <!-- Draw servers -->
@@ -225,7 +232,7 @@
 
     $.ajax({
         type: "GET",
-        url: '/admin/get/OrdersServer',
+        url: '/admin/get/servers',
 
         dataType: "json",
         success: function (data) {
@@ -241,7 +248,7 @@
                 var sho_cls = ''
                 var color = 'success'
                 var status = 'активный'
-                var srv_menu = '<a href="/admin-edit/OrdersServer/' + item.id + '" class="btn btn-xs btn-primary me-1 mt-1">Редактировать сервер</a>' +
+                var srv_menu = '<a href="/admin-edit/servers/' + item.id + '" class="btn btn-xs btn-primary me-1 mt-1">Редактировать сервер</a>' +
                     '           <a href="##" onclick="setSelectedServer(' + item.id + ')" class="btn btn-xs btn-label-primary me-1 mt-1" ' +
                     'data-bs-toggle="offcanvas" data-bs-target="#off-create-server-contractor" ' +
                     'aria-controls="off-create-server-contractor">Добавить подрядчика</a>'
@@ -268,7 +275,7 @@
 
                 $.each(item.contractors, function (j, cntr) {
 
-                    var srv_ctr_menu = '<a href="/admin-edit/OrdersServerContractor/' + cntr.id + '"><i class="bx bx-edit-alt"></i></a>' +
+                    var srv_ctr_menu = '<a href="/admin-edit/servercontractors/' + cntr.id + '"><i class="bx bx-edit-alt"></i></a>' +
                         '<a href="javascript: delrow(' + cntr.id + ')"><i class="bx bx-x"></i></a>'
 
                     var date = new Date(cntr.load_m);
@@ -358,13 +365,11 @@
                 selectSRVElement.append(option);
 
             })
-
             selectSRVElement.selectpicker('refresh');
-
 
         },
         error: function () {
-            toastr.error('Ошибка сохранения. Обновите страницу и повторите попытку')
+            toastr.error('Ошибка получения серверов')
 
         }
     })
@@ -373,10 +378,9 @@
 
 
 <script>
-
     function delrow(recid) {
 
-        if (!confirm('Подтвердите удаление подрядчика'))  {
+        if (!confirm('Подтвердите удаление подрядчика')) {
             return
         }
 

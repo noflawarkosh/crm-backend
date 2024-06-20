@@ -71,3 +71,5 @@ class ReviewReadSchema(ReviewCreateSchema):
     product: Optional[ProductReadSchema]
     size: Optional[ProductSizeReadSchema]
 
+
+

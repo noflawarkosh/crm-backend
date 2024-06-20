@@ -39,8 +39,8 @@ async def create_organization(bill_id: int,
                               ) -> BalanceBillReadSchema:
     bills = await DefaultRepository.get_records(
         BalanceBillModel,
-        filters={'id': bill_id},
-        select_models=[
+        filters=[BalanceBillModel.id == bill_id],
+        prefetch_related=[
             BalanceBillModel.source,
             BalanceBillModel.status,
             BalanceBillModel.media,
@@ -63,9 +63,11 @@ async def create_organization(org_id: int,
     await check_access(org_id, session.user.id, 0)
     bills = await DefaultRepository.get_records(
         BalanceBillModel,
-        filters={'org_id': org_id},
-        select_models=[BalanceBillModel.source, BalanceBillModel.status, BalanceBillModel.media]
-
+        filters=[BalanceBillModel.org_id == org_id],
+        prefetch_related=[
+            BalanceBillModel.source,
+            BalanceBillModel.status,
+            BalanceBillModel.media]
     )
     return [BalanceBillReadSchema.model_validate(record, from_attributes=True) for record in bills]
 
@@ -73,7 +75,10 @@ async def create_organization(org_id: int,
 @router.post('/updateBillStatus')
 async def create_organization(bill_id: int, status_id: int,
                               session: UserSessionModel = Depends(authed)):
-    bills = await DefaultRepository.get_records(BalanceBillModel, filters={'id': bill_id})
+    bills = await DefaultRepository.get_records(
+        BalanceBillModel,
+        filters=[BalanceBillModel.id == bill_id]
+    )
 
     if len(bills) != 1:
         raise HTTPException(status_code=404, detail=string_404)
@@ -96,7 +101,10 @@ async def create_organization(bill_id: int, status_id: int,
 
 @router.get('/getActiveSources')
 async def create_organization(session: UserSessionModel = Depends(authed)) -> list[BalanceSourceSchema]:
-    sources = await DefaultRepository.get_records(BalanceSourceModel, filters={'is_active': True})
+    sources = await DefaultRepository.get_records(
+        BalanceSourceModel,
+        filters=[BalanceSourceModel.is_active]
+    )
     return [BalanceSourceSchema.model_validate(record, from_attributes=True) for record in sources]
 
 
@@ -105,5 +113,8 @@ async def create_organization(org_id: int,
                               session: UserSessionModel = Depends(authed)
                               ) -> list[BalanceHistoryReadSchema]:
     await check_access(org_id, session.user.id, 0)
-    history = await DefaultRepository.get_records(BalanceHistoryModel, filters={'org_id': org_id})
+    history = await DefaultRepository.get_records(
+        BalanceHistoryModel,
+        filters=[BalanceHistoryModel.org_id == org_id],
+    )
     return [BalanceHistoryReadSchema.model_validate(record, from_attributes=True) for record in history]
