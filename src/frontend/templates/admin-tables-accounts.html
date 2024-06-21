@@ -1,18 +1,13 @@
 {% extends "!base-admin.html" %}
-{% block title %}Аккаунты{% endblock %}
-{% block css %}
-
-{% endblock %}
-
+{% block title %}Аккаунты | {% endblock %}
 {% block js %}
-<script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script>
 
     function updateAccountStatus(id, is_active) {
         $.ajax({
             type: "POST",
             url: '/admin/save',
-            data: JSON.stringify({OrdersAccount: [{id: id, is_active: is_active}]}),
+            data: JSON.stringify({accounts: [{id: id, is_active: is_active}]}),
             contentType: "application/json; charset=utf-8",
             success: function () {
                 var msg = 'Данные пользователя обновлены'
@@ -26,7 +21,7 @@
                 }
 
                 toastr.success(msg)
-                refresh()
+                dt_refresh('dt_accounts', '/admin/get/accounts')
 
             },
             error: function () {
@@ -36,136 +31,114 @@
         })
     }
 
-    $(document).ready(function () {
-        var table = $('#dt_accounts').DataTable({
-            "ajax": {
-                url: '/admin/get/OrdersAccount',
-                dataSrc: ''
-            },
-            "paging": true,
-            "pageLength": 10,
-            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-            "searching": true,
-            "ordering": true,
 
-            columns: [
-                {data: 'id'},
-                {data: 'number'},
-                {data: 'name'},
-                {
-                    "render": function (data, type, row) {
-                        return row.reg_date === null ? 'Не указано' : moment(row.reg_date).format('DD.MM.YYYY HH:mm')
+    $.ajax({
+        type: "GET",
+        url: '/admin/get/accounts',
+        success: function (data) {
+            $('#dt_accounts').DataTable({
+                data: data,
+                "paging": true,
+                "pageLength": 10,
+                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "searching": true,
+                "ordering": true,
+
+                columns: [
+                    {data: 'id'},
+                    {data: 'number'},
+                    {data: 'name'},
+                    {
+                        "render": function (data, type, row) {
+                            return row.reg_date === null ? 'Не указано' : moment(row.reg_date).format('DD.MM.YYYY HH:mm')
+                        }
+                    },
+
+                    {
+                        data: 'is_active',
+                        "render": function (data, type, row) {
+
+                            var c = 'warning'
+                            var cm = 'Не указано'
+
+                            if (data === true) {
+                                c = 'success'
+                                cm = 'Да'
+                            }
+
+                            if (data === false) {
+                                c = 'danger'
+                                cm = 'Нет'
+                            }
+
+                            return '<span class="badge bg-label-' + c + '">' + cm + '</span>'
+                        }
+                    },
+                    {
+                        data: 'address',
+                        "render": function (data, type, row) {
+                            var st = 'danger'
+
+                            if (data.is_active === true) {
+                                st = 'success'
+                            }
+
+                            return '<span class="badge badge-dot bg-' + st + ' me-1"></span> ' + data.address
+                        }
+                    },
+                    {
+                        data: "server",
+                        "render": function (data, type, row) {
+                            var st = 'danger'
+
+                            if (data.is_active === true) {
+                                st = 'success'
+                            }
+
+                            return '<span class="badge badge-dot bg-' + st + ' me-1"></span> ' + data.name
+                        }
+                    },
+                    {
+                        "render": function (data, type, row) {
+                            var edit = '<a href="/admin-edit/accounts/' + row['id'] + '"><i class="bx bx-edit-alt"></i></a>'
+
+                            if (row.is_active === true) {
+                                edit += '<a href="javascript:updateAccountStatus(' + row['id'] + ', false)"><i class="bx bx-block"></i></a>'
+                            }
+
+                            if (row.is_active === false) {
+                                edit += '<a href="javascript:updateAccountStatus(' + row['id'] + ', true)"><i class="bx bx-check"></i></a>'
+                            }
+                            return edit
+                        }
                     }
-                },
+                ],
 
-                {
-                    data: 'is_active',
-                    "render": function (data, type, row) {
+                "order": [[0, "desc"]]
+            });
 
-                        var c = 'warning'
-                        var cm = 'Не указано'
+        },
+        error: function () {
+            toastr.error('Ошибка получения аккаунтов')
 
-                        if (data === true) {
-                            c = 'success'
-                            cm = 'Да'
-                        }
-
-                        if (data === false) {
-                            c = 'danger'
-                            cm = 'Нет'
-                        }
-
-                        return '<span class="badge bg-label-' + c + '">' + cm + '</span>'
-                    }
-                },
-                {
-                    data: 'address',
-                    "render": function (data, type, row) {
-                        var st = 'danger'
-
-                        if (data.is_active === true) {
-                            st = 'success'
-                        }
-
-                        return '<span class="badge badge-dot bg-' + st + ' me-1"></span> ' + data.address
-                    }
-                },
-                {
-                    data: "server",
-                    "render": function (data, type, row) {
-                        var st = 'danger'
-
-                        if (data.is_active === true) {
-                            st = 'success'
-                        }
-
-                        return '<span class="badge badge-dot bg-' + st + ' me-1"></span> ' + data.name
-                    }
-                },
-                {
-                    "render": function (data, type, row) {
-                        var edit = '<a href="/admin-edit/OrdersAccount/' + row['id'] + '"><i class="bx bx-edit-alt"></i></a>'
-
-                        if (row.is_active === true) {
-                            edit += '<a href="javascript:updateAccountStatus(' + row['id'] + ', false)"><i class="bx bx-block"></i></a>'
-                        }
-
-                        if (row.is_active === false) {
-                            edit += '<a href="javascript:updateAccountStatus(' + row['id'] + ', true)"><i class="bx bx-check"></i></a>'
-                        }
-                        return edit
-                    }
-                }
-            ],
-
-            "order": [[0, "desc"]]
-        });
-
+        }
     })
 
-    function refresh() {
-        var table = $('#dt_accounts').DataTable()
-        $('#rb').hide()
-        table.clear()
-        table.draw()
-        $.ajax({
-            type: "GET",
-            url: '/admin/get/OrdersAccount',
-            dataType: "json",
-            success: function (data) {
-                table.rows.add(data).draw();
-                 $('#rb').show()
-            },
-            error: function () {
-                toastr.error('Ошибка обновления данных. Обновите страницу и повторите попытку')
-
-            }
-        })
-
-    }
 
 </script>
-
-
 {% endblock %}
 
 {% block content %}
 <div class="container-xxl flex-grow-1 container-p-y">
-
     <div class="row">
-
         <div class="col">
             <div class="card">
-
                 <div class="card-header">
                     <h5 class="card-title mb-0">Аккаунты
-                        <a href="##" id="rb" onclick="refresh()"><i class="bx bx-refresh"></i></a>
+                        <a href="javascript:dt_refresh('dt_accounts', '/admin/get/accounts')" id="rb"><i class="bx bx-refresh"></i></a>
                     </h5>
                     <small class="card-subtitle" id="prod-cntr"></small>
                 </div>
-
-
-
                 <div class="card-datatable p-4">
                     <table id="dt_accounts" class="datatables-ajax table table-bordered dataTable no-footer">
                         <thead>
@@ -184,8 +157,6 @@
                 </div>
             </div>
         </div>
-
     </div>
-
 </div>
 {% endblock %}

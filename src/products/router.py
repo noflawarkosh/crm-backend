@@ -207,6 +207,7 @@ async def create_review(data: Annotated[ReviewCreateSchema, Depends()],
     products = await DefaultRepository.get_records(
         ProductModel,
         filters=[ProductModel.id == data.product_id, ProductModel.is_active],
+        select_related=[ProductModel.sizes]
     )
 
     if len(products) != 1:
@@ -214,7 +215,7 @@ async def create_review(data: Annotated[ReviewCreateSchema, Depends()],
 
     await check_access(products[0].org_id, session.user.id, 8)
 
-    if data.size_id not in [size.id for size in products[0].sizes]:
+    if data.size_id and data.size_id not in [size.id for size in products[0].sizes]:
         raise HTTPException(status_code=400, detail=string_403)
 
     if data.match:

@@ -94,7 +94,7 @@
 
                 <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
 
-                    <div class="navbar-nav align-items-center me-3 me-xl-0">
+                    <div class="navbar-nav align-items-center me-3 me-xl-0" id="c-users-div" style="display:none">
                         <a href="/admin-tables-users" class="nav-link">
                             <i class="bx bx-user-plus bx-sm"></i>
                             <span class="badge bg-danger rounded-pill badge-notifications" id="c-users"
@@ -102,7 +102,7 @@
                         </a>
                     </div>
 
-                    <div class="navbar-nav align-items-center me-3 me-xl-0">
+                    <div class="navbar-nav align-items-center me-3 me-xl-0" id="c-orgs-div" style="display:none">
                         <a href="/admin-tables-orgs" class="nav-link">
                             <i class="bx bx-group bx-sm"></i>
                             <span class="badge bg-danger rounded-pill badge-notifications" id="c-orgs"
@@ -110,7 +110,7 @@
                         </a>
                     </div>
 
-                    <div class="navbar-nav align-items-center">
+                    <div class="navbar-nav align-items-center me-3 me-xl-0" id="c-bills-div" style="display:none">
                         <a href="/admin-tables-payments" class="nav-link">
                             <i class="bx bx-credit-card-front bx-sm"></i>
                             <span class="badge bg-danger rounded-pill badge-notifications" id="c-bills"
@@ -280,6 +280,10 @@
         'recipient': 'Получатель',
         'bill': 'Номер счета',
         'last_update': 'Последнее обновление',
+        'match': 'Соответствие',
+        'text': 'Текст',
+        'status': 'Статус',
+
     }
 
     const ASIDE = [
@@ -439,10 +443,14 @@
         'settings': 'Настройки',
     }
 
-    // non-editable fields
     const UEF = [
         'id',
         'owner_id'
+    ]
+
+    const UPF = [
+        'password',
+        'token',
     ]
 
     const bools = ['is_active']
@@ -454,6 +462,9 @@
         'contractor_id': ['contractors', 'name'],
         'server_id': ['servers', 'name'],
         'address_id': ['addresses', 'address'],
+        'org_id': ['organizations', 'title'],
+        'size_id': ['sizes', 'wb_size_name'],
+        'product_id': ['products', 'wb_title'],
     }
 </script>
 
@@ -533,6 +544,7 @@
 
 <!-- counters -->
 <script>
+
     $.ajax({
         url: '/admin/get/users',
         method: 'get',
@@ -546,15 +558,12 @@
                 }
             }
             if (amount > 0) {
+                $('#c-users-div').show()
                 $('#c-users').show()
                 $('#c-users').html(amount)
             }
 
         },
-
-        error: function (data) {
-            toastr.error(data.responseJSON.detail);
-        }
     });
 
     $.ajax({
@@ -571,14 +580,11 @@
             }
 
             if (amount > 0) {
+                $('#c-orgs-div').show()
                 $('#c-orgs').show()
                 $('#c-orgs').html(amount)
             }
         },
-
-        error: function (data) {
-            toastr.error(data.responseJSON.detail);
-        }
     });
 
     $.ajax({
@@ -595,16 +601,38 @@
             }
 
             if (amount > 0) {
+                $('#c-bills-div').show()
                 $('#c-bills').show()
                 $('#c-bills').html(amount)
             }
         },
-
-        error: function (data) {
-            toastr.error(data.responseJSON.detail);
-        }
     });
 </script>
+
+<!-- refresh datatable -->
+<script>
+    function dt_refresh(table_id, url) {
+        var table = $('#' + table_id).DataTable()
+        document.getElementById('admin_ldr').style.display = 'block'
+
+        $.ajax({
+            type: "GET",
+            url: url,
+            dataType: "json",
+            success: function (data) {
+                table.clear()
+                table.draw()
+                table.rows.add(data).draw();
+                document.getElementById('admin_ldr').style.display = 'none'
+            },
+            error: function () {
+                toastr.error('Ошибка обновления данных. Обновите страницу')
+
+            }
+        })
+    }
+</script>
+
 
 {% block js %}{% endblock %}
 

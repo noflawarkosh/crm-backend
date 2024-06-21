@@ -432,7 +432,7 @@
                            aria-controls="off-create-invitation">
                             <i class="bx bxs-plus-square"></i>
                         </a>
-                        <a href="javascript:var u = '/organizations/readInvitations?org_id=' + id; dt_refresh('dt_user_invitations', u)">
+                        <a href="javascript:var u = '/organizations/readInvitations?org_id=' + id; dt_refresh('dt_user_invitations', u)" id="rb2">
                             <i class="bx bx-refresh"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="inv-ldr"></span>
@@ -466,7 +466,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="card-title mb-1">Участники вашей организации
-                        <a href="javascript:var u = '/organizations/readOrganizationMemberships?org_id=' + id; dt_refresh('dt_user_members', u)">
+                        <a href="javascript:var u = '/organizations/readOrganizationMemberships?org_id=' + id; dt_refresh('dt_user_members', u)" id="rb1">
                             <i class="bx bx-refresh"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="mem-ldr"></span>

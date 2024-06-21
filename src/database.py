@@ -1,4 +1,4 @@
-from sqlalchemy import update, select
+from sqlalchemy import update, select, delete
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, selectinload, joinedload
 from config import DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER
@@ -78,6 +78,23 @@ class DefaultRepository:
         except Exception as e:
             await session.rollback()
             raise e
+
+        finally:
+            await session.close()
+
+    @classmethod
+    async def delete_record(cls, model, record_id: int):
+
+        try:
+            async with async_session_factory() as session:
+
+                query = (
+                    delete(model)
+                    .where(model.id == record_id)
+                )
+
+                await session.execute(query)
+                await session.commit()
 
         finally:
             await session.close()

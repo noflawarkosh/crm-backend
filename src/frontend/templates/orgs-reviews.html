@@ -28,7 +28,7 @@
 <!-- GET AND DISABLE REVIEWS -->
 <script>
 
-    function disableReview(id) {
+    function cancelReview(id) {
         if (confirm('Подтвердите отмену публикации отзыва #' + id)) {
 
             $.ajax({
@@ -37,202 +37,209 @@
                 method: 'get',
 
                 success: function (data) {
-                    location.reload()
+                    dt_refresh('dt_user_reviews', '/reviews/getOwned?org_id=' + org_id)
                     toastr.success('Публикация отменена')
-
                 },
                 error: function (data) {
-                    console.log(data)
-                    toastr.error('Ошибка выполнения операции. ' + data.responseJSON.detail)
+                    toastr.error('Ошибка выполнения операции' + data.responseJSON.detail)
                 }
             })
         }
     }
 
+    function truncateString(str, maxLength = 15) {
+        if (str.length <= maxLength) {
+            return str;
+        }
+        return str.slice(0, maxLength) + "...";
+    }
 
-    $(document).ready(function () {
+    const url = window.location.href;
+    var arr = url.split('/')
+    var org_id = arr[arr.length - 1]
 
-        const url = window.location.href;
+    $.ajax({
 
-        var arr = url.split('/')
-        var id = arr[arr.length - 1]
+        url: '/reviews/getOwned?org_id=' + org_id,
+        method: 'get',
 
-        $.ajax({
+        success: function (data) {
+            console.log(data)
+            $('#dt_user_reviews').DataTable({
+                "data": data,
+                "paging": true,
+                "pageLength": 10,
+                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "searching": true,
+                "ordering": true,
+                "columns": [
+                    {
+                        data: 'id'
+                    },
+                    {
+                        render: function (data, type, row) {
 
-            url: '/reviews/getOwned?org_id=' + id,
-            method: 'get',
+                            var avatar_src = "{{ url_for('static', path='assets/img/avatars/def-product.jpg') }}"
 
-            success: function (data) {
+                            if (row.product.media !== null) {
+                                avatar_src = '/storage/get/' + row.product.media.storage_href
+                            }
 
-                if (data.length !== 0) {
-                    $('#review-list').show();
-                }
+                            var wb_url = 'https://www.wildberries.ru/catalog/' + row.product.wb_article + '/detail.aspx'
 
-                $.each(data, function (index, item) {
-                    var pichref = '/storage/get/4m0Tqv66dBUakFPu.png'
-                    var size = ''
-                    var ext_url = 'https://www.wildberries.ru/catalog/' + item.product.wb_article + '/detail.aspx'
-                    var prod_title = item.product.wb_title
-
-
-                    if (item.size != null) {
-                        var ws = item.size.wb_size_name
-
-                        if (item.match == null) {
-                            var ws2 = 'Не указывать'
-
-                        } else {
-                            var ws2 = item.match.title
+                            return '' +
+                                '<div class="d-flex justify-content-start align-items-center product-name">' +
+                                '   <div class="avatar-wrapper">' +
+                                '       <div class="avatar avatar me-2 rounded-2 bg-label-secondary">' +
+                                '           <img src="' + avatar_src + '">' +
+                                '       </div>' +
+                                '   </div>' +
+                                '   <div class="d-flex flex-column">' +
+                                '       <h6 class="text-body text-nowrap mb-0"><a target="_blank" href="' + wb_url + '">' + truncateString(row.product.wb_title) + '</a></h6>' +
+                                '       <small class="text-muted text-truncate d-none d-sm-block">' + row.product.wb_article + '</small>' +
+                                '   </div>' +
+                                '</div>'
                         }
+                    },
+                    {
+                        "data": 'text',
+                        "render": function (data, type, row) {
+                            return data ? data : '—'
+                        }
+                    },
+                    {
+                        "data": 'size',
+                        "render": function (data, type, row) {
+                            var cell = data ? data.wb_size_name : '—'
+                            return '<span class="text-nowrap">' + cell + '</span>'
+                        }
+                    },
+                    {
+                        "data": 'size',
+                        "render": function (data, type, row) {
+                            var cell = '—'
+                            if (data != null) {
+                                if (row.match === 1) {
+                                    cell = 'Соответствует'
+                                }
+                                if (row.match === 2) {
+                                    cell = 'Маломерит'
+                                }
+                                if (row.match === 3) {
+                                    cell = 'Большемерит'
+                                }
+                            }
+                            return '<span class="text-nowrap">' + cell + '</span>'
+                        }
+                    },
+                    {
+                        "data": 'media',
+                        "render": function (data, type, row) {
+                            if (data.length !== 0) {
 
-                    } else {
-                        var ws = 'Не указывать'
-                        var ws2 = '—'
-                    }
+                                var media_list = ''
 
-                    var actionlist = ''
+                                $.each(data, function (i, pic) {
 
-                    var status = item.statuses[item.statuses.length - 1].status.title
+                                    if (pic.media.type === 'mov') {
+                                        media_list = media_list + '<a href="##" data-bs-toggle="modal" data-bs-target="#modalToggle-' + data.id + '">' +
+                                            '<div class="avatar-wrapper">' +
+                                            '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
+                                            '<i class="bx bx-play"></i>' +
+                                            '</div></div></a>' + '<div class="modal fade" id="modalToggle-' + data.id + '" aria-labelledby="modalToggleLabel-' + data.id + '" tabindex="-1" style="display: none;"\n' +
+                                            '         aria-hidden="true">\n' +
+                                            '        <div class="modal-dialog modal-dialog-centered">\n' +
+                                            '            <div class="modal-content">\n' +
+                                            '                <div class="modal-header">\n' +
+                                            '                    <h5 class="modal-title" id="modalToggleLabel-' + data.id + '">' + 'Видео' + '</h5>\n' +
+                                            '                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
+                                            '                </div>\n' +
+                                            '                <div class="modal-body"><video controls width="100%">\n' +
+                                            '  <source src="" />\n' +
+                                            '\n' +
+                                            '  <source src="/storage/get/' + pic.media.storage_href + '" class="rounded-2" />\n' +
 
-                    var status_color = 'warning'
+                                            '</video></div>' +
+                                            '\n' +
+                                            '            </div>\n' +
+                                            '        </div>\n' +
+                                            '    </div>'
 
+                                    } else {
+                                        media_list = media_list + '' +
+                                            '<div class="avatar-wrapper">' +
+                                            '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
+                                            '<img src="/storage/get/' + pic.media.storage_href + '" class="rounded-2">' +
+                                            '</div>\<' +
+                                            '/div>'
+                                    }
 
-                    if (item.statuses[item.statuses.length - 1].status.id === 3) {
-                        status_color = 'success'
-                    }
+                                })
 
-                    if (item.statuses[item.statuses.length - 1].status.id === 4) {
-                        status_color = 'danger'
-                    }
+                                media_list = '<div class="d-flex justify-content-start align-items-center customer-name">' + media_list + '</div>'
+                                return media_list
+                            }
 
-                    if (item.statuses[item.statuses.length - 1].status.id === 1) {
-                        status_color = 'info'
-                        actionlist = actionlist + '                                <div class="d-inline-block text-nowrap">\n' +
-                        '                                    <a href="##" onclick="disableReview(' + item.id + ')" class="btn btn-sm btn-icon">\n' +
-                        '                                    <i class="bx bx-x"></i></a>\n' +
-                        '                                </div>\n'
-                    }
+                            return '—'
+                        }
+                    },
 
+                    {
+                        "data": 'status',
+                        "render": function (data, type, row) {
+                            var text = 'Не опознан'
+                            var color = 'secondary'
 
-                    var media_list = '<td>—</td>'
+                            if (data === 1) {
+                                text = 'Новая задача'
+                                color = 'info'
+                            }
 
-                    if (item.media.length !== 0) {
+                            if (data === 2) {
+                                text = 'В работе'
+                                color = 'warning'
+                            }
 
-                        media_list = ''
-                        $.each(item.media, function (i, pic) {
+                            if (data === 3) {
+                                text = 'Опубликован'
+                                color = 'success'
+                            }
 
-                            if (pic.media.type == 'mov') {
-                                media_list = media_list + '<a href="##" data-bs-toggle="modal" data-bs-target="#modalToggle-' + item.id + '">' +
-                                    '<div class="avatar-wrapper">' +
-                                    '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
-                                    '<i class="bx bx-play"></i>' +
-                                    '</div></div></a>' + '<div class="modal fade" id="modalToggle-' + item.id + '" aria-labelledby="modalToggleLabel-' + item.id + '" tabindex="-1" style="display: none;"\n' +
-                                    '         aria-hidden="true">\n' +
-                                    '        <div class="modal-dialog modal-dialog-centered">\n' +
-                                    '            <div class="modal-content">\n' +
-                                    '                <div class="modal-header">\n' +
-                                    '                    <h5 class="modal-title" id="modalToggleLabel-' + item.id + '">' + 'Видео' + '</h5>\n' +
-                                    '                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
-                                    '                </div>\n' +
-                                    '                <div class="modal-body"><video controls width="100%">\n' +
-                                    '  <source src="" />\n' +
-                                    '\n' +
-                                    '  <source src="/storage/get/' + pic.media.storage_href + '" class="rounded-2" />\n' +
-
-                                    '</video></div>' +
-                                    '\n' +
-                                    '            </div>\n' +
-                                    '        </div>\n' +
-                                    '    </div>'
-
-                            } else {
-                                media_list = media_list + '' +
-                                    '<div class="avatar-wrapper">' +
-                                    '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
-                                    '<img src="/storage/get/' + pic.media.storage_href + '" class="rounded-2">' +
-                                    '</div>\<' +
-                                    '/div>'
+                            if (data === 4) {
+                                text = 'Отменен'
+                                color = 'danger'
                             }
 
 
-                        })
+                            return '<span class="badge bg-label-' + color + '">' + text + '</span>'
+                        }
+                    },
+                    {
+                        "render": function (data, type, row) {
+                            var edit = ''
 
-                        media_list = '<td><div class="d-flex justify-content-start align-items-center customer-name">' + media_list + '</div></td>'
+                            if (row.status === 1) {
+                                edit += '<a href="javascript:cancelReview(' + row['id'] + ', 5)"><i class="bx bx-x"></i></a>'
+                            }
+                            return edit
+                        }
                     }
+                ],
+                "order": [[0, "desc"]],
+            });
 
-                    if (prod_title.length >= 15) {
-                        prod_title = prod_title.slice(0, 15) + '...'
-                    }
+            document.getElementById('prod-cntr').innerText = 'Всего: ' + data.length
+            document.getElementById('rvs-ldr').style.display = 'none';
+            document.getElementById('rvs-div').style.display = 'block';
+        },
+        error: function () {
 
-                    if (item.product.media !== null) {
-                        pichref = '/storage/get/' + item.product.media.storage_href
-                    }
-
-                    if (item.size != null) {
-
-                        ext_url = 'https://www.wildberries.ru/catalog/' + item.product.wb_article + '/detail.aspx?size=' + item.size.wb_size_optionId
-                    }
-
-                    if (item.text != null) {
-
-                        var revtext = item.text
-                    } else {
-                        var revtext = '—'
-                    }
-
-
-
-
-
-
-                    var row = '<tr>\n' +
-                        '                            <td>' + item.id + '</td>\n' +
-                        '\n' +
-                        '                            <td class="sorting_1">\n' +
-                        '                                <div class="d-flex justify-content-start align-items-center customer-name">\n' +
-                        '                                    <div class="avatar-wrapper">\n' +
-                        '                                        <div class="avatar me-2 rounded-2 bg-label-secondary">\n' +
-                        '                                            <img src="' + pichref + '"\n' +
-                        '                                                 alt="Product-9" class="rounded-2">\n' +
-                        '                                        </div>\n' +
-                        '                                    </div>\n' +
-                        '                                    <div class="d-flex flex-column">\n' +
-                        '                                        <a target="_blank" href="' + ext_url + '"><span class="fw-medium text-nowrap">' + prod_title + '</span></a>\n' +
-                        '                                        <small class="text-muted text-nowrap">' + item.product.wb_article + ' </small>\n' +
-                        '                                    </div>\n' +
-                        '                                </div>\n' +
-                        '                            </td>\n' +
-                        '\n' +
-                        '                            <td>\n' +
-                        '                                <div>\n' +
-                        '                                    <small class="text-break pe-3">' + revtext + '</small>\n' +
-                        '                                </div>\n' +
-                        '                            </td>\n' +
-                        '                            <td><span class="text-nowrap">' + ws + '</span></td><td><span class="text-nowrap">' + ws2 + '</span></td>\n' + media_list +
-
-                        '                            <td>\n' +
-                        '                                <span class="badge bg-label-' + status_color + '" text-capitalized="">' + status + '</span>\n' +
-                        '                            </td>\n' +
-                        '                            <td>'+ actionlist +'</td>\n' +
-                        '                        </tr>'
-
-                    $('#review-list tbody').append(row);
-
-
-                });
-                document.getElementById('prod-cntr').innerText = 'Всего: ' + data.length
-                document.getElementById('loading-prods').style.display = 'none';
-            },
-            error: function () {
-
-                toastr.error('Ошибка загрузки списка товаров')
-                document.getElementById('loading-prods').style.display = 'none';
-            }
-
-        });
-
+            toastr.error('Ошибка загрузки списка товаров')
+            document.getElementById('rvs-ldr').style.display = 'none';
+        }
 
     });
+
 
 </script>
 
@@ -274,7 +281,7 @@
         }
 
         if (mtchid != 0) {
-            url.searchParams.append('match_id', mtchid);
+            url.searchParams.append('match', mtchid);
         }
 
         var txt = text.value
@@ -415,106 +422,80 @@
 
 {% block content %}
 <div class="container-xxl flex-grow-1 container-p-y">
-
-
     <div class="row">
-
         <div class="col">
             <div class="card">
-
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Отзывы организации
-                        <a href="#" data-bs-toggle="offcanvas"
+                    <h5 class="card-title mb-0">Отзывы
+                        <a href="javascript:"
+                           data-bs-toggle="offcanvas"
                            data-bs-target="#off-create-prod"
                            aria-controls="off-create-prod">
-                            <i class="bx bxs-plus-square" data-bs-toggle="tooltip"
-                               data-bs-offset="0,8"
-                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
-                               data-bs-original-title="Добавить">
-                            </i>
+                            <i class="bx bxs-plus-square"></i>
                         </a>
-                        <div class="spinner-border spinner-border-sm text-primary" role="status"
-                             id="loading-prods">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
+                        <a href="javascript:var u = '/reviews/getOwned?org_id=' + org_id; dt_refresh('dt_user_reviews', u)"
+                           id="rb">
+                            <i class="bx bx-refresh"></i>
+                        </a>
+                        <span class="spinner-border spinner-border-sm text-primary" role="status" id="rvs-ldr"></span>
                     </h5>
                     <small class="card-subtitle" id="prod-cntr"></small>
                 </div>
-
-                <div class="table-responsive">
-                    <table class="table" id="review-list" style="display: none;">
+                <div class="card-body table-responsive" id="rvs-div" style="display: none;">
+                    <table id="dt_user_reviews" class="datatables-ajax table table-bordered dataTable no-footer">
                         <thead>
                         <tr>
-                            <th style="width: 3%">#ID</th>
-                            <th style="width: 10%">Товар</th>
-                            <th style="width: 30%">Отзыв</th>
-                            <th style="width: 7%">Размер</th>
-                            <th style="width: 8%">Соответствие</th>
-                            <th style="width: 15%">Медиа</th>
+                            <th>#ID</th>
+                            <th>Товар</th>
+                            <th>Отзыв</th>
+                            <th>Размер</th>
+                            <th>Соответствие</th>
+                            <th>Медиа</th>
                             <th>Статус</th>
                             <th>Действия</th>
                         </tr>
                         </thead>
-                        <tbody class="table-border-bottom-0">
-
-                        </tbody>
                     </table>
                 </div>
             </div>
         </div>
-
     </div>
-
 </div>
 
 <div class="mt-3">
     <div class="offcanvas offcanvas-start" id="off-create-prod">
-
         <div class="offcanvas-header">
             <h5 id="off-create-product-label" class="offcanvas-title">Новый отзыв</h5>
             <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
                     aria-label="Закрыть"></button>
         </div>
-
         <div class="offcanvas-body">
-
-
             <form id="create-review-form" enctype="multipart/form-data">
-
                 <div class="mb-4 row">
-
                     <label for="prod-id" class="form-label">Товар</label>
                     <select id="prod-id" class="selectpicker w-100" data-style="btn-default"
                             data-show-subtext="true">
                     </select>
-
                 </div>
-
                 <div class="mb-4 row" id="size-id-div">
 
                     <label for="size-id" class="form-label">Размер</label>
                     <select id="size-id" class="selectpicker w-100" data-style="btn-default"
                             data-show-subtext="true">
                     </select>
-
                 </div>
-
                 <div class="mb-4 row">
                     <label for="rev-text" class="form-label">Текст отзыва</label>
                     <div class="col">
                         <input class="form-control" type="text" placeholder="Товар очень понравился!" id="rev-text">
                     </div>
                 </div>
-
-
                 <div class="mb-4 row">
                     <label for="rev-text" class="form-label">МЕДИА (JPEG, PNG, MOV | < 50MB)</label>
                     <div class="col">
                         <input type="file" name="files" class="form-control" multiple>
                     </div>
                 </div>
-
-
                 <div class="row mb-4">
                     <div class="col">
                         <label class="form-label">Соответствие размеру</label>
@@ -535,18 +516,11 @@
                             <input name="default-radio-1" class="form-check-input" type="radio" value="3" id="smr-4">
                             <label class="form-check-label" for="smr-4">Большемерит</label>
                         </div>
-
                     </div>
                 </div>
-
                 <button type="submit" class="btn btn-primary">Добавить</button>
-
             </form>
-
-
         </div>
     </div>
 </div>
-
-
 {% endblock %}

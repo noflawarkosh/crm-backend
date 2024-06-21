@@ -1,5 +1,5 @@
 from sqlalchemy import select, and_
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 
 from database import async_session_factory
 from products.models import ProductModel, ReviewModel, ReviewMediaModel, ProductSizeModel
@@ -69,7 +69,7 @@ class ReviewsRepository:
             async with async_session_factory() as session:
 
                 # Add review
-                review = ReviewModel(**review_schema.model_dump())
+                review = ReviewModel(**review_schema.model_dump(), status=1)
                 session.add(review)
                 await session.flush()
 
@@ -99,12 +99,12 @@ class ReviewsRepository:
             async with async_session_factory() as session:
 
                 query = (
-                    select(ReviewModel)
-                    .join(ProductModel)
+                    select(ReviewModel, ProductModel)
                     .options(
                         selectinload(ReviewModel.media),
                         selectinload(ReviewModel.product),
                         selectinload(ReviewModel.size),
+                        selectinload(ProductModel.media)
                     )
                     .filter(ProductModel.org_id == org_id)
                     .filter(ProductModel.is_active)

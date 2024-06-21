@@ -3,8 +3,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import func, inspect
 
-from admin.models import AdminSessionModel, AdminUserModel
-from admin.repository import AdminRepository
+from admin.models import AdminSessionModel, AdminUserModel, PickerSettingsModel, CrmSettingsModel
 from admin.schemas import AdminSessionCreateSchema
 from admin.utils import set_type
 from auth.models import UserModel, UserSessionModel
@@ -12,10 +11,10 @@ from auth.models import UserModel, UserSessionModel
 from auth.utils import hash_password, generate_token
 from database import DefaultRepository
 from orders.models import OrdersAddressModel, OrdersOrderModel, OrdersContractorModel, OrdersServerScheduleModel, \
-    OrdersServerModel, OrdersServerContractorModel
+    OrdersServerModel, OrdersServerContractorModel, OrdersAccountModel
 from orgs.models import OrganizationModel
 from payments.models import BalanceBillModel, BalanceSourceModel, BalancePricesModel
-from products.models import ProductModel, ReviewModel
+from products.models import ProductModel, ReviewModel, ProductSizeModel
 from storage.models import StorageModel
 from strings import *
 
@@ -26,10 +25,14 @@ router = APIRouter(
 
 tables_access = {
     'users': (UserModel, 4096, {}),
+    'organizations': (OrganizationModel, 2048, {}),
+    'sizes': (ProductSizeModel, 64, {}),
     'orgs': (OrganizationModel, 2048, {}),
     'bills': (BalanceBillModel, 256, {}),
     'orders': (OrdersOrderModel, 16, {}),
     'addresses': (OrdersAddressModel, 256, {}),
+    'accounts': (OrdersAccountModel, 32, {'select_related': [OrdersAccountModel.address, OrdersAccountModel.server]}),
+    'addresses_full': (OrdersAddressModel, 256, {'select_related': [OrdersAddressModel.contractor]}),
     'products': (ProductModel, 64, {}),
     'reviews': (ReviewModel, 128, {}),
     'admins': (AdminUserModel, 16384, {}),
@@ -41,6 +44,8 @@ tables_access = {
     'storage': (StorageModel, 524288, {}),
     'schedules': (OrdersServerScheduleModel, 524288, {}),
     'servercontractors': (OrdersServerContractorModel, 8, {}),
+    'pickersettings': (PickerSettingsModel, 2, {}),
+    'settings': (CrmSettingsModel, 262144, {}),
     'servers': (
         OrdersServerModel, 1,
         {
@@ -48,6 +53,17 @@ tables_access = {
                 OrdersServerModel.schedule,
                 OrdersServerModel.contractors,
             ],
+        }
+    ),
+    'bills_full': (
+        BalanceBillModel, 256,
+        {
+            'select_related': [
+                BalanceBillModel.organization,
+                BalanceBillModel.source,
+                BalanceBillModel.status,
+                BalanceBillModel.media
+            ]
         }
     ),
 }
@@ -193,6 +209,9 @@ async def creating_data(data: dict[str, list[dict]], request: Request, session: 
 
     for section in data:
 
+        if not tables_access.get(section, None):
+            raise HTTPException(status_code=404, detail=string_404)
+
         model, level, select_models = tables_access[section]
 
         if not level & session.admin.level:
@@ -209,8 +228,13 @@ async def creating_data(data: dict[str, list[dict]], request: Request, session: 
         for record in data[section]:
             model_record_with_typed_values = {}
             for field, value in record.items():
-                print(model_fields)
-                model_record_with_typed_values[field] = set_type(value, model_fields[field])
+
+                typed_value = set_type(value, model_fields[field])
+
+                if field == 'password':
+                    typed_value = hash_password(str(typed_value))
+
+                model_record_with_typed_values[field] = typed_value
 
             model_with_typed_records.append(model_record_with_typed_values)
 
@@ -219,14 +243,20 @@ async def creating_data(data: dict[str, list[dict]], request: Request, session: 
             'records': model_with_typed_records
         })
 
-    print(models_with_typed_records)
-
     await DefaultRepository.save_records(models_with_typed_records)
 
 
-@router.delete('/delete/{model}/{record_id}')
-async def reading_fields(model: str, record_id: int, session: AdminSessionModel = Depends(authed)):
-    await AdminRepository.delete_record(model + 'Model', record_id)
+@router.delete('/delete/{section}/{record_id}')
+async def reading_fields(section: str, record_id: int, session: AdminSessionModel = Depends(authed)):
+    if not tables_access.get(section, None):
+        raise HTTPException(status_code=404, detail=string_404)
+
+    model, level, select_models = tables_access[section]
+
+    if not level & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    await DefaultRepository.delete_record(model, record_id)
 
 
 @router.post('/test')

@@ -1,5 +1,5 @@
 {% extends "!base-admin.html" %}
-{% block title %}Платежи{% endblock %}
+{% block title %}Платежи | {% endblock %}
 {% block css %}
 
 {% endblock %}
@@ -26,11 +26,11 @@
         $.ajax({
             type: "POST",
             url: '/admin/save',
-            data: JSON.stringify({BalanceBill: [{id: id, status_id: status_id}]}),
+            data: JSON.stringify({bills: [{id: id, status_id: status_id}]}),
             contentType: "application/json; charset=utf-8",
             success: function () {
                 if (status_id === 1) {
-                    toastr.success('Статус счета #' + c_bill.id  + ' на пополнение успешно обновлен: исполнен')
+                    toastr.success('Статус счета #' + c_bill.id + ' на пополнение успешно обновлен: исполнен')
                     $.ajax({
                         type: "POST",
                         url: '/admin/save',
@@ -59,11 +59,10 @@
                         }
                     })
                 }
-                if (status_id ===  5)  {
-                    toastr.success('Статус счета #' + c_bill.id  + ' на пополнение успешно обновлен: отказ')
+                if (status_id === 5) {
+                    toastr.success('Статус счета #' + c_bill.id + ' на пополнение успешно обновлен: отказ')
                     refresh()
                 }
-
 
 
             },
@@ -74,90 +73,96 @@
         })
     }
 
-    $(document).ready(function () {
-        var table = $('#dt_payments').DataTable({
-            "ajax": {
-                url: '/admin/get/BalanceBill',
-                dataSrc: ''
-            },
-            "paging": true,
-            "pageLength": 10,
-            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-            "searching": true,
-            "ordering": true,
+    $.ajax({
+        type: "GET",
+        url: '/admin/get/bills_full',
+        dataType: "json",
+        success: function (data) {
+            $('#dt_payments').DataTable({
+                data: data,
+                "paging": true,
+                "pageLength": 10,
+                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "searching": true,
+                "ordering": true,
 
-            columns: [
-                {data: 'id'},
-                {
-                    data: 'organization',
-                    render: function (data, type, row) {
-                        d_bills[row.id] = row
-                        return data.title
-                    }
-                },
-                {
-                    data: 'source',
-                    render: function (data, type, row) {
-                        return data.title + ' (' + data.number + ')'
-                    }
-                },
-                {
-                    data: 'amount',
-                    "render": function (data, type, row) {
-                        return data + ' ₽'
-                    }
-                },
-                {
-                    data: 'date',
-                    "render": function (data, type, row) {
-                        return moment(data).format('DD.MM.YYYY HH:mm')
-                    }
-                },
-                {
-                    data: 'status',
-                    "render": function (data, type, row) {
-
-                        var statuses = {
-                            1: 'success',
-                            2: 'warning',
-                            3: 'info',
-                            4: 'danger',
-                            5: 'danger',
+                columns: [
+                    {data: 'id'},
+                    {
+                        data: 'organization',
+                        render: function (data, type, row) {
+                            d_bills[row.id] = row
+                            return data.title
                         }
-
-                        return '<span class="badge bg-label-' + statuses[data.id] + '">' + data.title + '</span>'
-                    }
-                },
-                {
-                    data: "media",
-                    "render": function (data, type, row) {
-                        var cell = '—'
-                        if (data !== null) {
-                            cell = '<a target="_blank" href="/storage/get/' + data.storage_href + '">' + data.title + '</a>'
+                    },
+                    {
+                        data: 'source',
+                        render: function (data, type, row) {
+                            return data.bank + ' (' + data.number + ' / ' + data.recipient + ')'
                         }
-                        return cell
-                    }
-                },
-                {
-                    "render": function (data, type, row) {
-                        var edit = ''
-
-                        if (row.status_id === 2) {
-                            edit += '<a href="javascript:updateBillStatus(' + row['id'] + ', 1)"><i class="bx bx-check"></i></a>'
+                    },
+                    {
+                        data: 'amount',
+                        "render": function (data, type, row) {
+                            return data + ' ₽'
                         }
-
-                        if (row.status_id === 2) {
-                            edit += '<a href="javascript:updateBillStatus(' + row['id'] + ', 5)"><i class="bx bx-x"></i></a>'
+                    },
+                    {
+                        data: 'date',
+                        "render": function (data, type, row) {
+                            return moment(data).format('DD.MM.YYYY HH:mm')
                         }
-                        return edit
+                    },
+                    {
+                        data: 'status',
+                        "render": function (data, type, row) {
+
+                            var statuses = {
+                                1: 'success',
+                                2: 'warning',
+                                3: 'info',
+                                4: 'danger',
+                                5: 'danger',
+                            }
+
+                            return '<span class="badge bg-label-' + statuses[data.id] + '">' + data.title + '</span>'
+                        }
+                    },
+                    {
+                        data: "media",
+                        "render": function (data, type, row) {
+                            var cell = '—'
+                            if (data !== null) {
+                                cell = '<a target="_blank" href="/storage/get/' + data.storage_href + '">' + data.title + '</a>'
+                            }
+                            return cell
+                        }
+                    },
+                    {
+                        "render": function (data, type, row) {
+                            var edit = ''
+
+                            if (row.status_id === 2) {
+                                edit += '<a href="javascript:updateBillStatus(' + row['id'] + ', 1)"><i class="bx bx-check"></i></a>'
+                            }
+
+                            if (row.status_id === 2) {
+                                edit += '<a href="javascript:updateBillStatus(' + row['id'] + ', 5)"><i class="bx bx-x"></i></a>'
+                            }
+                            return edit
+                        }
                     }
-                }
-            ],
+                ],
 
-            "order": [[0, "desc"]]
-        });
+                "order": [[0, "desc"]]
+            });
+        },
+        error: function () {
+            toastr.error('Ошибка получения счетов')
 
+        }
     })
+
 
     function refresh() {
         var table = $('#dt_payments').DataTable()
@@ -166,7 +171,7 @@
         table.draw()
         $.ajax({
             type: "GET",
-            url: '/admin/get/BalanceBill',
+            url: '/admin/get/bills',
             dataType: "json",
             success: function (data) {
                 table.rows.add(data).draw();

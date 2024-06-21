@@ -55,7 +55,7 @@ class ReviewModel(Base):
     id: Mapped[pk]
     text: Mapped[str | None]
     match: Mapped[int | None]
-    status: Mapped[str]
+    status: Mapped[int]
 
     # FK
     product_id: Mapped[int] = mapped_column(

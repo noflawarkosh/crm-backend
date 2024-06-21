@@ -700,10 +700,15 @@
 
 </script>
 
+<!-- refresh datatable -->
 <script>
     function dt_refresh(table_id, url) {
         var table = $('#' + table_id).DataTable()
         document.getElementById('page_ldr').style.display = 'block'
+        $('#rb').hide()
+        $('#rb1').hide()
+        $('#rb2').hide()
+        $('#rb3').hide()
 
         $.ajax({
             type: "GET",
@@ -714,6 +719,10 @@
                 table.draw()
                 table.rows.add(data).draw();
                 document.getElementById('page_ldr').style.display = 'none'
+                $('#rb').show()
+                $('#rb1').show()
+                $('#rb2').show()
+                $('#rb3').show()
             },
             error: function () {
                 toastr.error('Ошибка обновления данных. Обновите страницу')
@@ -722,6 +731,8 @@
         })
     }
 </script>
+
 {% block js %}{% endblock %}
+
 </body>
 </html>

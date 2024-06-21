@@ -28,12 +28,12 @@
                 success: function (fields) {
 
                     document.getElementById('btn_add').setAttribute('href', '/admin-create/' + table)
-                    document.getElementById('btn_refresh').setAttribute('href', 'javascript:refresh();')
+                    document.getElementById('btn_refresh').setAttribute('href', "javascript:dt_refresh('datatable', '/admin/get/" + table + "');")
 
                     var card_table_columns = []
 
                     Object.keys(fields).forEach(function (field) {
-                        if (UEF.includes(field)) {
+                        if (UPF.includes(field)) {
                             return
                         }
                         thead += '<th>' + (FT.hasOwnProperty(field) ? FT[field] : field) + '</th>'
@@ -106,9 +106,7 @@
         }
     })
 
-    function refresh() {
 
-    }
 
 </script>
 

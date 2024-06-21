@@ -1,6 +1,6 @@
 import pandas as pd
 from io import BytesIO
-from admin.repository import AdminRepository
+
 import datetime
 
 from auth.utils import hash_password
@@ -8,12 +8,11 @@ from strings import *
 
 
 def set_type(value, field_type):
+
     if field_type == 'INTEGER':
         return int(value) if value else None
 
     elif field_type == 'VARCHAR':
-        if field_type == 'password':
-            return hash_password(str(value))
         return str(value) if value else None
 
     elif field_type == 'BOOLEAN':
@@ -29,6 +28,7 @@ def set_type(value, field_type):
         return float(value) if value else None
 
     return value
+
 
 def detect_date(string_date):
     result = None

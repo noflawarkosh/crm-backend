@@ -1,5 +1,5 @@
 {% extends "!base-admin.html" %}
-{% block title %}Пользователи{% endblock %}
+{% block title %}Планирование | {% endblock %}
 {% block css %}
 
 {% endblock %}
@@ -25,7 +25,7 @@
 
     $.ajax({
         type: "GET",
-        url: '/admin/get/PickerSettings?id=1',
+        url: '/admin/get/pickersettings?id=1',
         success: function (data) {
             data = data[0]
             var rows = ''
@@ -44,7 +44,7 @@
 
     $.ajax({
         type: "GET",
-        url: '/admin/get/OrdersServer?is_active=true',
+        url: '/admin/get/servers?is_active=true',
         success: function (data) {
 
             var rows = ''
@@ -113,7 +113,7 @@
 
                 <div class="card-header">
                     <h5 class="card-title mb-0">Конфигурация
-                        <a href="/admin-edit/PickerSettings/1"><i class="bx bx-edit"></i></a>
+                        <a href="/admin-edit/pickersettings/1"><i class="bx bx-edit"></i></a>
                     </h5>
                 </div>
                 <div class="card-body">
