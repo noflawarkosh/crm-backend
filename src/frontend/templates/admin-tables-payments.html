@@ -15,7 +15,7 @@
         var c_bill = d_bills[id]
 
         var msgs = {
-            1: 'Подтвердите получение средств на ' + c_bill.source.title + ' (' + c_bill.source.number + ') и пополнение счета ' + c_bill.organization.title + ' на сумму ' + c_bill.amount + ' рублей',
+            1: 'Подтвердите получение средств на ' + c_bill.source.bank + ' (' + c_bill.source.number + ' / ' + c_bill.source.recipient + ') и пополнение счета ' + c_bill.organization.title + ' на сумму ' + c_bill.amount + ' рублей',
             5: 'Подтвердите отказ в получении средств на ' + c_bill.source.title + ' (' + c_bill.source.number + ') и отказ ' + c_bill.organization.title + ' в пополнении счета на сумму ' + c_bill.amount + ' рублей',
         }
 
@@ -36,7 +36,7 @@
                         url: '/admin/save',
                         data: JSON.stringify(
                             {
-                                BalanceHistory: [
+                                balance: [
                                     {
                                         amount: c_bill.amount,
                                         org_id: c_bill.organization.id,
@@ -50,7 +50,7 @@
                         success: function () {
 
                             toastr.info('Счет ' + c_bill.organization.title + ' успешно пополнен на сумму ' + c_bill.amount + ' рублей',)
-                            refresh()
+                            dt_refresh('dt_payments', '/admin/get/bills_full')
 
                         },
                         error: function () {
@@ -200,7 +200,7 @@
 
                 <div class="card-header">
                     <h5 class="card-title mb-0">Платежи
-                        <a href="##" id="rb" onclick="refresh()"><i class="bx bx-refresh"></i></a>
+                        <a href="javascript:dt_refresh('dt_payments', '/admin/get/bills_full')"><i class="bx bx-refresh"></i></a>
                     </h5>
                     <small class="card-subtitle" id="prod-cntr"></small>
                 </div>

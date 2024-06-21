@@ -25,7 +25,7 @@ class UserModel(Base):
     media_id: Mapped[int | None] = mapped_column(
         ForeignKey('storage.id', ondelete='CASCADE', onupdate='CASCADE')
     )
-    status_id: Mapped[int]
+    status: Mapped[int]
 
     # Relationships
     media: Mapped['StorageModel'] = relationship(primaryjoin='UserModel.media_id == StorageModel.id', lazy='noload')

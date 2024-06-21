@@ -13,7 +13,7 @@
         $.ajax({
             type: "POST",
             url: '/admin/save',
-            data: JSON.stringify({OrganizationStatusHistory: [{org_id: org_id, status_id: status_id}]}),
+            data: JSON.stringify({organizations: [{id: org_id, status: status_id}]}),
             dataType: "json",
             contentType: "application/json",
             success: function () {
@@ -28,7 +28,7 @@
                 }
 
                 toastr.success(msg)
-                refresh()
+                dt_refresh('dt_orgs', '/admin/get/organizations_full')
 
             },
             error: function () {
@@ -38,97 +38,82 @@
         })
     }
 
-    $(document).ready(function () {
-        var table = $('#dt_orgs').DataTable({
-            "ajax": {
-                url: '/admin/get/Organization',
-                dataSrc: ''
-            },
-            "paging": true,
-            "pageLength": 10,
-            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-            "searching": true,
-            "ordering": true,
+    $.ajax({
+        type: "GET",
+        url: '/admin/get/organizations_full',
+        success: function (data) {
+            $('#dt_orgs').DataTable({
+                data: data,
+                "paging": true,
+                "pageLength": 10,
+                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "searching": true,
+                "ordering": true,
 
-            columns: [
-                {data: 'id'},
-                {data: 'title'},
-                {data: 'inn'},
-                {
-                    "data": "owner",
-                    "render": function (data, type, row) {
+                columns: [
+                    {data: 'id'},
+                    {data: 'title'},
+                    {data: 'inn'},
+                    {
+                        "data": "owner",
+                        "render": function (data, type, row) {
 
-                        return '@' + data.username + ' (' + data.name + ')'
+                            return '@' + data.username + ' (' + data.name + ')'
+                        }
+                    },
+                    {
+                        "data": "status",
+                        "render": function (data, type, row) {
+
+                            var color = 'warning'
+                            var txt = 'Ожидает подтверждения'
+
+                            if (data === 2) {
+                                color = 'success'
+                                txt = 'Активна'
+                            }
+
+                            if (data === 3) {
+                                color = 'danger'
+                                txt = 'Приоставновлена'
+                            }
+
+                            return '<span class="badge bg-label-' + color + '">' + txt + '</span>'
+                        }
+                    },
+
+                    {
+                        "data": "status",
+                        "render": function (data, type, row) {
+
+                            var edit = '<a href="/admin-edit/organizations/' + row.id + '"><i class="bx bx-edit-alt"></i></a>'
+
+                            if (data === 1) {
+                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>' +
+                                    '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ')"><i class="bx bx-x"></i></a>'
+                            }
+
+                            if (data === 2) {
+                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ')"><i class="bx bx-x"></i></a>'
+                            }
+
+                            if (data === 3) {
+                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>'
+                            }
+                        }
                     }
-                },
-                {
-                    "data": "statuses",
-                    "render": function (data, type, row) {
+                ],
 
-                        var color = 'warning'
+                "order": [[0, "desc"]]
+            });
 
-                        if (data[data.length - 1].status.id === 2) {
-                            color = 'success'
-                        }
+        },
+        error: function () {
+            toastr.error('Ошибка обновления данных. Обновите страницу и повторите попытку')
 
-                        if (data[data.length - 1].status.id === 3) {
-                            color = 'danger'
-                        }
-
-                        return '<span class="badge bg-label-' + color + '">' + data[data.length - 1].status.title + '</span>'
-                    }
-                },
-
-                {
-                    "data": "statuses",
-                    "render": function (data, type, row) {
-
-                        var edit = '<a href="/admin-edit/Organization/' + row.id + '"><i class="bx bx-edit-alt"></i></a>'
-
-                        if (data[data.length - 1].status.id === 1) {
-                            return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>' +
-                                          '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ')"><i class="bx bx-x"></i></a>'
-                        }
-
-                        if (data[data.length - 1].status.id === 2) {
-                            return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ')"><i class="bx bx-x"></i></a>'
-                        }
-
-                        if (data[data.length - 1].status.id === 3) {
-                            return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>'
-                        }
-                    }
-                }
-            ],
-
-            "order": [[0, "desc"]]
-        });
-
+        }
     })
 
-
-    function refresh() {
-        $('#rb').hide()
-        var table = $('#dt_orgs').DataTable();
-        table.clear()
-        table.draw()
-
-        $.ajax({
-            type: "GET",
-            url: '/admin/get/Organization',
-            dataType: "json",
-            success: function (data) {
-                table.rows.add(data).draw();
-                $('#rb').show()
-
-            },
-            error: function () {
-                toastr.error('Ошибка обновления данных. Обновите страницу и повторите попытку')
-
-            }
-        })
-
-    }
 </script>
 
 
@@ -136,19 +121,15 @@
 
 {% block content %}
 <div class="container-xxl flex-grow-1 container-p-y">
-
     <div class="row">
-
         <div class="col">
             <div class="card">
-
                 <div class="card-header">
                     <h5 class="card-title mb-0">Организации
-                        <a href="##" id="rb" onclick="refresh()"><i class="bx bx-refresh"></i></a>
+                        <a href="javascript:dt_refresh('dt_orgs', '/admin/get/organizations_full')"><i class="bx bx-refresh"></i></a>
                     </h5>
                     <small class="card-subtitle" id="prod-cntr"></small>
                 </div>
-
                 <div class="card-datatable p-4">
                     <table id="dt_orgs" class="datatables-ajax table table-bordered dataTable no-footer">
                         <thead>
@@ -165,8 +146,6 @@
                 </div>
             </div>
         </div>
-
     </div>
-
 </div>
 {% endblock %}

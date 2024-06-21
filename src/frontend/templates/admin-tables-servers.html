@@ -200,7 +200,8 @@
                     {
                         "data": "id",
                         "render": function (data, type, row) {
-                            return '<a href="/admin-edit/schedules/' + data + '"><i class="bx bx-edit-alt"></i></a>'
+                            return '<a href="/admin-edit/schedules/' + data + '"><i class="bx bx-edit-alt"></i></a>' +
+                                '<a href="javascript: delrowSch('  + data  +  ')"><i class="bx bx-x"></i></a>'
 
                         }
                     }
@@ -386,7 +387,26 @@
 
         $.ajax({
             type: 'delete',
-            url: 'admin/delete/OrdersServerContractor/' + recid,
+            url: '/admin/delete/servercontractors/' + recid,
+            success: function () {
+                location.reload();
+            },
+            error: function () {
+                toastr.error('Ошибка удаления. Обновите страницу и повторите попытку')
+
+            }
+        })
+    }
+
+    function delrowSch(recid) {
+
+        if (!confirm('Подтвердите удаление расписания')) {
+            return
+        }
+
+        $.ajax({
+            type: 'delete',
+            url: '/admin/delete/schedules/' + recid,
             success: function () {
                 location.reload();
             },
@@ -425,7 +445,6 @@
                            aria-controls="off-create-schedule">
                             <i class="bx bxs-plus-square"></i>
                         </a>
-                        <a href="##" id="rb" onclick="refresh('dt_schedules')"><i class="bx bx-refresh"></i></a>
                     </h5>
                 </div>
 

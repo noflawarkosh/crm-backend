@@ -111,7 +111,7 @@ class ReviewsRepository:
                 )
 
                 db_response = await session.execute(query)
-                reviews = db_response.scalars().all()
+                reviews = db_response.unique().scalars().all()
 
                 return reviews
 

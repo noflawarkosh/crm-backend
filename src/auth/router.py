@@ -30,7 +30,7 @@ async def every(request: Request = Request):
     session = await AuthRepository.read_session(token)
 
     if session:
-        if session.user.status_id != 2:
+        if session.user.status != 2:
             return None
 
     return session
@@ -69,7 +69,7 @@ async def register(data: Annotated[UserCreateSchema, Depends()], session: UserSe
 
     data.password = hash_password(data.password)
 
-    await DefaultRepository.save_records([{'model': UserModel, 'records': [{**data.model_dump(), 'status_id': 1}]}])
+    await DefaultRepository.save_records([{'model': UserModel, 'records': [{**data.model_dump(), 'status': 1}]}])
 
 
 @router.post('/login')
@@ -88,7 +88,7 @@ async def login(request: Request, response: Response, username: str, password: s
     if hash_password(password) != user_check.password:
         raise HTTPException(status_code=403, detail=string_user_wrong_password)
 
-    if user_check.status_id != 2:
+    if user_check.status != 2:
         raise HTTPException(status_code=403, detail=string_user_inactive_user)
 
     user_session = await AuthRepository.create_session(

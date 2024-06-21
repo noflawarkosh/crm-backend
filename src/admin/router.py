@@ -13,7 +13,7 @@ from database import DefaultRepository
 from orders.models import OrdersAddressModel, OrdersOrderModel, OrdersContractorModel, OrdersServerScheduleModel, \
     OrdersServerModel, OrdersServerContractorModel, OrdersAccountModel
 from orgs.models import OrganizationModel
-from payments.models import BalanceBillModel, BalanceSourceModel, BalancePricesModel
+from payments.models import BalanceBillModel, BalanceSourceModel, BalancePricesModel, BalanceHistoryModel
 from products.models import ProductModel, ReviewModel, ProductSizeModel
 from storage.models import StorageModel
 from strings import *
@@ -26,9 +26,11 @@ router = APIRouter(
 tables_access = {
     'users': (UserModel, 4096, {}),
     'organizations': (OrganizationModel, 2048, {}),
+    'organizations_full': (OrganizationModel, 2048, {'select_related': [OrganizationModel.owner]}),
     'sizes': (ProductSizeModel, 64, {}),
     'orgs': (OrganizationModel, 2048, {}),
     'bills': (BalanceBillModel, 256, {}),
+    'balance': (BalanceHistoryModel, 256, {}),
     'orders': (OrdersOrderModel, 16, {}),
     'addresses': (OrdersAddressModel, 256, {}),
     'accounts': (OrdersAccountModel, 32, {'select_related': [OrdersAccountModel.address, OrdersAccountModel.server]}),
@@ -46,6 +48,7 @@ tables_access = {
     'servercontractors': (OrdersServerContractorModel, 8, {}),
     'pickersettings': (PickerSettingsModel, 2, {}),
     'settings': (CrmSettingsModel, 262144, {}),
+
     'servers': (
         OrdersServerModel, 1,
         {

@@ -67,7 +67,8 @@ async def create_organization(org_id: int,
         prefetch_related=[
             BalanceBillModel.source,
             BalanceBillModel.status,
-            BalanceBillModel.media]
+            BalanceBillModel.media
+        ]
     )
     return [BalanceBillReadSchema.model_validate(record, from_attributes=True) for record in bills]
 
@@ -116,5 +117,6 @@ async def create_organization(org_id: int,
     history = await DefaultRepository.get_records(
         BalanceHistoryModel,
         filters=[BalanceHistoryModel.org_id == org_id],
+        select_related=[BalanceHistoryModel.organization, BalanceHistoryModel.action]
     )
     return [BalanceHistoryReadSchema.model_validate(record, from_attributes=True) for record in history]
