@@ -1,0 +1,88 @@
+{% extends "!base-admin.html" %}
+{% block title %}Пользователи{% endblock %}
+{% block css %}
+
+{% endblock %}
+
+{% block js %}
+<script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script>
+
+    function updateUserStatus(user_id, status_id) {
+
+        $.ajax({
+            type: "POST",
+            url: '/admin/save',
+            data: JSON.stringify({users: [{status: status_id, id: user_id}]}),
+            contentType: "application/json",
+            success: function () {
+                var msg = 'Данные пользователя обновлены'
+
+                if (status_id === 2) {
+                    msg = 'Пользователь разблокирован'
+                }
+
+                if (status_id === 3) {
+                    msg = 'Пользователь заблокирован'
+                }
+
+                toastr.success(msg)
+                dt_refresh('dt_users', '/admin/get/users')
+
+            },
+            error: function () {
+                toastr.error('Ошибка обновления данных. Обновите страницу и повторите попытку')
+
+            }
+        })
+    }
+
+    $.ajax({
+        type: "GET",
+        url: '/admin/get/prices',
+        success: function (data) {
+
+        },
+        error: function () {
+            toastr.error('Ошибка получения пользователей')
+
+        }
+    })
+
+</script>
+
+
+{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Пользователи
+                        <a href="javascript:dt_refresh('dt_users', '/admin/get/users')"><i class="bx bx-refresh"></i></a>
+                    </h5>
+                    <small class="card-subtitle" id="prod-cntr"></small>
+                </div>
+                <div class="card-datatable p-4">
+                    <table id="dt_users" class="datatables-ajax table table-bordered dataTable no-footer">
+                        <thead>
+                        <tr>
+                            <th>#ID</th>
+                            <th>Имя</th>
+                            <th>Логин</th>
+                            <th>Почта</th>
+                            <th>Телефон</th>
+                            <th>Telegram</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

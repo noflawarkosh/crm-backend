@@ -87,8 +87,8 @@
                            data-bs-placement="top" data-bs-custom-class="tooltip-primary"
                            data-bs-original-title="Добавить">
                         </i>
-
                     </a>
+                    <i class="bx bx-cloud-download" id="orgs1_ldr"></i>
                 </li>
 
                 <li class="menu-header small text-uppercase" id="orgs-other">
@@ -99,10 +99,9 @@
                            data-bs-original-title="Присоединиться">
                         </i>
                     </a>
+                    <i class="bx bx-cloud-download" id="orgs2_ldr"></i>
                 </li>
-
             </ul>
-
         </aside>
 
         <!-- Top Nav -->
@@ -232,7 +231,7 @@
                                     <div class="dropdown-divider"></div>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="/support">
+                                    <a class="dropdown-item" href="javascript:toastr.info('Раздел в разработке')">
                                         <i class="bx bx-help-circle me-2"></i>
                                         <span class="align-middle">Помощь</span>
                                     </a>
@@ -243,7 +242,7 @@
                                 </li>
 
                                 <li>
-                                    <a class="dropdown-item" href="#" onclick="logout();">
+                                    <a class="dropdown-item" href="javascript:logout();">
                                         <i class="bx bx-power-off me-2"></i>
                                         <span class="align-middle">Выйти</span>
                                     </a>
@@ -499,8 +498,8 @@
             {'menuItemTitle': 'Кошелек', 'menuItemHref': 'wallet'},
             //{'menuItemTitle': 'Реферальная программа', 'menuItemHref': 'loyalty'},
             {'menuItemTitle': 'Товары', 'menuItemHref': 'products'},
-            {'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': 'tasks'},
             {'menuItemTitle': 'Отзывы', 'menuItemHref': 'reviews'},
+            {'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': 'tasks'},
             {'menuItemTitle': 'Статусы заказов WB', 'menuItemHref': 'orders'},
         ]
 
@@ -550,12 +549,17 @@
 
                     })
 
-
                     menuItem.append(menuItemA, menuSub);
-
                     orgsMine.after(menuItem);
 
+
                 });
+                document.getElementById('orgs1_ldr').style.display = 'none';
+            },
+
+            error: function (data) {
+                document.getElementById('orgs1_ldr').style.display = 'none';
+                toastr.error('Ошибка загрузки организаций: ' + data.responseJSON.detail);
             }
         });
 
@@ -644,13 +648,18 @@
 
 
                         menuItem.append(menuItemA, menuSub);
-
                         orgsOther.after(menuItem);
+
 
                     }
 
 
                 });
+                document.getElementById('orgs2_ldr').style.display = 'none';
+            },
+            error: function (data) {
+                document.getElementById('orgs2_ldr').style.display = 'none';
+                toastr.error('Ошибка загрузки организаций: ' + data.responseJSON.detail);
             }
         });
 
@@ -672,8 +681,8 @@
             document.getElementById('nav-username').innerText = data.username
 
             var imageUrl = "{{ url_for('static', path='assets/img/avatars/def-avatar.jpg') }}";
-            if (data.media_id !== null) {
-                imageUrl = '/storage/get/' + data.media.storage_href
+            if (data.media !== null) {
+                imageUrl = 'https://storage.yandexcloud.net/greedybear/' + data.media
             }
 
             var imageElement1 = $('<img class="w-px-40 rounded-circle">');

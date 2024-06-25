@@ -1,14 +1,82 @@
+import io
+import random
+import string
+
 import pandas as pd
 from io import BytesIO
 
 import datetime
 
-from auth.utils import hash_password
+from PIL import Image
+
+from database import s3
 from strings import *
 
+file_types = {
+    'image': {
+        'types': ['jpeg', 'png', 'jpg', 'webp'],
+        'max': 1048576 * 10,
+    },
+    'video': {
+        'types': ['mp4', 'mov'],
+        'max': 1048576 * 50,
+    },
+    'other': {
+        'types': ['pdf'],
+        'max': 104857 * 10,
+    }
+}
+
+
+def generate_filename():
+    alphanumeric_characters = string.ascii_letters + string.digits
+    return ''.join(random.choice(alphanumeric_characters) for _ in range(32))
+
+
+async def verify_file(file, available_media: list):
+    if file.size == 0:
+        raise Exception(string_storage_empty_file)
+
+    fileinfo = file.filename.rsplit('.', maxsplit=1)
+    if len(fileinfo) != 2:
+        raise Exception(string_storage_wrong_filetype)
+
+    filename = fileinfo[0]
+    filetype = fileinfo[1]
+
+    if len(filename) == 0:
+        raise Exception(string_storage_empty_filename)
+
+    available_types = sum([file_types[t]['types'] for t in available_media], [])
+
+    if filetype.lower() not in available_types:
+        raise Exception(string_storage_wrong_filetype + f'. Только: {available_types}')
+
+    for t in file_types:
+        if filetype in file_types[t]['types']:
+            if file.size > file_types[t]['max']:
+                raise Exception(string_storage_max_size)
+
+
+async def s3_save(file_bytes, file_name, file_type):
+
+    if file_type in file_types['image']['types']:
+        image = Image.open(io.BytesIO(file_bytes))
+        image.save(io.BytesIO(), format='WEBP', optimize=True, quality=15)
+
+        webp_bytes = io.BytesIO()
+        image.save(webp_bytes, format='WebP')
+        file_content = webp_bytes.getvalue()
+        file_type = 'webp'
+
+    else:
+        file_content = file_bytes
+
+    s3.upload_fileobj(io.BytesIO(file_content), 'greedybear', f'{file_name}.{file_type}')
+
+    return file_name, file_type
 
 def set_type(value, field_type):
-
     if field_type == 'INTEGER':
         return int(value) if value else None
 

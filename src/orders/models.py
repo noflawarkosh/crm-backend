@@ -126,7 +126,7 @@ class OrdersOrderModel(Base):
     wb_keyword: Mapped[str]
     wb_price: Mapped[int | None]
     wb_status: Mapped[str | None]
-    is_cancelled: Mapped[bool]
+    status: Mapped[int]
     description: Mapped[str | None]
     dt_planed: Mapped[datetime.datetime | None]
     dt_ordered: Mapped[datetime.datetime | None]

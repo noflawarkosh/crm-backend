@@ -59,8 +59,8 @@
         $.ajax({
             url: url,
             method: 'post',
-            success: function () {
-                location.reload()
+            success: function (data) {
+                location.replace('/bill/' + data)
             },
 
             error: function (data) {
@@ -150,7 +150,7 @@
                             var cell = '—'
 
                             if (data !== null) {
-                                cell = '<a target="_blank" href="/storage/get/' + data.storage_href + '">' + data.title + '</a>'
+                                cell = '<a target="_blank" href="https://storage.yandexcloud.net/greedybear/' + data + '">' + 'Скачать' + '</a>'
                             }
 
                             return cell
@@ -166,6 +166,7 @@
                                 3: 'info',
                                 4: 'danger',
                                 5: 'danger',
+                                6: 'primary'
                             }
 
                             return '<span class="badge bg-label-' + statuses[data.id] + '">' + data.title + '</span>'

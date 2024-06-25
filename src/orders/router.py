@@ -56,7 +56,7 @@ async def save_data(amount: int,
     if (
             len(products) != 1 or
             products[0].org_id != data.org_id or
-            not products[0].is_active or
+            products[0].status == 3 or
             data.size_id not in [size.id for size in products[0].sizes] or
             data.dt_planed.date() < datetime.datetime.now().date()
     ):
@@ -69,6 +69,6 @@ async def save_data(amount: int,
         'model': OrdersOrderModel,
         'records': [{
             **data.model_dump(),
-            'is_cancelled': False,
+            'status': 1,
         }] * amount
     }])

@@ -10,7 +10,7 @@
 
 <script>
     function loadProfile(data) {
-        document.getElementById('header-name').innerText = data.name
+        document.getElementById('header-name').innerHTML = data.name
         document.getElementById('header-username').innerText = data.username
 
         document.getElementById('card-name').innerText = data.name
@@ -22,13 +22,13 @@
         document.getElementById('card-telegram').innerText = data.telegram
         document.getElementById('card-telnum').innerText = data.telnum
 
-        var imageUrl = '/storage/get/4m0Tqv66dBUakFPu.png';
+        var imageUrl = "{{ url_for('static', path='assets/img/avatars/def-avatar.jpg') }}"
 
-        if (data.media_id !== null) {
-            imageUrl = '/storage/get/' + data.media.storage_href
+        if (data.media !== null) {
+            imageUrl = 'https://storage.yandexcloud.net/greedybear/' + data.media
         }
 
-        var imageElement1 = $('<img class="h-100 h-auto ms-0 ms-sm-4 rounded user-profile-img" style="object-fit:cover">');
+        var imageElement1 = $('<img class="ms-0 ms-sm-4 rounded user-profile-img" height="120" width="100" style="object-fit: cover">');
 
         imageElement1.attr('src', imageUrl);
 
@@ -125,31 +125,18 @@
 
                         <li class="d-flex align-items-center mb-3">
                             <i class="bx bx-phone"></i>
-                            <span class="fw-medium mx-2">Телефон:</span>+7
+                            <span class="fw-medium mx-2">Телефон:</span>
                             <span id="card-telnum"></span>
                         </li>
                     </ul>
 
                 </div>
             </div>
-            <!--/ About User -->
-            <!-- Profile Overview -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <small class="text-muted text-uppercase">Статистика</small>
-                    <ul class="list-unstyled mt-3 mb-0">
-
-                    </ul>
-                </div>
-            </div>
-            <!--/ Profile Overview -->
-        </div>
-        <div class="col-xl-8 col-lg-7 col-md-7">
-
 
         </div>
+
     </div>
-    <!--/ User Profile Content -->
+
 
 </div>
 {% endblock %}

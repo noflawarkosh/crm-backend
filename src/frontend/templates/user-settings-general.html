@@ -19,10 +19,10 @@
         inputTelegram.setAttribute('value', data.telegram);
         inputTelnum.setAttribute('value', data.telnum);
 
-        var imageUrl = '/storage/get/4m0Tqv66dBUakFPu.png';
+        var imageUrl = "{{ url_for('static', path='assets/img/avatars/def-avatar.jpg')}}";
 
-        if (data.media_id !== null) {
-            imageUrl = '/storage/get/' + data.media.storage_href
+        if (data.media !== null) {
+            imageUrl = 'https://storage.yandexcloud.net/greedybear/' + data.media
         }
 
         var imageElement1 = $('<img alt="user-avatar" class="d-block rounded" height="100" width="100" style="object-fit: cover">');
@@ -36,68 +36,200 @@
 
 
 <script>
-    document.getElementById('update').addEventListener('submit', function (event) {
+    var sb = document.getElementById('sbpd');
+
+    function good(i, text) {
+        var ve = $('#vf-' + i)
+        var ie = $('#if-' + i)
+        ve.html(text)
+        ve.show()
+        ie.hide()
+        sb.classList.remove('disabled')
+        return true
+    }
+
+    function bad(i, text) {
+        var ve = $('#vf-' + i)
+        var ie = $('#if-' + i)
+        ie.html(text)
+        ie.show()
+        ve.hide()
+        sb.classList.add('disabled')
+        return false
+    }
+
+    function validateName(value) {
+        const regex = /^[а-яА-Я]+$/;
+        var x = value.length;
+
+        if (!regex.test(value) && value !== '') {
+            return bad('name', 'Пожалуйста, используйте только кириллицу');
+        }
+
+        if (x === 0) {
+            return bad('name', 'Введите ваше имя');
+        } else if (x > 0 && x <= 8) {
+            return good('name', 'У вас красивое имя');
+        } else if (x > 8 && x <= 12) {
+            return good('name', 'У вас длинное красивое имя');
+        } else if (x > 12 && x <= 17) {
+            return good('name', 'У вас очень длинное красивое имя');
+        } else if (x > 17 && x <= 30) {
+            return good('name', 'У вас оооочень длинное красивое имя');
+        } else if (x > 30 && x <= 50) {
+            return good('name', 'У вас <b>ООООЧЕНЬ</b> длинное красивое имя');
+        } else if (x > 50) {
+            return bad('name', `У вас неверноятно длинное и красивое имя, но мы не сможем его запомнить. Нужно убрать ${x - 50} символов`);
+        }
+    }
+
+    function validateTelegram(value) {
+        const regex = /^[a-zA-z0-9_]+$/;
+        var x = value.length;
+
+        if (value === '') {
+            return bad('telegram', 'Введите тег вашего <a href="https://telegram.org/" target="_blank">Telegram</a>')
+        }
+
+        if (!regex.test(value)) {
+            return bad('telegram', 'Пожалуйста, используйте только латиницу, цифры и _')
+        }
+
+        if (x < 5) {
+            return bad('telegram', 'Еще хотя бы ' + (5 - x) + ' символов')
+        }
+
+        if (x > 50) {
+            return bad('telegram', 'Перебор, нужно убрать ' + (x - 50) + ' символов')
+        }
+
+        return good('telegram', 'То, что нужно!')
+    }
+
+    function validatePhone(value) {
+        const regex = /^\+7\d{10}$/;
+        var x = value.length;
+
+        if (value.length === 0) {
+            return bad('telnum', 'Введите номер телефона');
+        }
+
+        if (!regex.test(value)) {
+            bad('telnum', 'Неверный формат телефона. Пример: +79123456789');
+            return false;
+        }
+
+        if (x !== 12) {
+            return bad('telnum', 'Телефон должен состоять из 11 цифр и начинаться с +7');
+        }
+
+        return good('telnum', 'То, что нужно!');
+    }
+
+    function validateEmail(value) {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (value.length === 0) {
+            return bad('email', 'Введите адрес электронной почты');
+        }
+
+        if (!regex.test(value)) {
+            return bad('email', 'Почта неверна');
+        }
+
+        if (value.length > 100) {
+            return bad('email', 'Максимальная длина электронной почты не более 100 символов');
+        }
+
+        return good('email', 'То, что нужно!');
+    }
+
+    const nameInput = document.getElementById('name');
+    const emailInput = document.getElementById('email');
+    const telnumInput = document.getElementById('telnum');
+    const telegramInput = document.getElementById('telegram');
+
+
+    nameInput.addEventListener('input', function (event) {
+        validateName(event.target.value);
+    });
+
+    telnumInput.addEventListener('input', function (event) {
+        validatePhone(event.target.value);
+    });
+
+    emailInput.addEventListener('input', function (event) {
+        validateEmail(event.target.value);
+    });
+
+    telegramInput.addEventListener('input', function (event) {
+        validateTelegram(event.target.value);
+    });
+</script>
+
+<script>
+    document.getElementById('updateform').addEventListener('submit', function (event) {
 
         event.preventDefault();
 
-        var submitButton = document.querySelector('button[type="submit"]');
-        submitButton.classList.add('disabled');
+        var ssb = document.getElementById('sbpd');
 
-        const nameInput = document.getElementById('name');
-        const emailInput = document.getElementById('email');
-        const telnumInput = document.getElementById('telnum');
-        const telegramInput = document.getElementById('telegram');
+        var validated = true
+        if (!validateName(nameInput.value)) {
+            validated = false
+        }
 
-        if ((nameInput.value.length === 0) || (nameInput.value.length > 30)) {
-            toastr.error('Поле ввода имени является обязательным, длина должна составлять от 1 до 100 символов')
-            submitButton.classList.remove('disabled');
+        if (!validatePhone(telnumInput.value)) {
+            validated = false
+        }
+
+        if (!validateEmail(emailInput.value)) {
+            validated = false
+        }
+
+        if (!validateTelegram(telegramInput.value)) {
+            validated = false
+        }
+
+        if (!validated) {
+            ssb.classList.remove('disabled');
             return
         }
 
-        if ((emailInput.value.length === 0) || (emailInput.value.length > 50)) {
-            toastr.error('Поле ввода эл. почты является обязательным, длина должна составлять не более 100 символов')
-            submitButton.classList.remove('disabled');
-            return
-        }
-
-        if ((telnumInput.value.length === 0) || (telnumInput.value.length !== 10)) {
-            toastr.error('Поле ввода номера телефона является обязательным, длина должна составлять 11 символов')
-            submitButton.classList.remove('disabled');
-            return
-        }
-
-        if ((telegramInput.value.length === 0) || (telegramInput.value.length > 31)) {
-            toastr.error('Поле ввода тега Telegram является обязательным, длина должна составлять от 5 до 32 символов')
-            submitButton.classList.remove('disabled');
-            return
-        }
-
+        var formData = new FormData();
 
         const currentDomain = window.location.origin;
-        const url = new URL('/auth/updateSelfProfile', currentDomain);
+        const url = new URL('/auth/updateProfile', currentDomain);
+
         url.searchParams.append('name', nameInput.value);
         url.searchParams.append('email', emailInput.value);
         url.searchParams.append('telnum', telnumInput.value);
         url.searchParams.append('telegram', telegramInput.value);
 
+        var avafile = $('#avatar-file')[0].files
+
+        if (avafile.length !== 0) {
+            formData.append('file', avafile[0]);
+        } else {
+            formData.append('file', '');
+        }
+
+        ssb.classList.add('disabled');
         $.ajax({
             url: url,
-            method: 'post',
-            success: function (data) {
-                if (data.result === 'success') {
-                    toastr.success('Сохранено');
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
 
-                }
-
-                if (data.result === 'error') {
-                    toastr.error(data.details)
-                }
-                submitButton.classList.remove('disabled');
+            success: function () {
+                toastr.success('Изменения сохранены');
+                ssb.classList.remove('disabled');
             },
 
-            error: function () {
-                toastr.error('Произошла ошибка. Обновите страницу и повторите попытку');
-                submitButton.classList.remove('disabled');
+            error: function (data) {
+                toastr.error(data.responseJSON.detail);
+                ssb.classList.remove('disabled');
             }
         });
 
@@ -105,6 +237,19 @@
 
 </script>
 
+
+<script>
+    const avatarInput = document.getElementById('avatar-file');
+    const avatarHeader = document.getElementById('my-avatar-header');
+
+    avatarInput.addEventListener('change', function (event) {
+        const file = event.target.files[0];
+        if (file) {
+            const imageUrl = URL.createObjectURL(file);
+            avatarHeader.innerHTML = `<img alt="user-avatar" src="${imageUrl}" class="d-block rounded" height="100" width="100" style="object-fit: cover">`;
+        }
+    });
+</script>
 {% endblock %}
 
 {% block content %}
@@ -115,84 +260,75 @@
             <ul class="nav nav-pills flex-column flex-md-row mb-3">
                 <li class="nav-item"><a class="nav-link active" href="javascript:void(0);"><i
                         class="bx bx-user me-1"></i> Основные</a></li>
-                <li class="nav-item"><a class="nav-link" href="pages-account-settings-security.html"><i
+                <li class="nav-item"><a class="nav-link" href="/security"><i
                         class="bx bx-lock-alt me-1"></i> Безопасность</a></li>
-                <li class="nav-item"><a class="nav-link" href="pages-account-settings-notifications.html"><i
+                <li class="nav-item"><a class="nav-link disabled" ><i
                         class="bx bx-bell me-1"></i> Уведомления</a></li>
             </ul>
 
             <div class="card mb-4">
-
-                <h5 class="card-header">Настройки профиля</h5>
-
-                <div class="card-body">
-                    <div class="d-flex align-items-start align-items-sm-center gap-4" >
-                        <div id="my-avatar-header"></div>
-                        <div class="button-wrapper">
-                            <label for="upload" class="btn btn-primary me-2 mb-4" tabindex="0">
-                                <span class="d-none d-sm-block">Выбрать фото</span>
-                                <i class="bx bx-upload d-block d-sm-none"></i>
-                                <input type="file" id="upload" class="account-file-input" hidden=""
-                                       accept="image/png, image/jpeg">
-                            </label>
-                            <button type="button" class="btn btn-label-secondary account-image-reset mb-4">
-                                <i class="bx bx-reset d-block d-sm-none"></i>
-                                <span class="d-none d-sm-block">Сброс</span>
-                            </button>
-
-                            <p class="text-muted mb-0">JPG, PNG</p>
+                <form id="updateform" enctype="multipart/form-data">
+                    <h5 class="card-header">Настройки профиля</h5>
+                    <div class="card-body">
+                        <div class="d-flex align-items-start align-items-sm-center gap-4">
+                            <div id="my-avatar-header"></div>
+                            <div class="button-wrapper">
+                                <label class="btn btn-primary me-2 mb-4" tabindex="0">
+                                    <span class="d-none d-sm-block">Выбрать фото</span>
+                                    <i class="bx bx-upload d-block d-sm-none"></i>
+                                    <input type="file" name="avatar-file" id="avatar-file" class="account-file-input"
+                                           hidden=""
+                                           accept="image/png, image/jpeg, image/webp">
+                                </label>
+                                <p class="text-muted mb-0">JPEG, PNG, WEBP</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <hr class="my-0">
-
-                <div class="card-body">
-                    <form id="update" class="fv-plugins-bootstrap5 fv-plugins-framework" novalidate="novalidate">
+                    <hr class="my-0">
+                    <div class="card-body">
                         <div class="row">
                             <div class="mb-3 col-md-6 fv-plugins-icon-container">
-                                <label for="name" class="form-label">Имя</label>
-                                <input class="form-control" type="text" id="name" name="name" autofocus="">
-                                <div class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback"></div>
+                                <label for="name" class="form-label">Имя *</label>
+                                <input type="text" class="form-control" id="name" name="name"
+                                       placeholder="Иван" autofocus autocomplete="nofill">
+                                <div class="valid-feedback" id="vf-name">У вас красивое имя!</div>
+                                <div class="invalid-feedback" id="if-name"></div>
                             </div>
-
                             <div class="mb-3 col-md-6 fv-plugins-icon-container">
-                                <label for="email" class="form-label">Email</label>
-                                <input class="form-control" type="text" id="email" name="email" value=""
-                                       autofocus="">
-                                <div class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback"></div>
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="text" class="form-control" id="email" name="email"
+                                       placeholder="mail@example.ru">
+                                <div class="valid-feedback" id="vf-email">То, что нужно!</div>
+                                <div class="invalid-feedback" id="if-email"></div>
                             </div>
-
                             <div class="mb-3 col-md-6 fv-plugins-icon-container">
-                                <label for="telegram" class="form-label">Telegram</label>
+                                <label for="telegram" class="form-label">Telegram *</label>
                                 <div class="input-group">
                                     <span class="input-group-text" id="basic-addon12">@</span>
                                     <input type="text" class="form-control" placeholder="telegram" aria-label="telegram"
                                            aria-describedby="basic-addon12" id="telegram" name="telegram"/>
+                                    <div class="valid-feedback" id="vf-telegram">То, что нужно!</div>
+                                    <div class="invalid-feedback" id="if-telegram"></div>
                                 </div>
                             </div>
-
                             <div class="mb-3 col-md-6 fv-plugins-icon-container">
-                                <label for="telnum" class="form-label">Телефон</label>
+                                <label for="telnum" class="form-label">Номер телефона *</label>
                                 <div class="input-group">
-                                    <span class="input-group-text" id="basic-addon11">+7</span>
-                                    <input type="text" class="form-control" placeholder="9100000000" aria-label="telnum"
-                                           aria-describedby="basic-addon11" id="telnum" name="telnum"/>
+                                    <input type="text" class="form-control" placeholder="+79100000000"
+                                           aria-label="telnum"
+                                           aria-describedby="basic-addon11" id="telnum" name="telnum" value="+7"/>
                                 </div>
+                                <div class="valid-feedback" id="vf-telnum">То, что нужно!</div>
+                                <div class="invalid-feedback" id="if-telnum"></div>
                             </div>
                         </div>
                         <div class="mt-2">
-                            <button type="submit" class="btn btn-primary me-2">Сохранить изменения</button>
+                            <button type="submit" class="btn btn-primary me-2" id="sbpd">Сохранить изменения</button>
                         </div>
-
-                    </form>
-                </div>
-                <!-- /Account -->
+                    </div>
+                </form>
             </div>
-
         </div>
     </div>
-
-
 </div>
 {% endblock %}

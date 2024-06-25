@@ -29,6 +29,7 @@ string_storage_max_size = 'Файл слишком большой'
 string_storage_wrong_filetype = 'Неверный формат файла'
 string_storage_empty_filename = 'Имя файла не указано'
 string_storage_saving_error_db = 'Ошибка при информации о файле'
+string_storage_empty_file = 'Пустой файл'
 
 string_user_email_exist = 'Указанный адрес электронной почты уже используется'
 string_user_username_exist = 'Указанный логин уже используется'
@@ -37,6 +38,8 @@ string_user_telegram_exist = 'Указанный тег Telegram уже испо
 string_user_register_error = 'Ошибка сервера при регистрации пользователя. Обновите страницу и повторите попытку'
 string_user_wrong_password = 'Неверный пароль или имя пользователя'
 string_user_inactive_user = 'Учетная запись не активна'
+string_user_wrong_opw = 'Неверный текущий пароль'
+string_user_wrong_npw = 'Новый пароль должен отличаться от старого'
 
 string_product_parsing_error = 'Ошибка при парсинге карточки товара Wildberries'
 string_product_parsing_url_error = 'Невозможно определить артикул товара. Проверьте правильность ссылки'

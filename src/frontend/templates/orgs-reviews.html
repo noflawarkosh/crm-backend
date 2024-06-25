@@ -57,6 +57,7 @@
     const url = window.location.href;
     var arr = url.split('/')
     var org_id = arr[arr.length - 1]
+    var v_modals = ''
 
     $.ajax({
 
@@ -64,7 +65,6 @@
         method: 'get',
 
         success: function (data) {
-            console.log(data)
             $('#dt_user_reviews').DataTable({
                 "data": data,
                 "paging": true,
@@ -82,7 +82,7 @@
                             var avatar_src = "{{ url_for('static', path='assets/img/avatars/def-product.jpg') }}"
 
                             if (row.product.media !== null) {
-                                avatar_src = '/storage/get/' + row.product.media.storage_href
+                                avatar_src = 'https://storage.yandexcloud.net/greedybear/' + row.product.media
                             }
 
                             var wb_url = 'https://www.wildberries.ru/catalog/' + row.product.wb_article + '/detail.aspx'
@@ -140,36 +140,40 @@
                                 var media_list = ''
 
                                 $.each(data, function (i, pic) {
+                                    var ftype = pic.media.split('.')[1].toLowerCase()
 
-                                    if (pic.media.type === 'mov') {
-                                        media_list = media_list + '<a href="##" data-bs-toggle="modal" data-bs-target="#modalToggle-' + data.id + '">' +
+                                    if (ftype === 'mov' || ftype === 'mp4') {
+                                        media_list = media_list + '<a href="##" data-bs-toggle="modal" data-bs-target="#modalToggle-' + pic.id + '">' +
                                             '<div class="avatar-wrapper">' +
                                             '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
                                             '<i class="bx bx-play"></i>' +
-                                            '</div></div></a>' + '<div class="modal fade" id="modalToggle-' + data.id + '" aria-labelledby="modalToggleLabel-' + data.id + '" tabindex="-1" style="display: none;"\n' +
+                                            '</div></div></a>'
+
+                                        v_modals += '<div class="modal fade" id="modalToggle-' + pic.id + '" aria-labelledby="modalToggleLabel-' + pic.id + '" tabindex="-1" style="display: none;"\n' +
                                             '         aria-hidden="true">\n' +
                                             '        <div class="modal-dialog modal-dialog-centered">\n' +
                                             '            <div class="modal-content">\n' +
                                             '                <div class="modal-header">\n' +
-                                            '                    <h5 class="modal-title" id="modalToggleLabel-' + data.id + '">' + 'Видео' + '</h5>\n' +
+                                            '                    <h5 class="modal-title" id="modalToggleLabel-' + pic.id + '">' + 'Видео' + '</h5>\n' +
                                             '                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
                                             '                </div>\n' +
                                             '                <div class="modal-body"><video controls width="100%">\n' +
                                             '  <source src="" />\n' +
                                             '\n' +
-                                            '  <source src="/storage/get/' + pic.media.storage_href + '" class="rounded-2" />\n' +
+                                            '  <source src="https://storage.yandexcloud.net/greedybear/' + pic.media + '" class="rounded-2" />\n' +
 
                                             '</video></div>' +
                                             '\n' +
                                             '            </div>\n' +
                                             '        </div>\n' +
                                             '    </div>'
-
                                     } else {
+
+                                        var mu = 'https://storage.yandexcloud.net/greedybear/' + pic.media.split('.')[0] + '.webp'
                                         media_list = media_list + '' +
                                             '<div class="avatar-wrapper">' +
                                             '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
-                                            '<img src="/storage/get/' + pic.media.storage_href + '" class="rounded-2">' +
+                                            '<a href="'+mu+'" target="_blank"><img src="'+mu+'" class="rounded-2"></a>' +
                                             '</div>\<' +
                                             '/div>'
                                     }
@@ -231,6 +235,7 @@
             document.getElementById('prod-cntr').innerText = 'Всего: ' + data.length
             document.getElementById('rvs-ldr').style.display = 'none';
             document.getElementById('rvs-div').style.display = 'block';
+            document.getElementById('v-modals').innerHTML = v_modals
         },
         error: function () {
 
@@ -289,11 +294,8 @@
             url.searchParams.append('text', txt);
         }
 
-
         url.searchParams.append('product_id', prodid);
 
-
-        submitButton.classList.remove('disabled');
 
         $.ajax({
             url: url,
@@ -304,6 +306,7 @@
 
             success: function (data) {
                 location.reload()
+
             },
 
             error: function (data) {
@@ -409,8 +412,7 @@
             },
 
             error: function (data) {
-                console.log(data)
-                toastr.error('Ошибка получения реквизитов получателей. Обновите страницу и повторите попытку')
+                toastr.error('Ошибка получения товаров: ' + data.responseJSON.detail)
             }
         });
 
@@ -461,7 +463,7 @@
         </div>
     </div>
 </div>
-
+<div id="v-modals"></div>
 <div class="mt-3">
     <div class="offcanvas offcanvas-start" id="off-create-prod">
         <div class="offcanvas-header">

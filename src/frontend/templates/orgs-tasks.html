@@ -46,10 +46,11 @@
     dateInput.value = formattedDate
 
     dateInput.addEventListener('change', function () {
+
         var selectedDate = dateInput.value;
-        console.log(selectedDate)
         dateInput.disabled = true
         drawPlan(selectedDate);
+        document.getElementById('page_ldr').style.display = 'none'
     });
 
     document.getElementById('divider-text').innerText = 'Запланированные выкупы на ' + moment(currentDate).format('DD.MM.YYYY')
@@ -109,16 +110,7 @@
                         },
                         {
                             "render": function (data, type, row) {
-                                var cell = '—'
-                                if (row.size.wb_price !== null) {
-                                    cell = row.size.wb_price / 100
-                                }
-
-                                if (row.wb_price !== null) {
-                                    cell = row.wb_price
-                                }
-
-                                return cell
+                                return getPrice(row)
                             }
                         },
                         {
@@ -152,7 +144,7 @@
                                     title = 'Доставлен на склад'
                                 }
 
-                                if (row.is_canceled === true) {
+                                if (row.is_cancelled === true) {
                                     title = 'Отменен'
                                 }
 
@@ -179,13 +171,8 @@
                         {
                             "render": function (data, type, row) {
                                 var edit = ''
-
-                                if (row.status_id === 2) {
-                                    edit += '<a href="javascript:updateBillStatus(' + row['id'] + ', 1)"><i class="bx bx-check"></i></a>'
-                                }
-
-                                if (row.status_id === 2) {
-                                    edit += '<a href="javascript:updateBillStatus(' + row['id'] + ', 5)"><i class="bx bx-x"></i></a>'
+                                if (row.is_cancelled === false && row.wb_price === null) {
+                                    edit += '<a href="javascript:updateBillStatus(' + row.id+ ', 5)"><i class="bx bx-x"></i></a>'
                                 }
                                 return edit
                             }
@@ -193,32 +180,72 @@
                     ],
                     "order": [[0, "desc"]],
                 });
+
+                document.getElementById('add-plan-btn').classList.remove('disabled')
+
+                if (data.length !== 0) {
+                    document.getElementById('pay-plan-btn').classList.remove('disabled')
+                    document.getElementById('pay-plan-btn').innerText = '$ Оплатить задачи на ' + moment(currentDate).format('DD.MM.YYYY')
+                }
+
             },
 
             error: function () {
-                toastr.error('Ошибка загрузки счетов')
+                toastr.error('Ошибка загрузки плана')
 
             }
 
         });
     });
 
+    function getPrice(item) {
+
+        if (item.size.wb_in_stock == null) {
+            return 'Не в наличии'
+        }
+
+        if (item.wb_price !== null) {
+            return item.wb_price
+        }
+
+        if (item.size.wb_price !== null) {
+            return item.size.wb_price / 100
+        }
+    }
+
     function drawPlan(selectedDate) {
         $(document).ready(function () {
             $.ajax({
+
                 url: '/orders/getPlan?org_id=' + id + '&date=' + selectedDate,
                 method: 'get',
+
                 success: function (data) {
+                    document.getElementById('add-plan-btn').classList.add('disabled')
+                    document.getElementById('pay-plan-btn').classList.add('disabled')
+                    document.getElementById('pay-plan-btn').innerText = '$ Оплатить'
+                    document.getElementById('page_ldr').style.display = 'block'
+
                     var table = $('#dt_plan').DataTable();
                     table.clear()
                     table.draw()
                     table.rows.add(data).draw();
+
                     document.getElementById('divider-text').innerText = 'Запланированные выкупы на ' + moment(selectedDate).format('DD.MM.YYYY')
                     dateInput.disabled = false
+                    document.getElementById('page_ldr').style.display = 'none'
+                    document.getElementById('add-plan-btn').classList.remove('disabled')
+
+                    if (data.length !== 0) {
+                        document.getElementById('pay-plan-btn').classList.remove('disabled')
+                        document.getElementById('pay-plan-btn').innerText = '$ Оплатить задачи на ' + moment(selectedDate).format('DD.MM.YYYY')
+                    }
                 },
+
                 error: function () {
                     toastr.error('Ошибка загрузки плана. Обновите страницу и повторите попытку')
                     dateInput.disabled = false
+                    document.getElementById('page_ldr').style.display = 'none'
 
                 }
 
@@ -436,10 +463,12 @@
 
                     <div class="row mt-3">
                         <div class="col">
-                            <a href="javascript:addPlan()" class="btn btn-primary" id="add-plan-btn">Добавить</a>
+                            <a href="javascript:addPlan()" class="btn btn-primary disabled"
+                               id="add-plan-btn">Добавить</a>
+                            <a href="javascript:addPlan()" class="btn btn-label-success disabled" id="pay-plan-btn">$
+                                Оплатить</a>
                         </div>
                     </div>
-
                 </div>
 
 

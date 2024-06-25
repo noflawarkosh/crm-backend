@@ -5,7 +5,7 @@ from sqlalchemy import func, inspect
 
 from admin.models import AdminSessionModel, AdminUserModel, PickerSettingsModel, CrmSettingsModel
 from admin.schemas import AdminSessionCreateSchema
-from admin.utils import set_type
+from admin.utils import set_type, verify_file, generate_filename, s3_save
 from auth.models import UserModel, UserSessionModel
 
 from auth.utils import hash_password, generate_token
@@ -15,7 +15,6 @@ from orders.models import OrdersAddressModel, OrdersOrderModel, OrdersContractor
 from orgs.models import OrganizationModel
 from payments.models import BalanceBillModel, BalanceSourceModel, BalancePricesModel, BalanceHistoryModel
 from products.models import ProductModel, ReviewModel, ProductSizeModel
-from storage.models import StorageModel
 from strings import *
 
 router = APIRouter(
@@ -43,7 +42,6 @@ tables_access = {
     'contractors': (OrdersContractorModel, 8, {}),
     'banks': (BalanceSourceModel, 1024, {}),
     'prices': (BalancePricesModel, 512, {}),
-    'storage': (StorageModel, 524288, {}),
     'schedules': (OrdersServerScheduleModel, 524288, {}),
     'servercontractors': (OrdersServerContractorModel, 8, {}),
     'pickersettings': (PickerSettingsModel, 2, {}),
@@ -65,7 +63,6 @@ tables_access = {
                 BalanceBillModel.organization,
                 BalanceBillModel.source,
                 BalanceBillModel.status,
-                BalanceBillModel.media
             ]
         }
     ),
@@ -277,3 +274,29 @@ async def test(request: Request, session: AdminSessionModel = Depends(authed)):
     result = await refresh_orders_and_accounts(data, servers)
 
     return str(result)
+
+
+@router.post('/uploadBillMedia')
+async def test(bill_id: int, file: UploadFile = File(), session: AdminSessionModel = Depends(authed)):
+    try:
+        await verify_file(file, ['image', 'other'])
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")
+
+    bills = await DefaultRepository.get_records(BalanceBillModel, filters=[BalanceBillModel.id == bill_id])
+
+    if len(bills) != 1:
+        raise HTTPException(status_code=404, detail=string_404)
+    bill = bills[0]
+
+    content = await file.read()
+    n, t = await s3_save(content, generate_filename(), file.filename.rsplit('.', maxsplit=1)[1])
+
+    record = {'id': bill.id, 'media': f'{n}.{t}'}
+
+    if bill.status_id == 6:
+        record['status_id'] = 3
+
+    await DefaultRepository.save_records([
+        {'model': BalanceBillModel, 'records': [record]}
+    ])

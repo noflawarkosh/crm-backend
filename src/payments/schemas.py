@@ -3,7 +3,7 @@ from typing import Optional
 from pydantic import BaseModel, constr
 
 from orgs.schemas import OrganizationReadSchema
-from storage.schemas import StorageGETSchema
+
 
 
 # Balance Action
@@ -50,11 +50,11 @@ class BalanceBillCreateSchema(BaseModel):
 class BalanceBillReadSchema(BalanceBillCreateSchema):
     id: int
     status_id: int
-    media_id: int | None
     date: datetime.datetime
+    media: Optional[str] = None
 
     organization: Optional['OrganizationReadSchema']
     source: Optional['BalanceSourceSchema']
     status: Optional['BalanceBillStatusSchema']
-    media: Optional['StorageGETSchema']
+
 

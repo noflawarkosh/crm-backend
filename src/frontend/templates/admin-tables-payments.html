@@ -8,7 +8,56 @@
 <script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script>
 
+    function set_watchers(data) {
+        for (var i in data) {
+            (function (id) {
+                document.getElementById('attachment_' + id).addEventListener('change', function (event) {
+                    const file = event.target.files[0];
+
+                    if (file) {
+                        var d = document.getElementById('div_attachment_' + id)
+                        var l = document.getElementById('att_ldr_' + id)
+                        d.style.display = 'none'
+                        l.style.display = 'block'
+
+                        var formData = new FormData();
+                        formData.append('file', event.target.files[0])
+
+                        $.ajax({
+
+                            url: '/admin/uploadBillMedia?bill_id=' + id,
+                            type: 'POST',
+                            data: formData,
+                            contentType: false,
+                            processData: false,
+
+                            success: function () {
+                                toastr.success('Вложение добавлено');
+                                d.style.display = 'block'
+                                l.style.display = 'none'
+
+                                dt_refresh('dt_payments', '/admin/get/bills_full', function (newdata) {
+                                    set_watchers(newdata)
+                                });
+
+                            },
+
+                            error: function (data) {
+                                toastr.error(data.responseJSON.detail);
+                                d.style.display = 'block'
+                                l.style.display = 'none'
+                            }
+                        })
+                    }
+                });
+            })(data[i].id);
+
+        }
+    }
+
+
     var d_bills = []
+    var file_inputs = []
 
     function updateBillStatus(id, status_id) {
 
@@ -16,7 +65,7 @@
 
         var msgs = {
             1: 'Подтвердите получение средств на ' + c_bill.source.bank + ' (' + c_bill.source.number + ' / ' + c_bill.source.recipient + ') и пополнение счета ' + c_bill.organization.title + ' на сумму ' + c_bill.amount + ' рублей',
-            5: 'Подтвердите отказ в получении средств на ' + c_bill.source.title + ' (' + c_bill.source.number + ') и отказ ' + c_bill.organization.title + ' в пополнении счета на сумму ' + c_bill.amount + ' рублей',
+            5: 'Подтвердите отказ в получении средств на ' + c_bill.source.bank + ' (' + c_bill.source.number + ') и отказ ' + c_bill.organization.title + ' в пополнении счета на сумму ' + c_bill.amount + ' рублей',
         }
 
         if (!confirm(msgs[status_id])) {
@@ -50,7 +99,9 @@
                         success: function () {
 
                             toastr.info('Счет ' + c_bill.organization.title + ' успешно пополнен на сумму ' + c_bill.amount + ' рублей',)
-                            dt_refresh('dt_payments', '/admin/get/bills_full')
+                            dt_refresh('dt_payments', '/admin/get/bills_full', function (newdata) {
+                                set_watchers(newdata)
+                            });
 
                         },
                         error: function () {
@@ -78,6 +129,7 @@
         url: '/admin/get/bills_full',
         dataType: "json",
         success: function (data) {
+
             $('#dt_payments').DataTable({
                 data: data,
                 "paging": true,
@@ -104,7 +156,7 @@
                     {
                         data: 'amount',
                         "render": function (data, type, row) {
-                            return data + ' ₽'
+                            return '<span class="text-nowrap">' + data + ' ₽' + '</span>'
                         }
                     },
                     {
@@ -123,6 +175,7 @@
                                 3: 'info',
                                 4: 'danger',
                                 5: 'danger',
+                                6: 'primary'
                             }
 
                             return '<span class="badge bg-label-' + statuses[data.id] + '">' + data.title + '</span>'
@@ -133,7 +186,7 @@
                         "render": function (data, type, row) {
                             var cell = '—'
                             if (data !== null) {
-                                cell = '<a target="_blank" href="/storage/get/' + data.storage_href + '">' + data.title + '</a>'
+                                cell = '<a target="_blank" href="https://storage.yandexcloud.net/greedybear/' + data + '">Скачать</a>'
                             }
                             return cell
                         }
@@ -142,20 +195,30 @@
                         "render": function (data, type, row) {
                             var edit = ''
 
+                            edit += '' +
+                                '<a href="##" id="div_attachment_' + row.id + '"><label class="bx bxs-file-plus">' +
+                                '<input type="file" id="attachment_' + row.id + '" class="account-file-input" hidden="">' +
+                                '</label></a>' +
+                                '<span class="spinner-border spinner-border-sm text-primary" role="status" id="att_ldr_' + row.id + '"\n' +
+                                '                              style="display: none;"></span>'
+
+
                             if (row.status_id === 2) {
                                 edit += '<a href="javascript:updateBillStatus(' + row['id'] + ', 1)"><i class="bx bx-check"></i></a>'
                             }
 
-                            if (row.status_id === 2) {
+                            if (row.status_id === 2 || row.status_id === 3) {
                                 edit += '<a href="javascript:updateBillStatus(' + row['id'] + ', 5)"><i class="bx bx-x"></i></a>'
                             }
                             return edit
                         }
                     }
                 ],
-
                 "order": [[0, "desc"]]
             });
+
+            set_watchers(data)
+
         },
         error: function () {
             toastr.error('Ошибка получения счетов')
@@ -200,8 +263,10 @@
 
                 <div class="card-header">
                     <h5 class="card-title mb-0">Платежи
-                        <a href="javascript:dt_refresh('dt_payments', '/admin/get/bills_full')"><i class="bx bx-refresh"></i></a>
+                        <a href="javascript:dt_refresh('dt_payments', '/admin/get/bills_full')"><i
+                                class="bx bx-refresh"></i></a>
                     </h5>
+
                     <small class="card-subtitle" id="prod-cntr"></small>
                 </div>
 

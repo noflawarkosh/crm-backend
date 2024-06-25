@@ -18,9 +18,9 @@
         'r2': ['R2', 'Максимум дней для расчёта'],
         'r3': ['R3', 'Максимум дней для расчёта'],
         'r4': ['R4', 'Будет завтра на адресе ограничение'],
-        'lo': ['LO', 'Макс кол-во дней с последнего заказа на аккаунте'],
+        'lo': ['LO', 'Макс дней с последнего заказа на аккаунте'],
         'al': ['AL', 'Время жизни аккаунта в днях'],
-        'k_format': ['KF', 'Заказано на пвз'],
+        'k_format': ['KF', 'Формат даты в листе'],
     }
 
     $.ajax({
@@ -89,7 +89,7 @@
             contentType: false,
             processData: false,
             success: function (data) {
-                console.log(data)
+
                 toastr.success('Сохранено')
 
             },
@@ -107,17 +107,24 @@
 <div class="container-xxl flex-grow-1 container-p-y">
 
     <div class="row">
-
-        <div class="col">
+        <div class="col-xl-6">
             <div class="card">
-
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Конфигурация
-                        <a href="/admin-edit/pickersettings/1"><i class="bx bx-edit"></i></a>
+                    <h5 class="card-title mb-0">Конфигурация подбора
+                        <a href="/admin-edit/pickersettings/1"><i class="bx bx-edit-alt"></i></a>
                     </h5>
                 </div>
-                <div class="card-body">
-                    <table class="table" id="config-table" style="display: none;"></table>
+                <div class="card-body table-responsive">
+                    <table class="table text-nowrap" id="config-table" style="display: none;"></table>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Идентификация заказов
+                        <a href="/admin-edit/pickersettings/1"><i class="bx bx-edit-alt"></i></a>
+                    </h5>
                 </div>
             </div>
         </div>
@@ -147,8 +154,7 @@
                             </tbody>
                         </table>
                         <div class="mt-3">
-                            <label for="bad_accounts" class="form-label">Реестровые минус
-                                аккаунты</label>
+                            <label for="bad_accounts" class="form-label">Реестровые минус аккаунты</label>
                             <textarea class="form-control" id="bad_accounts" rows="3"></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary mt-4 disabled">Скоро</button>

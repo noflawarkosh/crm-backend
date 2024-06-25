@@ -20,15 +20,8 @@ class UserModel(Base):
     telnum: Mapped[str]
     telegram: Mapped[str]
     password: Mapped[str]
-
-    # FK
-    media_id: Mapped[int | None] = mapped_column(
-        ForeignKey('storage.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
     status: Mapped[int]
-
-    # Relationships
-    media: Mapped['StorageModel'] = relationship(primaryjoin='UserModel.media_id == StorageModel.id', lazy='noload')
+    media: Mapped[str | None]
 
 
 # Session

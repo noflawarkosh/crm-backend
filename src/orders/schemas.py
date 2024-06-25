@@ -16,9 +16,11 @@ class OrdersOrderReadModel(OrdersOrderCreateModel):
     id: int
     wb_price: Optional[int]
     description: Optional[str]
+    status: int
     dt_ordered: Optional[datetime.datetime]
     dt_delivered: Optional[datetime.datetime]
     dt_collected: Optional[datetime.datetime]
 
     product: 'ProductReadSchema'
     size: 'ProductSizeReadSchema'
+4

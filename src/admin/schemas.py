@@ -3,6 +3,13 @@ from typing import Optional
 from pydantic import BaseModel, constr
 
 
+class FileSchema(BaseModel):
+    filename: str
+    size: int
+    content: bytes
+    href: str
+
+
 class AdminReadSchema(BaseModel):
     id: int
     name: str

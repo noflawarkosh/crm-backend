@@ -1,3 +1,4 @@
+import boto3
 from sqlalchemy import update, select, delete
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, selectinload, joinedload
@@ -7,6 +8,12 @@ DATABASE_URL = f'postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{D
 
 async_engine = create_async_engine(url=DATABASE_URL)
 async_session_factory = async_sessionmaker(async_engine)
+
+storage = boto3.session.Session()
+s3 = storage.client(
+    service_name='s3',
+    endpoint_url='https://storage.yandexcloud.net'
+)
 
 
 class Base(DeclarativeBase):
@@ -40,11 +47,15 @@ class DefaultRepository:
 
     @classmethod
     async def get_records(cls, model, filters=None, joins=None, select_related=None, prefetch_related=None,
-                          order_by=None, limit=None, offset=None):
+                          order_by=None, limit=None, offset=None, selects=None):
 
         try:
             async with async_session_factory() as session:
-                query = select(model)
+
+                if selects:
+                    query = select(model, *selects)
+                else:
+                    query = select(model)
 
                 if filters:
                     for condition in filters:

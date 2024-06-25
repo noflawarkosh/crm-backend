@@ -3,7 +3,7 @@ from sqlalchemy import text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import datetime
 
-from storage.models import Base, StorageModel
+from orgs.models import Base
 
 pk = Annotated[int, mapped_column(primary_key=True)]
 dt = Annotated[datetime.datetime, mapped_column(server_default=text('NOW()'))]
@@ -71,6 +71,7 @@ class BalanceBillModel(Base):
     id: Mapped[pk]
     date: Mapped[dt]
     amount: Mapped[int]
+    media: Mapped[str | None]
 
     # FK
     org_id: Mapped[int] = mapped_column(
@@ -82,15 +83,11 @@ class BalanceBillModel(Base):
     status_id: Mapped[int] = mapped_column(
         ForeignKey('balance_bill_status.id', ondelete='CASCADE', onupdate='CASCADE')
     )
-    media_id: Mapped[int | None] = mapped_column(
-        ForeignKey('storage.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
 
     # Relationships
     organization: Mapped['OrganizationModel'] = relationship(lazy='noload')
     source: Mapped['BalanceSourceModel'] = relationship(lazy='noload')
     status: Mapped['BalanceBillStatusModel'] = relationship(lazy='noload')
-    media: Mapped['StorageModel'] = relationship(lazy='noload')
 
 
 class BalanceSourceModel(Base):

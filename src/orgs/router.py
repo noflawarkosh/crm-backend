@@ -57,7 +57,7 @@ async def check_access(org_id: int, user_id: int, level: int):
 async def create_organization(data: Annotated[OrganizationCreateSchema, Depends()],
                               session: UserSessionModel = Depends(authed)):
     await DefaultRepository.save_records(
-        [{'model': OrganizationModel, 'records': [{**data.model_dump(), 'owner_id': session.user.id, 'status': 1}]}]
+        [{'model': OrganizationModel, 'records': [{**data.model_dump(), 'owner_id': session.user.id, 'status': 1, 'level_id': None}]}]
     )
 
 

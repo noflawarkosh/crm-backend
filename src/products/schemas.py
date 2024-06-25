@@ -1,7 +1,6 @@
 import datetime
 from typing import Optional
 from pydantic import BaseModel, constr
-from storage.schemas import StorageGETSchema
 
 
 # Product Size schemas
@@ -11,6 +10,7 @@ class ProductSizeCreateSchema(BaseModel):
     wb_size_optionId: int
     wb_in_stock: bool
     wb_price: int | None
+    barcode: str | None
 
 
 class ProductSizeReadSchema(ProductSizeCreateSchema):
@@ -20,28 +20,24 @@ class ProductSizeReadSchema(ProductSizeCreateSchema):
 # Product schemas
 class ProductPOSTSchema(BaseModel):
     org_id: int
-    barcode: str
     wb_url: str
 
 
 class ProductCreateSchema(BaseModel):
     org_id: int
-    barcode: str
     wb_article: str
     wb_title: str
 
 
 class ProductReadSchema(BaseModel):
     id: int
-    barcode: str
     date: datetime.datetime
-    is_active: bool
+    status: int
     wb_article: str
     wb_title: str
     org_id: int
-    media_id: int | None
+    media: Optional[str] = None
 
-    media: Optional[StorageGETSchema]
     sizes: Optional[list[ProductSizeReadSchema]]
 
 
@@ -49,9 +45,7 @@ class ProductReadSchema(BaseModel):
 class ReviewMediaReadSchema(BaseModel):
     id: int
     review_id: int
-    media_id: int
-
-    media: StorageGETSchema
+    media: str | None
 
 
 class ReviewCreateSchema(BaseModel):
@@ -67,7 +61,7 @@ class ReviewReadSchema(ReviewCreateSchema):
     match: int | None
     status: int
 
-    media: Optional[list[ReviewMediaReadSchema]]
+    media: Optional[list[ReviewMediaReadSchema]] = None
     product: Optional[ProductReadSchema]
     size: Optional[ProductSizeReadSchema]
 

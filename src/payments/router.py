@@ -2,6 +2,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from database import DefaultRepository
+from payments.repository import PaymentsRepository
 from strings import *
 from auth.router import authed
 from orgs.router import check_access
@@ -28,9 +29,13 @@ router = APIRouter(
 async def create_organization(data: Annotated[BalanceBillCreateSchema, Depends()],
                               session: UserSessionModel = Depends(authed)):
     await check_access(data.org_id, session.user.id, 0)
-    await DefaultRepository.save_records(
-        [{'model': BalanceBillModel, 'records': [{**data.model_dump(), 'status_id': 3}]}]
-    )
+
+    status_id = 3
+    if data.source_id == 1:
+        status_id = 6
+
+    bill_id = await PaymentsRepository.create_bill({**data.model_dump(), 'status_id': status_id})
+    return bill_id
 
 
 @router.get('/getBill')
@@ -43,7 +48,6 @@ async def create_organization(bill_id: int,
         prefetch_related=[
             BalanceBillModel.source,
             BalanceBillModel.status,
-            BalanceBillModel.media,
             BalanceBillModel.organization
         ]
     )
@@ -67,7 +71,6 @@ async def create_organization(org_id: int,
         prefetch_related=[
             BalanceBillModel.source,
             BalanceBillModel.status,
-            BalanceBillModel.media
         ]
     )
     return [BalanceBillReadSchema.model_validate(record, from_attributes=True) for record in bills]

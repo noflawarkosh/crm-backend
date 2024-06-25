@@ -396,8 +396,8 @@
                 },
                 {
                     'title': 'Хранилище',
-                    'href': '/admin-tables/storage',
-                    'icon': 'bx bx-server',
+                    'href': 'https://console.yandex.cloud/folders/b1g9dkaq87etb8tm9bhj/storage/buckets/greedybear',
+                    'icon': 'bx bx-hdd',
                     'level': 32768,
                 },
                 {
@@ -597,7 +597,7 @@
             var amount = 0
 
             for (var i = 0; i < data.length; i++) {
-                if (data[i].status_id === 2) {
+                if (data[i].status_id === 2 || data[i].status_id === 6) {
                     amount += 1
                 }
             }
@@ -613,7 +613,7 @@
 
 <!-- refresh datatable -->
 <script>
-    function dt_refresh(table_id, url) {
+    function dt_refresh(table_id, url, callback) {
         var table = $('#' + table_id).DataTable()
         document.getElementById('admin_ldr').style.display = 'block'
 
@@ -626,12 +626,16 @@
                 table.draw()
                 table.rows.add(data).draw();
                 document.getElementById('admin_ldr').style.display = 'none'
+                if (typeof callback === 'function') {
+                    callback(data)
+                }
             },
             error: function () {
                 toastr.error('Ошибка обновления данных. Обновите страницу')
 
             }
         })
+
     }
 </script>
 

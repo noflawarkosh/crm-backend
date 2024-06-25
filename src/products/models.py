@@ -13,23 +13,19 @@ class ProductModel(Base):
     __tablename__ = 'products_product'
 
     id: Mapped[pk]
-    barcode: Mapped[str]
     date: Mapped[dt]
-    is_active: Mapped[bool] = mapped_column(default=True)
+    status: Mapped[int]
     wb_article: Mapped[str]
     wb_title: Mapped[str]
     last_update: Mapped[dt]
+    media: Mapped[str | None]
 
     # FK
     org_id: Mapped[int] = mapped_column(
         ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE')
     )
-    media_id: Mapped[int | None] = mapped_column(
-        ForeignKey('storage.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
 
     # Relationships
-    media: Mapped['StorageModel'] = relationship(lazy='noload')
     sizes: Mapped[list['ProductSizeModel']] = relationship(lazy='noload')
 
 
@@ -42,11 +38,14 @@ class ProductSizeModel(Base):
     wb_size_optionId: Mapped[int]
     wb_in_stock: Mapped[bool]
     wb_price: Mapped[int | None]
+    barcode: Mapped[str | None]
 
     # FK
     product_id: Mapped[int] = mapped_column(
         ForeignKey('products_product.id', ondelete='CASCADE', onupdate='CASCADE')
     )
+
+    product: Mapped['ProductModel'] = relationship(lazy='noload')
 
 
 class ReviewModel(Base):
@@ -75,14 +74,10 @@ class ReviewMediaModel(Base):
     __tablename__ = 'products_review_media'
 
     id: Mapped[pk]
+    media: Mapped[str | None]
 
     # FK
     review_id: Mapped[int] = mapped_column(
         ForeignKey('products_review.id', ondelete='CASCADE', onupdate='CASCADE')
     )
-    media_id: Mapped[int] = mapped_column(
-        ForeignKey('storage.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
 
-    # Relationships
-    media: Mapped['StorageModel'] = relationship(lazy=False)

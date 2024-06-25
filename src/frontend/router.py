@@ -95,7 +95,6 @@ async def page(section: str,
     if action == 'create':
         return templates.TemplateResponse(f'admin-record-create.html', {'request': request})
 
-
     return RedirectResponse('/404')
 
 
@@ -189,7 +188,7 @@ async def page(request: Request,
 async def page(request: Request,
                bill_id: int,
                session: UserSessionModel = Depends(every)):
-    if not session.user:
+    if not session:
         return RedirectResponse('/login')
 
     bills = await DefaultRepository.get_records(
@@ -224,7 +223,7 @@ async def page(request: Request,
 @router.get('/profile')
 async def page(request: Request,
                session: UserSessionModel = Depends(every)):
-    if not session.user:
+    if not session:
         return RedirectResponse('/login')
 
     return templates.TemplateResponse('user-profile.html', {'request': request})
@@ -233,17 +232,26 @@ async def page(request: Request,
 @router.get('/settings')
 async def page(request: Request,
                session: UserSessionModel = Depends(every)):
-    if not session.user:
+    if not session:
         return RedirectResponse('/login')
 
     return templates.TemplateResponse('user-settings-general.html', {'request': request})
+
+
+@router.get('/security')
+async def page(request: Request,
+               session: UserSessionModel = Depends(every)):
+    if not session:
+        return RedirectResponse('/login')
+
+    return templates.TemplateResponse('user-settings-security.html', {'request': request})
 
 
 # UTILITY PAGES
 @router.get('/403')
 async def page(request: Request,
                session: UserSessionModel = Depends(every)):
-    if not session.user:
+    if not session:
         return RedirectResponse('/login')
 
     return templates.TemplateResponse('misc-403.html', {'request': request})
@@ -252,7 +260,7 @@ async def page(request: Request,
 @router.get('/404')
 async def page(request: Request,
                session: UserSessionModel = Depends(every)):
-    if not session.user:
+    if not session:
         return RedirectResponse('/login')
 
     return templates.TemplateResponse('misc-404.html', {'request': request})

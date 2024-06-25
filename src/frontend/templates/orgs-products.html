@@ -74,6 +74,33 @@
         }
     }
 
+    function saveBarcode(id) {
+
+        document.getElementById('page_ldr').style.display = 'block'
+        var code = document.getElementById('bc_inp_' + id)
+
+        if (code.value === '' || code.value.length < 1) {
+            document.getElementById('page_ldr').style.display = 'none'
+            toastr.error('Штрих-код не указан')
+            return
+        }
+
+        $.ajax({
+            url: '/products/barcode?size_id=' + id + '&barcode=' + code.value,
+            method: 'post',
+
+            success: function () {
+                document.getElementById('bc_div_' + id).innerText = code.value
+                dt_refresh('dt_user_products', '/products/getOwned?org_id=' + org_id)
+                toastr.success('Штрих-код сохранен')
+            },
+            error: function (data) {
+                document.getElementById('page_ldr').style.display = 'none'
+                toastr.error('Ошибка сохранения штрих-кода: ' + data.responseJSON.detail)
+            }
+        })
+
+    }
 
     $(document).ready(function () {
 
@@ -107,7 +134,7 @@
                                 var avatar_src = "{{ url_for('static', path='assets/img/avatars/def-avatar.jpg') }}"
 
                                 if (row.media !== null) {
-                                    avatar_src = '/storage/get/' + row.media.storage_href
+                                    avatar_src = 'https://storage.yandexcloud.net/greedybear/' + row.media
                                 }
 
                                 var wb_url = 'https://www.wildberries.ru/catalog/' + row.wb_article + '/detail.aspx'
@@ -127,84 +154,108 @@
                             }
                         },
                         {
-                            data: 'barcode'
-                        },
-                        {
                             render: function (data, type, row) {
                                 var price = ''
 
-                                if (row.sizes.length === 1) {
-                                    if (row.sizes[0].wb_size_name == null) {
 
-                                        if (row.sizes[0].wb_in_stock === false) {
-                                            price = 'Нет в наличии'
+                                var trs = ''
 
-                                        } else {
-                                            price = row.sizes[0].wb_price / 100 + ' руб.'
-                                        }
+                                $.each(row.sizes, function (i, size) {
+                                    var p = '—'
+                                    var bdc = 'success'
+                                    var bdt = 'Да'
 
+                                    if (size.wb_in_stock === false) {
+                                        p = '—'
+                                        bdc = 'danger'
+                                        bdt = 'Нет'
+
+                                    } else {
+                                        p = size.wb_price / 100
                                     }
 
-                                } else {
-                                    var trs = ''
+                                    if (size.barcode === null) {
+                                        var barcode = '' +
+                                            '<div class="input-group input-group-sm" id="bc_div_' + size.id + '">\n' +
+                                            '          <input id="bc_inp_' + size.id + '" class="form-control form-control-sm" type="number" placeholder="Не указан">\n' +
+                                            '          <span class="input-group-text"><a href="javascript:saveBarcode(' + size.id + ')" id="bc_btn_' + size.id + '"><i class="bx bx-save"></i></a></span>\n' +
+                                            '        </div>'
 
-                                    $.each(row.sizes, function (i, size) {
-                                        var p = null
 
-                                        var bdc = 'success'
-                                        var bdt = 'В наличии'
+                                    } else {
+                                        barcode = size.barcode
+                                    }
 
-                                        if (size.wb_in_stock === false) {
-                                            p = '—'
-                                            bdc = 'danger'
-                                            bdt = 'Не в наличии'
+                                    var s_n = null
 
+                                    if (size.wb_size_origName !== null) {
+                                        s_n = size.wb_size_origName
+                                    }
+
+                                    if (size.wb_size_name !== null) {
+                                        if (s_n !== null) {
+                                            s_n += ' (' + size.wb_size_name + ')'
                                         } else {
-                                            p = size.wb_price / 100 + ' руб.'
+                                            s_n = size.wb_size_name
                                         }
-
-                                        trs = trs + '                        <tr>\n' +
-                                            '                            <td>' + size.wb_size_origName + ' (' + size.wb_size_name + ')</td>\n' +
-                                            '                            <td>' + p + '</td>\n' +
-                                            '                            <td><span class="badge bg-label-' + bdc + '">' + bdt + '</span></td>\n' +
-                                            '                        </tr>\n'
-
-                                    })
+                                    }
 
 
-                                    modal += '<div class="modal fade" id="modalToggle-' + row.id + '" aria-labelledby="modalToggleLabel-' + row.id + '" tabindex="-1" style="display: none;"\n' +
-                                        '         aria-hidden="true">\n' +
-                                        '        <div class="modal-dialog modal-dialog-centered">\n' +
-                                        '            <div class="modal-content">\n' +
-                                        '                <div class="modal-header">\n' +
-                                        '                    <h5 class="modal-title" id="modalToggleLabel-' + row.id + '">' + row.wb_article + '</h5>\n' +
-                                        '                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
-                                        '                </div>\n' +
-                                        '                <div class="modal-body">\n' +
-                                        '                  <div class="table-responsive text-nowrap" >' +
-                                        '                    <table class="table text-nowrap">\n' +
-                                        '                        <thead>\n' +
-                                        '                        <tr>\n' +
-                                        '                            <th>Размер</th>\n' +
-                                        '                            <th>Стоимость</th>\n' +
-                                        '                            <th>Наличие</th>\n' +
-                                        '                        </tr>\n' +
-                                        '                        </thead>\n' +
-                                        '                        <tbody class="table-border-bottom-0">\n' + trs +
-                                        '                        </tbody>\n' +
-                                        '                    </table>\n' +
-                                        '                </div>\n</div>' +
-                                        '            </div>\n' +
-                                        '        </div>\n' +
-                                        '    </div>'
+                                    trs = trs + '                        <tr>\n' +
+                                        '                            <td>' + (s_n ? s_n : '—') + '</td>\n' +
+                                        '                            <td>' + p + '</td>\n' +
+                                        '                            <td>' + barcode + '</td>\n' +
+                                        '                            <td><span class="badge bg-label-' + bdc + '">' + bdt + '</span></td>\n' +
+                                        '                        </tr>\n'
 
-                                    price = '<div><a href="##" data-bs-toggle="modal" data-bs-target="#modalToggle-' + row.id + '">Размеров: ' + row.sizes.length + '</a></div>'
+                                })
+
+                                modal += '<div class="modal fade" id="modalToggle-' + row.id + '" aria-labelledby="modalToggleLabel-' + row.id + '" tabindex="-1" style="display: none;"\n' +
+                                    '         aria-hidden="true">\n' +
+                                    '        <div class="modal-dialog modal-dialog-centered modal-xl">\n' +
+                                    '            <div class="modal-content">\n' +
+                                    '                <div class="modal-header">\n' +
+                                    '                    <h5 class="modal-title" id="modalToggleLabel-' + row.id + '">' + row.wb_article + ': ' + row.wb_title + '</h5>\n' +
+                                    '                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
+                                    '                </div>\n' +
+                                    '                <div class="modal-body">\n' +
+                                    '                  <div class="table-responsive text-nowrap" >' +
+                                    '                    <table class="table text-nowrap">\n' +
+                                    '                        <thead>\n' +
+                                    '                        <tr>\n' +
+                                    '                            <th>Размер</th>\n' +
+                                    '                            <th>Стоимость</th>\n' +
+                                    '                            <th>Штрих-код</th>\n' +
+                                    '                            <th>Наличие</th>\n' +
+                                    '                        </tr>\n' +
+                                    '                        </thead>\n' +
+                                    '                        <tbody class="table-border-bottom-0">\n' + trs +
+                                    '                        </tbody>\n' +
+                                    '                    </table>\n' +
+                                    '        </div>\n</div>' +
+                                    '            </div>\n' +
+                                    '        </div>\n' +
+                                    '    </div>'
+
+                                price = '<div><a href="##" data-bs-toggle="modal" data-bs-target="#modalToggle-' + row.id + '">Размеров: ' + row.sizes.length + '</a></div>'
+
+                                return '<span class="text-nowrap">' + price + '</span>'
+
+                            }
+                        },
+                        {
+                            render: function (data, type, row) {
+                                if (row.status === 1) {
+                                    return '<span class="badge bg-label-danger">Штрих-коды не указаны</span>'
                                 }
 
-                                return price
+                                if (row.status === 2) {
+                                    return '<span class="badge bg-label-success">Активен</span>'
+                                }
 
-
-                                return '<b>' + row.level + '</b>'
+                                if (row.status === 3) {
+                                    return '<span class="badge bg-label-error">Удален</span>'
+                                }
                             }
                         },
                         {
@@ -252,16 +303,9 @@
         submitButton.disabled = true
 
         const wb_url = document.getElementById('wb_url');
-        const barcode = document.getElementById('barcode');
 
         if (wb_url.value.length === 0) {
-            toastr.error('Введите ссылку')
-            submitButton.disabled = false
-            return
-        }
-
-        if (barcode.value.length === 0) {
-            toastr.error('Введите штрих-код')
+            toastr.error('Введите ссылку на товар')
             submitButton.disabled = false
             return
         }
@@ -275,7 +319,6 @@
         const url = new URL('/products/create', currentDomain);
         url.searchParams.append('org_id', org_id);
         url.searchParams.append('wb_url', wb_url.value);
-        url.searchParams.append('barcode', barcode.value);
         submitButton.classList.remove('disabled');
 
         $.ajax({
@@ -309,7 +352,8 @@
                            aria-controls="off-create-prod">
                             <i class="bx bxs-plus-square"></i>
                         </a>
-                        <a href="javascript:var u = '/products/getOwned?org_id=' + org_id; dt_refresh('dt_user_products', u)" id="rb">
+                        <a href="javascript:var u = '/products/getOwned?org_id=' + org_id; dt_refresh('dt_user_products', u)"
+                           id="rb">
                             <i class="bx bx-refresh"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="prd-ldr"></span>
@@ -322,9 +366,9 @@
                         <tr>
                             <th>#ID</th>
                             <th>Товар</th>
-                            <th>Баркод</th>
-                            <th>Стоимость</th>
-                            <th>Обновление</th>
+                            <th>О товаре</th>
+                            <th>Статус</th>
+                            <th>Обновление WB</th>
                             <th>Действия</th>
                         </tr>
                         </thead>
@@ -354,13 +398,6 @@
                         <input class="form-control" type="text"
                                placeholder="wildberries.ru/catalog/000000000/detail.aspx?size=000000000"
                                id="wb_url">
-                    </div>
-                </div>
-
-                <div class="mb-4 row">
-                    <label for="barcode" class="form-label">Barcode (штрих-код) товара</label>
-                    <div class="col">
-                        <input class="form-control" type="text" placeholder="0000000" id="barcode">
                     </div>
                 </div>
 

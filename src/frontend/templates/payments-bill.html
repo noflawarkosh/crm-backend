@@ -92,7 +92,7 @@
 
                 if (data.media) {
                     bill_buttons = bill_buttons +
-                        '<a href="/storage/get/' + data.media.storage_href + '" target="_blank" class="btn btn-label-primary d-grid w-100 mb-3 text-primary"' +
+                        '<a href="https://storage.yandexcloud.net/greedybear/' + data.media + '" target="_blank" class="btn btn-label-primary d-grid w-100 mb-3 text-primary"' +
                         '<a class="d-flex align-items-center justify-content-center text-nowrap">' +
                         'Скачать вложение\n' +
                         '</a>\n' +
@@ -138,6 +138,10 @@
 
                 if (data.status.id === 5) {
                     status = 'bg-label-danger'
+                }
+
+                if (data.status.id === 6) {
+                    status = 'bg-label-primary'
                 }
 
                 var bill_status = '<span class="badge ' + status + '"> ' + data.status.title + ' </span>'
@@ -252,7 +256,7 @@
                     <div class="row">
                         <div class="col-12">
                             <span class="fw-medium">Подсказка:</span>
-                            <span>выполните перевод по указанным реквизитам, а затем нажмите кнопку "Подтвердить перевод". Средства поступят на кошелек после подтверждения поулчения средств администратором сервиса</span>
+                            <span>выполните перевод по указанным реквизитам, а затем нажмите кнопку "Подтвердить перевод". Средства поступят на кошелек после подтверждения поулчения средств администратором сервиса. При выборе получателя <b>расчетный счет ИП/ЮЛ</b>, ожидайте прикрепления вложения с реквизитами счета. Вложение отобразится справа в виде кнопки "Скачать вложение"</span>
                         </div>
                     </div>
                 </div>
