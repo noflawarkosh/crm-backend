@@ -71,7 +71,7 @@ async def refresh_product(product_id: int,
 
     await check_access(products[0].org_id, session.user.id, 2)
 
-    if products[0].last_update + datetime.timedelta(minutes=5) > datetime.datetime.now():
+    if False and products[0].last_update + datetime.timedelta(minutes=5) > datetime.datetime.now():
         remaining = (products[0].last_update + datetime.timedelta(minutes=5)) - datetime.datetime.now()
 
         raise HTTPException(
@@ -116,7 +116,8 @@ async def refresh_product(product_id: int,
                     'wb_in_stock': new_size.wb_in_stock,
                     'wb_price': new_size.wb_price,
                     'product_id': products[0].id,
-                    'barcode': None
+                    'barcode': None,
+                    'is_active': False
                 }
             )
 
@@ -125,6 +126,12 @@ async def refresh_product(product_id: int,
 
         for new_size in new_sizes:
             if current_size.wb_size_optionId == new_size.wb_size_optionId:
+                records.append(
+                    {
+                        'id': current_size.id,
+                        'wb_in_stock': new_size.wb_in_stock,
+                    }
+                )
                 found = True
                 break
 
@@ -133,15 +140,11 @@ async def refresh_product(product_id: int,
                 {
                     'id': current_size.id,
                     'wb_in_stock': False,
+                    'is_active': False
                 }
             )
-        else:
-            records.append(
-                {
-                    'id': current_size.id,
-                    'wb_in_stock': True,
-                }
-            )
+
+
 
     await DefaultRepository.save_records(
         [
@@ -183,13 +186,31 @@ async def refresh_product(product_id: int,
 
 @router_products.get('/getOwned')
 async def get_owned_products(org_id: int, session: UserSessionModel = Depends(authed)):
-
     products = await DefaultRepository.get_records(
         ProductModel,
         filters=[ProductModel.org_id == org_id, ProductModel.status != 3],
         select_related=[ProductModel.sizes]
     )
     return [ProductReadSchema.model_validate(product, from_attributes=True) for product in products]
+
+
+@router_products.post('/updateSize')
+async def create_barcode(size_id: int, status: bool, session: UserSessionModel = Depends(authed)):
+    sizes = await DefaultRepository.get_records(
+        ProductSizeModel,
+        filters=[ProductSizeModel.id == size_id],
+        select_related=[ProductSizeModel.product]
+    )
+
+    if len(sizes) != 1:
+        raise HTTPException(status_code=404, detail=string_404)
+
+    size = sizes[0]
+
+    await check_access(size.product.org_id, session.user.id, 2)
+
+    await DefaultRepository.save_records(
+        [{'model': ProductSizeModel, 'records': [{'id': size_id, 'is_active': status}]}])
 
 
 @router_products.post('/barcode')
@@ -272,6 +293,23 @@ async def create_review(data: Annotated[ReviewCreateSchema, Depends()],
     if data.size_id and data.size_id not in [size.id for size in products[0].sizes]:
         raise HTTPException(status_code=400, detail=string_403)
 
+    if data.size_id:
+        sizes = await DefaultRepository.get_records(ProductSizeModel, filters=[ProductSizeModel.id == data.size_id])
+
+        if len(sizes) != 1:
+            raise HTTPException(status_code=404, detail=string_product_size_not_found)
+
+        size = sizes[0]
+
+        if not size.is_active:
+            raise HTTPException(status_code=403, detail=string_product_size_not_active)
+
+        if not size.barcode:
+            raise HTTPException(status_code=403, detail=string_product_size_no_barcode)
+
+        if not size.wb_in_stock:
+            raise HTTPException(status_code=403, detail=string_product_size_not_in_stock)
+
     if data.match:
         if not data.size_id:
             raise HTTPException(status_code=400, detail=string_product_size_not_selected_but_match)
@@ -303,7 +341,7 @@ async def create_review(data: Annotated[ReviewCreateSchema, Depends()],
     await ReviewsRepository.create_review(data, ordered_files)
 
     for file in ordered_files:
-        await s3_save(file.content, file.href, file.name.rsplit('.', maxsplit=1)[1])
+        await s3_save(file.content, file.href, file.filename.rsplit('.', maxsplit=1)[1])
 
 
 @router_reviews.get('/getOwned')

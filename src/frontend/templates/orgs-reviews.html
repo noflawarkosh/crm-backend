@@ -339,11 +339,11 @@
         $("#size-id").empty();
         $("#size-id").selectpicker("refresh");
 
-        $("#size-id").append($('<option>').text('Без указания').val(0));
+        $("#size-id").append($('<option>').text('Не указывать размер в отзыве').val(0));
 
         for (var j = 0; j < optionsArr.length; j++) {
 
-            if (optionsArr[j].wb_size_name !== null) {
+            if (optionsArr[j].wb_size_name !== null && optionsArr[j].is_active !== false) {
                 var op_txt = optionsArr[j].wb_size_name;
                 var op_val = optionsArr[j].id;
                 var op_sub = optionsArr[j].wb_size_origName;

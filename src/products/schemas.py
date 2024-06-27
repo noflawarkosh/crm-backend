@@ -11,6 +11,7 @@ class ProductSizeCreateSchema(BaseModel):
     wb_in_stock: bool
     wb_price: int | None
     barcode: str | None
+    is_active: bool
 
 
 class ProductSizeReadSchema(ProductSizeCreateSchema):

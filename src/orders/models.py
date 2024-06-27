@@ -128,10 +128,10 @@ class OrdersOrderModel(Base):
     wb_status: Mapped[str | None]
     status: Mapped[int]
     description: Mapped[str | None]
-    dt_planed: Mapped[datetime.datetime | None]
-    dt_ordered: Mapped[datetime.datetime | None]
-    dt_delivered: Mapped[datetime.datetime | None]
-    dt_collected: Mapped[datetime.datetime | None]
+    dt_planed: Mapped[datetime.date | None]
+    dt_ordered: Mapped[datetime.date | None]
+    dt_delivered: Mapped[datetime.date | None]
+    dt_collected: Mapped[datetime.date | None]
 
     # FK
     product_id: Mapped[int] = mapped_column(

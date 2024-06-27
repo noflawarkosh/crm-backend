@@ -49,7 +49,7 @@ class ReviewsRepository:
                 for file in files:
                     session.add(ReviewMediaModel(
                         review_id=review.id,
-                        media=f"{file.href}.{file.name.rsplit('.', maxsplit=1)[1]}")
+                        media=f"{file.href}.{file.filename.rsplit('.', maxsplit=1)[1]}")
                     )
 
                 await session.commit()

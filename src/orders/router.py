@@ -9,7 +9,7 @@ from database import DefaultRepository
 from orders.models import OrdersOrderModel
 from orders.schemas import OrdersOrderReadModel, OrdersOrderCreateModel
 from orgs.router import check_access
-from products.models import ProductModel
+from products.models import ProductModel, ProductSizeModel
 from strings import *
 
 from products.repository import ProductsRepository
@@ -45,22 +45,40 @@ async def save_data(amount: int,
 
     products = await DefaultRepository.get_records(
         model=ProductModel,
-        filters=[ProductModel.id == data.product_id],
+        filters=[ProductModel.id == data.product_id, ProductModel.org_id == data.org_id, ProductModel.status != 3],
         select_related=[ProductModel.sizes]
     )
 
-    for size in products[0].sizes:
-        if size.id == data.size_id and not size.wb_in_stock:
-            raise HTTPException(status_code=400, detail=string_orders_size_not_in_stock)
+    if len(products) != 1:
+        raise HTTPException(status_code=404, detail=string_products_product_not_found)
 
-    if (
-            len(products) != 1 or
-            products[0].org_id != data.org_id or
-            products[0].status == 3 or
-            data.size_id not in [size.id for size in products[0].sizes] or
-            data.dt_planed.date() < datetime.datetime.now().date()
-    ):
-        raise HTTPException(status_code=403, detail=string_403)
+    if not data.size_id:
+        raise HTTPException(status_code=400, detail=string_product_size_not_selected)
+
+    if data.size_id not in [size.id for size in products[0].sizes]:
+        raise HTTPException(status_code=400, detail=string_403)
+
+    sizes = await DefaultRepository.get_records(ProductSizeModel, filters=[ProductSizeModel.id == data.size_id])
+
+    if len(sizes) != 1:
+        raise HTTPException(status_code=404, detail=string_product_size_not_found)
+
+    size = sizes[0]
+
+    if not size.is_active:
+        raise HTTPException(status_code=403, detail=string_product_size_not_active)
+
+    if not size.barcode:
+        raise HTTPException(status_code=403, detail=string_product_size_no_barcode)
+
+    if not size.wb_in_stock:
+        raise HTTPException(status_code=403, detail=string_product_size_not_in_stock)
+
+    if not size.wb_price:
+        raise HTTPException(status_code=403, detail=string_product_size_no_price)
+
+    if data.dt_planed.date() < datetime.datetime.now().date():
+        raise HTTPException(status_code=403, detail=string_orders_wrong_date)
 
     if datetime.datetime.now().hour > 9 and data.dt_planed.date() == datetime.datetime.now().date():
         raise HTTPException(status_code=400, detail=string_orders_time_error)

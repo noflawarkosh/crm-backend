@@ -17,6 +17,7 @@ class OrganizationModel(Base):
     title: Mapped[str]
     inn: Mapped[str]
     status: Mapped[int]
+    created_at: Mapped[dt]
     level_id: Mapped[int | None] = mapped_column(
         ForeignKey('balance_prices.id')
     )

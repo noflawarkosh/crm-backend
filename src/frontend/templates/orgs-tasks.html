@@ -26,6 +26,7 @@
 
 <script>
 
+    var ordersToPay = []
     var currentDate = new Date()
     const currentHour = currentDate.getHours();
 
@@ -110,43 +111,31 @@
                         },
                         {
                             "render": function (data, type, row) {
-                                return getPrice(row)
+
+                                if (row.status !== 1) {
+                                    return '₽ ' + row.wb_price.toLocaleString('ru-RU')
+                                } else {
+                                    return '<span class="text-nowrap">Не оплачен</span>'
+                                }
                             }
                         },
                         {
                             "render": function (data, type, row) {
+
                                 var status = 5
                                 var title = 'Не опознан'
 
 
-                                if (row.dt_planed !== null) {
+                                if (row.status === 1) {
                                     status = 3
                                     title = 'Запланирован'
                                 }
 
-                                if (row.size.wb_in_stock === false) {
-                                    status = 5
-                                    title = 'Не в наличии'
+                                if (row.status === 2) {
+                                    status = 2
+                                    title = 'Оплачен'
                                 }
 
-                                if (row.dt_ordered !== null) {
-                                    status = 3
-                                    title = 'Закзан'
-                                }
-
-                                if (row.dt_delivered !== null) {
-                                    status = 3
-                                    title = 'Доставлен в пункт выдачи'
-                                }
-
-                                if (row.dt_collected !== null) {
-                                    status = 1
-                                    title = 'Доставлен на склад'
-                                }
-
-                                if (row.is_cancelled === true) {
-                                    title = 'Отменен'
-                                }
 
                                 var statuses = {
                                     1: 'success',
@@ -172,7 +161,7 @@
                             "render": function (data, type, row) {
                                 var edit = ''
                                 if (row.is_cancelled === false && row.wb_price === null) {
-                                    edit += '<a href="javascript:updateBillStatus(' + row.id+ ', 5)"><i class="bx bx-x"></i></a>'
+                                    edit += '<a href="javascript:updateBillStatus(' + row.id + ', 5)"><i class="bx bx-x"></i></a>'
                                 }
                                 return edit
                             }
@@ -185,7 +174,7 @@
 
                 if (data.length !== 0) {
                     document.getElementById('pay-plan-btn').classList.remove('disabled')
-                    document.getElementById('pay-plan-btn').innerText = '$ Оплатить задачи на ' + moment(currentDate).format('DD.MM.YYYY')
+                    document.getElementById('pay-plan-btn').innerText = 'Оплатить задачи на ' + moment(currentDate).format('DD.MM.YYYY')
                 }
 
             },
@@ -213,45 +202,207 @@
         }
     }
 
-    function drawPlan(selectedDate) {
-        $(document).ready(function () {
-            $.ajax({
+    function calculatePayment() {
+        var modal_title = document.getElementById('modal_title')
+        var modal_body = document.getElementById('modal_body')
+        var ldr = document.getElementById('pay_ldr')
 
-                url: '/orders/getPlan?org_id=' + id + '&date=' + selectedDate,
-                method: 'get',
 
-                success: function (data) {
-                    document.getElementById('add-plan-btn').classList.add('disabled')
-                    document.getElementById('pay-plan-btn').classList.add('disabled')
-                    document.getElementById('pay-plan-btn').innerText = '$ Оплатить'
-                    document.getElementById('page_ldr').style.display = 'block'
+        modal_title.innerText = 'Загрузка данных платежа'
+        modal_body.innerText = ''
+        ldr.style.display = 'block'
+        $.ajax({
 
-                    var table = $('#dt_plan').DataTable();
-                    table.clear()
-                    table.draw()
-                    table.rows.add(data).draw();
+            url: '/payments/tasksCheckout?org_id=' + id + '&date=' + dateInput.value,
+            method: 'get',
 
-                    document.getElementById('divider-text').innerText = 'Запланированные выкупы на ' + moment(selectedDate).format('DD.MM.YYYY')
-                    dateInput.disabled = false
-                    document.getElementById('page_ldr').style.display = 'none'
-                    document.getElementById('add-plan-btn').classList.remove('disabled')
+            success: function (data) {
+                ordersToPay = data.trace
+                modal_body.innerHTML = '<div class="row">\n' +
+                    '                    <div class="col-xl-8 mb-3 mb-xl-0">\n' +
+                    '                        <div class="card-body table-responsive">\n' +
+                    '                            <table id="dt_total" class="datatables-ajax table table-bordered dataTable no-footer">\n' +
+                    '                                <thead>\n' +
+                    '                                <tr>\n' +
+                    '                                    <th>№</th>\n' +
+                    '                                    <th>Артикул</th>\n' +
+                    '                                    <th>Размер</th>\n' +
+                    '                                    <th>Товар</th>\n' +
+                    '                                    <th>Комиссия</th>\n' +
+                    '                                    <th>Выкуп</th>\n' +
+                    '                                    <th>Логистика</th>\n' +
+                    '                                    <th>Сумма</th>\n' +
+                    '                                </tr>\n' +
+                    '                                </thead>\n' +
+                    '                            </table>\n' +
+                    '                        </div>\n' +
+                    '                    </div>\n' +
+                    '                    \n' +
+                    '                    <div class="col-xl-4">\n' +
+                    '                        <div class="border rounded p-4 mb-3 pb-3">\n' +
+                    '                            \n' +
+                    '                            <h6>Тариф "' + data.total.level + '"</h6>\n' +
+                    '\n' +
+                    '                            <dl class="row mb-0">\n' +
+                    '                                <dt class="col-6 fw-normal">Выкуп</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + data.total.per_buy.toLocaleString('ru-RU') + '</dd>\n' +
+                    '                            </dl>\n' +
+                    '                            <dl class="row mb-0">\n' +
+                    '                                <dt class="col-6 fw-normal">Логистика</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + data.total.per_collect.toLocaleString('ru-RU') + '</dd>\n' +
+                    '                            </dl>\n' +
+                    '                            <dl class="row mb-0">\n' +
+                    '                                <dt class="col-6 fw-normal">Порог комиссии</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + data.total.percent_limit.toLocaleString('ru-RU') + '</dd>\n' +
+                    '                            </dl>\n' +
+                    '\n' +
+                    '                            <dl class="row mb-0">\n' +
+                    '                                <dt class="col-6 fw-normal">Комиссия</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">' + data.total.percent.toLocaleString('ru-RU') + '%</dd>\n' +
+                    '                            </dl>\n' +
+                    '\n' +
+                    '\n' +
+                    '                            <hr class="mx-n4">\n' +
+                    '                            <h6>Итого</h6>\n' +
+                    '\n' +
+                    '                            <dl class="row mb-0">\n' +
+                    '                                <dt class="col-6 fw-normal">Товары</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + data.total.sum_price_product.toLocaleString('ru-RU') + '</dd>\n' +
+                    '                            </dl>\n' +
+                    '                            <dl class="row mb-0">\n' +
+                    '                                <dt class="col-6 fw-normal">Комиссия</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + data.total.sum_price_commission.toLocaleString('ru-RU') + '</dd>\n' +
+                    '                            </dl>\n' +
+                    '                            <dl class="row mb-0">\n' +
+                    '                                <dt class="col-6 fw-normal">Выкуп</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + data.total.sum_service_buy.toLocaleString('ru-RU') + '</dd>\n' +
+                    '                            </dl>\n' +
+                    '                            <dl class="row mb-0">\n' +
+                    '                                <dt class="col-6 fw-normal">Логистика</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + data.total.sum_service_collect.toLocaleString('ru-RU') + '</dd>\n' +
+                    '                            </dl>\n' +
+                    '\n' +
+                    '                            <hr class="mx-n4">\n' +
+                    '                            <dl class="row mb-0">\n' +
+                    '                                <dt class="col-6 fw-medium">К оплате</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + data.total.sum_total.toLocaleString('ru-RU') + '</dd>\n' +
+                    '                            </dl>\n' +
+                    '                        </div>\n' +
+                    '                        \n' +
+                    '                        <div class="d-grid">\n' +
+                    '                            <button class="btn btn-primary btn-next" onclick="payOrders()" id="pay_btn">Оплатить</button>\n' +
+                    '                        </div>\n' +
+                    '                    </div>\n' +
+                    '                </div>'
 
-                    if (data.length !== 0) {
-                        document.getElementById('pay-plan-btn').classList.remove('disabled')
-                        document.getElementById('pay-plan-btn').innerText = '$ Оплатить задачи на ' + moment(selectedDate).format('DD.MM.YYYY')
-                    }
-                },
+                $('#dt_total').DataTable({
+                    "data": data.trace,
+                    "paging": true,
+                    "pageLength": 10,
+                    "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                    "searching": true,
+                    "ordering": true,
 
-                error: function () {
-                    toastr.error('Ошибка загрузки плана. Обновите страницу и повторите попытку')
-                    dateInput.disabled = false
-                    document.getElementById('page_ldr').style.display = 'none'
+                    "columns": [
+                        {"data": "order_id"},
+                        {"data": "wb_article"},
+                        {"data": "wb_size_name"},
+                        {"data": "price_product"},
+                        {"data": "price_commission"},
+                        {"data": "price_buy"},
+                        {"data": "price_collect"},
+                        {"data": "price_total"},
+                    ],
+                    "order": [[0, "desc"]],
+                });
 
-                }
 
-            });
+                modal_title.innerText = 'Оплата задач на ' + moment(dateInput.value).format('DD.MM.YYYY')
+                ldr.style.display = 'none'
+            },
+
+            error: function (data) {
+                toastr.error('Ошибка загрузки платежа. ' + data.responseJSON.detail)
+                modal_body.innerText = data.responseJSON.detail
+                ldr.style.display = 'none'
+            }
 
         });
+    }
+
+    function payOrders() {
+        var pb = document.getElementById('pay_btn')
+        var ldr = document.getElementById('pay_ldr')
+        pb.classList.add('disabled')
+        ldr.style.display = 'block'
+
+
+        var order_ids = []
+        for (var i in ordersToPay) {
+            order_ids.push(ordersToPay[i].order_id)
+        }
+
+        $.ajax({
+            url: '/payments/tasksPay?org_id=' + id,
+            method: 'post',
+            data: JSON.stringify(order_ids),
+            contentType: 'application/json',
+            dataType: 'json',
+
+            success: function (data) {
+                toastr.success('Задачи успешно оплачены')
+                drawPlan(dateInput.value)
+                calculatePayment()
+            },
+            error: function (data) {
+                toastr.error('Ошибка оплаты: ' + data.responseJSON.detail)
+                pb.classList.remove('disabled')
+                ldr.style.display = 'none'
+            }
+
+        })
+    }
+
+    function drawPlan(selectedDate) {
+
+        $.ajax({
+
+            url: '/orders/getPlan?org_id=' + id + '&date=' + selectedDate,
+            method: 'get',
+
+            success: function (data) {
+                document.getElementById('add-plan-btn').classList.add('disabled')
+                document.getElementById('pay-plan-btn').classList.add('disabled')
+                document.getElementById('pay-plan-btn').innerText = 'Оплатить'
+                document.getElementById('page_ldr').style.display = 'block'
+
+                var table = $('#dt_plan').DataTable();
+                table.clear()
+                table.draw()
+                table.rows.add(data).draw();
+
+                document.getElementById('divider-text').innerText = 'Запланированные выкупы на ' + moment(selectedDate).format('DD.MM.YYYY')
+                dateInput.disabled = false
+                document.getElementById('page_ldr').style.display = 'none'
+                document.getElementById('add-plan-btn').classList.remove('disabled')
+
+                if (data.length !== 0) {
+                    document.getElementById('pay-plan-btn').classList.remove('disabled')
+                    document.getElementById('pay-plan-btn').innerText = 'Оплатить задачи на ' + moment(selectedDate).format('DD.MM.YYYY')
+                }
+
+                toastr.info('Данные обновлены')
+            },
+
+            error: function () {
+                toastr.error('Ошибка загрузки плана. Обновите страницу и повторите попытку')
+                dateInput.disabled = false
+                document.getElementById('page_ldr').style.display = 'none'
+
+            }
+
+        });
+
     }
 
     function addPlan() {
@@ -262,6 +413,16 @@
             'product_id': document.getElementById('product_id').value,
             'size_id': document.getElementById('size_id').value,
             'org_id': id,
+        }
+
+        if (data.product_id == '') {
+            toastr.error('Выберите товар')
+            return
+        }
+
+        if (data.size_id == '') {
+            toastr.error('Выберите размер. К выбору доступны только размеры с включенным отображением. Подробнее в разделе Товары')
+            return
         }
 
         var amount = document.getElementById('amount').value
@@ -288,6 +449,7 @@
             url.searchParams.append(key, data[key]);
         }
         url.searchParams.append('amount', amount);
+
         $.ajax({
             url: url,
             method: 'post',
@@ -304,6 +466,7 @@
             }
         });
     }
+
 </script>
 
 <!-- GET PRODS FOR SELECT IN FORM -->
@@ -328,12 +491,12 @@
         $("#size_id").selectpicker("refresh");
 
         if (optionsArr.length === 1 && optionsArr[0].wb_size_name === null && optionsArr[0].wb_size_origName === null) {
-            $("#size_id").append($('<option>').text('Товар без размеров').val(optionsArr[0].id));
+            $("#size_id").append($('<option>').text('Товар с одним размером').val(optionsArr[0].id));
         }
 
         for (var j = 0; j < optionsArr.length; j++) {
 
-            if (optionsArr[j].wb_size_name !== null) {
+            if (optionsArr[j].wb_size_name !== null && optionsArr[j].is_active === true) {
                 var op_txt = optionsArr[j].wb_size_name;
                 var op_val = optionsArr[j].id;
                 var op_sub = optionsArr[j].wb_size_origName;
@@ -461,42 +624,68 @@
                         </div>
                     </div>
 
-                    <div class="row mt-3">
-                        <div class="col">
-                            <a href="javascript:addPlan()" class="btn btn-primary disabled"
-                               id="add-plan-btn">Добавить</a>
-                            <a href="javascript:addPlan()" class="btn btn-label-success disabled" id="pay-plan-btn">$
-                                Оплатить</a>
+                    <div class="mt-3">
+
+                        <a href="javascript:addPlan()" class="btn btn-primary disabled"
+                           id="add-plan-btn">Добавить</a>
+
+                        <a href="javascript:drawPlan(dateInput.value)" class="btn btn-label-secondary"
+                           id="refresh-plan-btn">Обновить</a>
+
+                        <a href="javascript:"
+                           onclick="calculatePayment()"
+                           class="btn btn-label-success disabled"
+                           id="pay-plan-btn"
+                           data-bs-toggle="modal"
+                           data-bs-target="#modal-plan-calc">Оплатить
+                        </a>
+
+
+                    </div>
+
+                    <div class="card-body table-responsive">
+                        <div class="divider text-start">
+                            <div class="divider-text" id="divider-text"></div>
                         </div>
+                        <table id="dt_plan" class="datatables-ajax table table-bordered dataTable no-footer">
+                            <thead>
+                            <tr>
+                                <th>#ID</th>
+                                <th>Артикул</th>
+                                <th>Товар</th>
+                                <th>Размер</th>
+                                <th>Ключевой запрос</th>
+                                <th>Сумма</th>
+                                <th>Статус</th>
+                                <th>Описание</th>
+                                <th>Действия</th>
+                            </tr>
+                            </thead>
+                        </table>
                     </div>
                 </div>
+            </div>
 
+        </div>
+    </div>
+    <div class="modal fade" id="modal-plan-calc" aria-labelledby="modal-plan-calc" style="display: none"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <span id="modal_title" class="me-2">Загрузка даннных платежа</span>
+                    </h5>
+                    <span class="spinner-border spinner-border-sm text-primary" role="status" id="pay_ldr"
+                          style="display: none">
+                </span>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modal_body">
 
-                <div class="card-body table-responsive">
-                    <div class="divider text-start">
-                        <div class="divider-text" id="divider-text"></div>
-                    </div>
-                    <table id="dt_plan" class="datatables-ajax table table-bordered dataTable no-footer">
-                        <thead>
-                        <tr>
-                            <th>#ID</th>
-                            <th>Артикул</th>
-                            <th>Товар</th>
-                            <th>Размер</th>
-                            <th>Ключевой запрос</th>
-                            <th>Сумма</th>
-                            <th>Статус</th>
-                            <th>Описание</th>
-                            <th>Действия</th>
-                        </tr>
-                        </thead>
-                    </table>
                 </div>
             </div>
         </div>
-
     </div>
-</div>
 
-
-{% endblock %}
+    {% endblock %}

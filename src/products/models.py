@@ -39,6 +39,7 @@ class ProductSizeModel(Base):
     wb_in_stock: Mapped[bool]
     wb_price: Mapped[int | None]
     barcode: Mapped[str | None]
+    is_active: Mapped[bool]
 
     # FK
     product_id: Mapped[int] = mapped_column(

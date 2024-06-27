@@ -16,7 +16,8 @@ class BalancePricesModel(Base):
     id: Mapped[pk]
     title: Mapped[str]
     number: Mapped[int]
-    amount: Mapped[int]
+    amount: Mapped[int | None]
+    is_public: Mapped[bool]
 
     price_buy: Mapped[int]
     price_collect: Mapped[int]
@@ -25,9 +26,9 @@ class BalancePricesModel(Base):
     price_review_request: Mapped[int]
     price_box: Mapped[int]
     price_pass: Mapped[int]
-    price_percent: Mapped[int]
+    price_percent: Mapped[float]
     price_percent_limit: Mapped[int]
-    price_percent_penalty: Mapped[int]
+    price_percent_penalty: Mapped[float]
 
 
 class BalanceActionModel(Base):

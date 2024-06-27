@@ -1,8 +1,11 @@
+import datetime
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from database import DefaultRepository
+from orders.models import OrdersOrderModel
 from payments.repository import PaymentsRepository
+from payments.utils import payment_week
 from strings import *
 from auth.router import authed
 from orgs.router import check_access
@@ -10,7 +13,7 @@ from auth.models import UserSessionModel
 from payments.models import (
     BalanceBillModel,
     BalanceSourceModel,
-    BalanceHistoryModel
+    BalanceHistoryModel, BalancePricesModel
 )
 from payments.schemas import (
     BalanceBillCreateSchema,
@@ -23,6 +26,52 @@ router = APIRouter(
     prefix="/payments",
     tags=["Payments"]
 )
+
+
+async def current_prices(organization):
+    ws, we, cw = await payment_week(organization.created_at)
+
+    if not organization.level_id:
+        purchases = len(await DefaultRepository.get_records(
+            OrdersOrderModel,
+            filters=[
+                OrdersOrderModel.org_id == organization.id,
+                OrdersOrderModel.dt_collected is not None,
+                OrdersOrderModel.dt_ordered > ws,
+                OrdersOrderModel.dt_ordered < we,
+            ]
+        ))
+
+        levels = await DefaultRepository.get_records(
+            BalancePricesModel,
+            filters=[BalancePricesModel.is_public],
+            order_by=[BalancePricesModel.number.asc()]
+        )
+
+        if len(levels) == 0:
+            raise HTTPException(status_code=404, detail=string_payments_no_levels)
+
+        selected_level = None
+        for level in levels:
+            if purchases < level.amount:
+                selected_level = level
+                break
+
+        if not selected_level:
+            selected_level = levels[-1]
+
+        return selected_level
+
+    else:
+        levels = await DefaultRepository.get_records(
+            BalancePricesModel,
+            filters=[BalancePricesModel.id == organization.level_id]
+        )
+
+        if len(levels) != 1:
+            raise HTTPException(status_code=404, detail=string_payments_no_levels)
+
+        return levels[0]
 
 
 @router.post('/createBill')
@@ -123,3 +172,168 @@ async def create_organization(org_id: int,
         select_related=[BalanceHistoryModel.organization, BalanceHistoryModel.action]
     )
     return [BalanceHistoryReadSchema.model_validate(record, from_attributes=True) for record in history]
+
+
+@router.post('/tasksPay')
+async def create_organization(org_id: int, data: list[int], session: UserSessionModel = Depends(authed)):
+    organization, membership = await check_access(org_id, session.user.id, 0)
+
+    orders = await DefaultRepository.get_records(
+        OrdersOrderModel,
+        filters=[OrdersOrderModel.id.in_(data)],
+        select_related=[
+            OrdersOrderModel.size,
+            OrdersOrderModel.product,
+        ]
+    )
+
+    if len(orders) == 0:
+        raise HTTPException(status_code=400, detail=string_orders_no_orders_to_pay)
+
+    for order in orders:
+
+        error_string_product = f'Товар арт. {order.product.wb_article}'
+        error_string_size = f' размер {order.size.wb_size_name}' if order.size.wb_size_name else ''
+        error_string = f'{error_string_product}{error_string_size}: '
+
+        if order.org_id != org_id:
+            raise HTTPException(status_code=403, detail=f'Задача №{order.id}: ' + string_403)
+
+        if order.status != 1 or order.wb_price:
+            raise HTTPException(status_code=400, detail=f'Задача №{order.id}: ' + string_orders_already_paid)
+
+        if order.dt_planed < datetime.date.today():
+            raise HTTPException(status_code=400, detail=f'Задача №{order.id}: ' + string_orders_old_to_pay)
+
+        if datetime.datetime.now().hour > 9 and order.dt_planed < datetime.date.today():
+            raise HTTPException(status_code=400, detail=f'Задача №{order.id}: ' + string_orders_time_error)
+
+        if not order.size.is_active:
+            raise HTTPException(status_code=403,
+                                detail=f'Задача №{order.id}: ' + error_string + string_product_size_not_active)
+
+        if not order.size.barcode:
+            raise HTTPException(status_code=403,
+                                detail=f'Задача №{order.id}: ' + error_string + string_product_size_not_active)
+
+        if not order.size.wb_in_stock:
+            raise HTTPException(status_code=403,
+                                detail=f'Задача №{order.id}: ' + error_string + string_product_size_not_active)
+
+        if not order.size.wb_price:
+            raise HTTPException(status_code=403,
+                                detail=f'Задача №{order.id}: ' + error_string + string_product_size_not_active)
+
+    level = await current_prices(organization)
+
+    calculated_orders = []
+    sum_price_product = 0
+    sum_price_commission = 0
+    sum_service_buy = 0
+    sum_service_collect = 0
+
+    for order in orders:
+        price_product = order.size.wb_price // 100
+        price_commission = 0
+
+        if price_product >= level.price_percent_limit:
+            price_commission = int((price_product - level.price_percent_limit) * (level.price_percent / 100)) + 1
+
+        sum_price_product += price_product
+        sum_price_commission += price_commission
+        sum_service_buy += level.price_buy
+        sum_service_collect += level.price_collect
+
+        calculated_orders.append({'id': order.id, 'wb_price': price_product, 'status': 2})
+
+    sum_total = sum_price_product + sum_price_commission + sum_service_buy + sum_service_collect
+
+    await PaymentsRepository.pay_tasks(calculated_orders, sum_total, org_id, level.title)
+
+
+@router.get('/tasksCheckout')
+async def create_organization(org_id: int, date: datetime.date, session: UserSessionModel = Depends(authed)):
+    organization, membership = await check_access(org_id, session.user.id, 0)
+
+    if date < datetime.date.today():
+        raise HTTPException(status_code=403, detail=string_403)
+
+    level = await current_prices(organization)
+
+    orders = await DefaultRepository.get_records(
+        OrdersOrderModel,
+        filters=[
+            OrdersOrderModel.status == 1,
+            OrdersOrderModel.wb_price.is_(None),
+            OrdersOrderModel.dt_planed == date,
+            OrdersOrderModel.org_id == org_id
+        ],
+        select_related=[
+            OrdersOrderModel.size,
+            OrdersOrderModel.product,
+        ]
+    )
+
+    sum_price_product = 0
+    sum_price_commission = 0
+    sum_service_buy = 0
+    sum_service_collect = 0
+    total = []
+
+    for order in orders:
+        error_string_product = f'Товар арт. {order.product.wb_article}'
+        error_string_size = f' размер {order.size.wb_size_name}' if order.size.wb_size_name else ''
+        error_string = f'{error_string_product}{error_string_size}: '
+
+        if not order.size.is_active:
+            raise HTTPException(status_code=403, detail=error_string + string_product_size_not_active)
+
+        if not order.size.barcode:
+            raise HTTPException(status_code=403, detail=error_string + string_product_size_no_barcode)
+
+        if not order.size.wb_in_stock:
+            raise HTTPException(status_code=403, detail=error_string + string_product_size_not_in_stock)
+
+        if not order.size.wb_price:
+            raise HTTPException(status_code=403, detail=error_string + string_product_size_no_price)
+
+        price_product = order.size.wb_price // 100
+        price_commission = 0
+
+        if price_product >= level.price_percent_limit:
+            price_commission = int((price_product - level.price_percent_limit) * (level.price_percent / 100)) + 1
+
+        total.append({
+            'order_id': order.id,
+            'wb_title': order.product.wb_title,
+            'wb_article': order.product.wb_article,
+            'wb_size_name': order.size.wb_size_name,
+            'wb_size_origName': order.size.wb_size_origName,
+
+            'price_product': price_product,
+            'price_commission': price_commission,
+            'price_buy': level.price_buy,
+            'price_collect': level.price_collect,
+            'price_total': price_product + price_commission + level.price_collect + level.price_collect,
+        })
+
+        sum_price_product += price_product
+        sum_price_commission += price_commission
+        sum_service_buy += level.price_buy
+        sum_service_collect += level.price_collect
+
+    return {
+        'total': {
+            'level': level.title,
+            'per_buy': level.price_buy,
+            'per_collect': level.price_collect,
+            'percent': level.price_percent,
+            'percent_limit': level.price_percent_limit,
+            'sum_price_product': sum_price_product,
+            'sum_price_commission': sum_price_commission,
+            'sum_service_buy': sum_service_buy,
+            'sum_service_collect': sum_service_collect,
+            'sum_total': sum_price_product + sum_price_commission + sum_service_buy + sum_service_collect,
+        },
+        'trace': total
+    }
