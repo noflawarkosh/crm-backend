@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from database import DefaultRepository
 from orders.models import OrdersOrderModel
 from payments.repository import PaymentsRepository
-from payments.utils import payment_week
+from payments.utils import payment_week, get_previous_week_dates, get_current_week_dates
+from products.models import ProductSizeModel, ProductModel
 from strings import *
 from auth.router import authed
 from orgs.router import check_access
@@ -19,7 +20,7 @@ from payments.schemas import (
     BalanceBillCreateSchema,
     BalanceBillReadSchema,
     BalanceSourceSchema,
-    BalanceHistoryReadSchema
+    BalanceHistoryReadSchema, BalanceLevelSchema
 )
 
 router = APIRouter(
@@ -29,49 +30,111 @@ router = APIRouter(
 
 
 async def current_prices(organization):
-    ws, we, cw = await payment_week(organization.created_at)
+    ws, we = get_previous_week_dates()
 
     if not organization.level_id:
-        purchases = len(await DefaultRepository.get_records(
-            OrdersOrderModel,
-            filters=[
-                OrdersOrderModel.org_id == organization.id,
-                OrdersOrderModel.dt_collected is not None,
-                OrdersOrderModel.dt_ordered > ws,
-                OrdersOrderModel.dt_ordered < we,
-            ]
-        ))
+        purchases = await get_purchases_count(ws, we, organization.id)
+        levels = await get_public_levels()
+        selected_level = next((level for level in levels if purchases < level.amount), levels[-1])
+    else:
+        purchases = await get_purchases_count(ws, we, organization.id)
+        levels = await get_level_by_id(organization.level_id)
+        selected_level = levels
 
-        levels = await DefaultRepository.get_records(
-            BalancePricesModel,
-            filters=[BalancePricesModel.is_public],
-            order_by=[BalancePricesModel.number.asc()]
-        )
+    return selected_level, purchases
 
-        if len(levels) == 0:
-            raise HTTPException(status_code=404, detail=string_payments_no_levels)
 
-        selected_level = None
-        for level in levels:
-            if purchases < level.amount:
-                selected_level = level
-                break
+async def nex_prices(organization):
+    ws, we = get_current_week_dates()
 
-        if not selected_level:
-            selected_level = levels[-1]
+    if not organization.level_id:
+        purchases = await get_purchases_count(ws, we, organization.id)
+        levels = await get_public_levels()
+        selected_level = next((level for level in levels if purchases < level.amount), levels[-1])
+    else:
+        purchases = await get_purchases_count(ws, we, organization.id)
+        levels = await get_level_by_id(organization.level_id)
+        selected_level = levels
 
-        return selected_level
+    return selected_level, purchases
+
+
+async def get_purchases_count(ws, we, org_id):
+    return len(await DefaultRepository.get_records(
+        model=OrdersOrderModel,
+        filters=[
+            OrdersOrderModel.dt_ordered is not None,
+            OrdersOrderModel.dt_ordered > ws,
+            OrdersOrderModel.dt_ordered < we,
+        ],
+        select_related=[OrdersOrderModel.size],
+        deep_related=[[OrdersOrderModel.size, ProductSizeModel.product]],
+        joins=[ProductSizeModel, ProductModel],
+        filtration=[ProductModel.org_id == org_id]
+    ))
+
+
+async def get_public_levels():
+    return await DefaultRepository.get_records(
+        BalancePricesModel,
+        filters=[BalancePricesModel.is_public],
+        order_by=[BalancePricesModel.number.asc()]
+    )
+
+
+async def get_level_by_id(level_id):
+    levels = await DefaultRepository.get_records(
+        BalancePricesModel,
+        filters=[BalancePricesModel.id == level_id]
+    )
+    if len(levels) != 1:
+        raise HTTPException(status_code=404, detail=string_payments_no_levels)
+    return levels[0]
+
+
+@router.get('/currentLevel')
+async def current_level(org_id: int, session: UserSessionModel = Depends(authed)):
+    organization, membership = await check_access(org_id, session.user.id, 0)
+
+    if organization.level_id:
+        level = await get_level_by_id(organization.level_id)
+        ws, we = get_previous_week_dates()
+        purchases = await get_purchases_count(ws, we, organization.id)
 
     else:
-        levels = await DefaultRepository.get_records(
-            BalancePricesModel,
-            filters=[BalancePricesModel.id == organization.level_id]
-        )
+        level, purchases = await current_prices(organization)
 
-        if len(levels) != 1:
-            raise HTTPException(status_code=404, detail=string_payments_no_levels)
+    return {
+        'level': BalanceLevelSchema.model_validate(level, from_attributes=True),
+        'purchases': purchases,
+        'personal': organization.level_id,
+    }
 
-        return levels[0]
+
+@router.get('/futureLevel')
+async def get_levels(org_id: int, session: UserSessionModel = Depends(authed)):
+    organization, membership = await check_access(org_id, session.user.id, 0)
+
+    levels = await DefaultRepository.get_records(
+        BalancePricesModel,
+        filters=[BalancePricesModel.is_public],
+        order_by=[BalancePricesModel.number.asc()]
+    )
+
+    if organization.level_id:
+        level = await get_level_by_id(organization.level_id)
+        ws, we = get_current_week_dates()
+        purchases = await get_purchases_count(ws, we, organization.id)
+
+    else:
+        level, purchases = await nex_prices(organization)
+
+    return {
+        'all': [BalanceLevelSchema.model_validate(level, from_attributes=True) for level in levels],
+        'progress': BalanceLevelSchema.model_validate(level, from_attributes=True),
+        'purchases': purchases,
+        'personal': organization.level_id,
+    }
 
 
 @router.post('/createBill')
@@ -168,9 +231,29 @@ async def create_organization(org_id: int,
     await check_access(org_id, session.user.id, 0)
     history = await DefaultRepository.get_records(
         BalanceHistoryModel,
-        filters=[BalanceHistoryModel.org_id == org_id],
-        select_related=[BalanceHistoryModel.organization, BalanceHistoryModel.action]
+        filters=[BalanceHistoryModel.org_id == org_id]
     )
+    return [BalanceHistoryReadSchema.model_validate(record, from_attributes=True) for record in history]
+
+
+@router.get('/getPaymentsDetails')
+async def create_organization(org_id: int, start: datetime.datetime, end: datetime.datetime,
+                              session: UserSessionModel = Depends(authed)
+                              ) -> list[BalanceHistoryReadSchema]:
+    await check_access(org_id, session.user.id, 0)
+
+    start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+    end = end.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    history = await DefaultRepository.get_records(
+        BalanceHistoryModel,
+        filters=[
+            BalanceHistoryModel.org_id == org_id,
+            BalanceHistoryModel.date >= start,
+            BalanceHistoryModel.date <= end,
+        ]
+    )
+
     return [BalanceHistoryReadSchema.model_validate(record, from_attributes=True) for record in history]
 
 
@@ -179,12 +262,11 @@ async def create_organization(org_id: int, data: list[int], session: UserSession
     organization, membership = await check_access(org_id, session.user.id, 0)
 
     orders = await DefaultRepository.get_records(
-        OrdersOrderModel,
+        model=OrdersOrderModel,
         filters=[OrdersOrderModel.id.in_(data)],
-        select_related=[
-            OrdersOrderModel.size,
-            OrdersOrderModel.product,
-        ]
+        select_related=[OrdersOrderModel.size],
+        joins=[ProductSizeModel, ProductModel],
+        deep_related=[[OrdersOrderModel.size, ProductSizeModel.product]],
     )
 
     if len(orders) == 0:
@@ -192,11 +274,11 @@ async def create_organization(org_id: int, data: list[int], session: UserSession
 
     for order in orders:
 
-        error_string_product = f'Товар арт. {order.product.wb_article}'
+        error_string_product = f'Товар арт. {order.size.product.wb_article}'
         error_string_size = f' размер {order.size.wb_size_name}' if order.size.wb_size_name else ''
         error_string = f'{error_string_product}{error_string_size}: '
 
-        if order.org_id != org_id:
+        if order.size.product.org_id != org_id:
             raise HTTPException(status_code=403, detail=f'Задача №{order.id}: ' + string_403)
 
         if order.status != 1 or order.wb_price:
@@ -224,13 +306,10 @@ async def create_organization(org_id: int, data: list[int], session: UserSession
             raise HTTPException(status_code=403,
                                 detail=f'Задача №{order.id}: ' + error_string + string_product_size_not_active)
 
-    level = await current_prices(organization)
+    level, purchases = await current_prices(organization)
 
     calculated_orders = []
-    sum_price_product = 0
-    sum_price_commission = 0
-    sum_service_buy = 0
-    sum_service_collect = 0
+    balance_records = []
 
     for order in orders:
         price_product = order.size.wb_price // 100
@@ -239,40 +318,66 @@ async def create_organization(org_id: int, data: list[int], session: UserSession
         if price_product >= level.price_percent_limit:
             price_commission = int((price_product - level.price_percent_limit) * (level.price_percent / 100)) + 1
 
-        sum_price_product += price_product
-        sum_price_commission += price_commission
-        sum_service_buy += level.price_buy
-        sum_service_collect += level.price_collect
+        balance_records.append({
+            'description': f'Заморозка стоимости товара по заказу №{order.id}',
+            'amount': price_product,
+            'org_id': org_id,
+            'action_id': 2
+        })
+
+        balance_records.append({
+            'description': f'Списание стоимости услуги выкупа по заказу №{order.id}',
+            'amount': level.price_buy,
+            'org_id': org_id,
+            'action_id': 3
+        })
+
+        balance_records.append({
+            'description': f'Списание стоимости услуг логистики по заказу №{order.id}',
+            'amount': level.price_collect,
+            'org_id': org_id,
+            'action_id': 3
+        })
+
+        if price_commission > 0:
+            balance_records.append({
+                'description': f'Списание комиссии за стоимость товара по заказу №{order.id}',
+                'amount': price_commission,
+                'org_id': org_id,
+                'action_id': 3
+            })
 
         calculated_orders.append({'id': order.id, 'wb_price': price_product, 'status': 2})
 
-    sum_total = sum_price_product + sum_price_commission + sum_service_buy + sum_service_collect
-
-    await PaymentsRepository.pay_tasks(calculated_orders, sum_total, org_id, level.title)
+    await DefaultRepository.save_records(
+        [
+            {'model': OrdersOrderModel,'records': calculated_orders},
+            {'model': BalanceHistoryModel,'records': balance_records}
+        ]
+    )
 
 
 @router.get('/tasksCheckout')
 async def create_organization(org_id: int, date: datetime.date, session: UserSessionModel = Depends(authed)):
-    organization, membership = await check_access(org_id, session.user.id, 0)
-
     if date < datetime.date.today():
         raise HTTPException(status_code=403, detail=string_403)
 
-    level = await current_prices(organization)
+    organization, membership = await check_access(org_id, session.user.id, 4)
 
     orders = await DefaultRepository.get_records(
-        OrdersOrderModel,
+        model=OrdersOrderModel,
         filters=[
             OrdersOrderModel.status == 1,
             OrdersOrderModel.wb_price.is_(None),
             OrdersOrderModel.dt_planed == date,
-            OrdersOrderModel.org_id == org_id
         ],
-        select_related=[
-            OrdersOrderModel.size,
-            OrdersOrderModel.product,
-        ]
+        select_related=[OrdersOrderModel.size],
+        deep_related=[[OrdersOrderModel.size, ProductSizeModel.product]],
+        joins=[ProductSizeModel, ProductModel],
+        filtration=[ProductModel.org_id == org_id]
     )
+
+    level, purchases = await current_prices(organization)
 
     sum_price_product = 0
     sum_price_commission = 0
@@ -281,7 +386,7 @@ async def create_organization(org_id: int, date: datetime.date, session: UserSes
     total = []
 
     for order in orders:
-        error_string_product = f'Товар арт. {order.product.wb_article}'
+        error_string_product = f'Товар арт. {order.size.product.wb_article}'
         error_string_size = f' размер {order.size.wb_size_name}' if order.size.wb_size_name else ''
         error_string = f'{error_string_product}{error_string_size}: '
 
@@ -305,8 +410,8 @@ async def create_organization(org_id: int, date: datetime.date, session: UserSes
 
         total.append({
             'order_id': order.id,
-            'wb_title': order.product.wb_title,
-            'wb_article': order.product.wb_article,
+            'wb_title': order.size.product.wb_title,
+            'wb_article': order.size.product.wb_article,
             'wb_size_name': order.size.wb_size_name,
             'wb_size_origName': order.size.wb_size_origName,
 

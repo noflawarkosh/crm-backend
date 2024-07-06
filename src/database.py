@@ -1,8 +1,9 @@
 import boto3
 from sqlalchemy import update, select, delete
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine , AsyncSession
 from sqlalchemy.orm import DeclarativeBase, selectinload, joinedload
 from config import DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER
+
 
 DATABASE_URL = f'postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 
@@ -45,9 +46,22 @@ class DefaultRepository:
         finally:
             await session.close()
 
+
+    @classmethod
+    async def update_records(cls, model, records):
+        try:
+            async with async_session_factory() as session:
+                for record in records:
+                    query = update(model).where(model.id == record['id']).values(**record)
+                    await session.execute(query)
+
+                await session.commit()
+        finally:
+            await session.close()
+
     @classmethod
     async def get_records(cls, model, filters=None, joins=None, select_related=None, prefetch_related=None,
-                          order_by=None, limit=None, offset=None, selects=None):
+                          order_by=None, limit=None, offset=None, selects=None, deep_related=None, filtration=None):
 
         try:
             async with async_session_factory() as session:
@@ -69,9 +83,17 @@ class DefaultRepository:
                     for select_model in select_related:
                         query = query.options(selectinload(select_model))
 
+                if deep_related:
+                    for deep_model in deep_related:
+                        query = query.options(selectinload(*deep_model))
+
                 if prefetch_related:
                     for prefetch_model in prefetch_related:
                         query = query.options(joinedload(prefetch_model))
+
+                if filtration:
+                    for filtration in filtration:
+                        query = query.filter(filtration)
 
                 if order_by:
                     query = query.order_by(*order_by)

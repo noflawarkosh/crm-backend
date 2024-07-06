@@ -34,19 +34,20 @@
         })
     }
 
+
     $.ajax({
         type: "GET",
         url: '/admin/get/addresses_full',
         success: function (data) {
             $('#dt_addresses').DataTable({
-                data: data,
+
+                "data": data,
                 "paging": true,
                 "pageLength": 10,
-                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "lengthMenu": [[10, 50, 100, 500, -1], [10, 50, 100, 500, "Все"]],
                 "searching": true,
                 "ordering": true,
-
-                columns: [
+                "columns": [
                     {data: 'id'},
                     {data: 'address'},
                     {data: 'district'},
@@ -73,7 +74,7 @@
                     {
                         data: "contractor",
                         "render": function (data, type, row) {
-                            return data.name
+                            return data ? data.name : ''
                         }
                     },
                     {
@@ -91,8 +92,33 @@
                         }
                     }
                 ],
+                "order": [[0, "desc"]],
+                "initComplete": function () {
 
-                "order": [[0, "desc"]]
+                    var table = this.api().table().header();
+                    var newRow = $('<tr></tr>');
+                    $(table).append(newRow);
+
+                    var searchColumns = [1, 2, 3, 4];
+
+                    this.api().columns().every(function (i) {
+                        var column = this;
+                        if (searchColumns.includes(i)) {
+
+                            var input = $('<input type="text" class="form-control" placeholder="" />');
+                            $(newRow).append($('<th></th>').append(input));
+
+                            input.on('keyup change clear', function () {
+                                if (column.search() !== this.value) {
+                                    column.search(this.value).draw();
+                                }
+                            });
+                        } else {
+                            $(newRow).append($('<th></th>'))
+
+                        }
+                    });
+                },
             });
 
 

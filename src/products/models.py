@@ -27,6 +27,7 @@ class ProductModel(Base):
 
     # Relationships
     sizes: Mapped[list['ProductSizeModel']] = relationship(lazy='noload')
+    organization: Mapped['OrganizationModel'] = relationship(lazy='noload')
 
 
 class ProductSizeModel(Base):
@@ -57,17 +58,12 @@ class ReviewModel(Base):
     match: Mapped[int | None]
     status: Mapped[int]
 
-    # FK
-    product_id: Mapped[int] = mapped_column(
-        ForeignKey('products_product.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
     size_id: Mapped[int | None] = mapped_column(
         ForeignKey('products_product_size.id', ondelete='CASCADE', onupdate='CASCADE')
     )
 
     # Relationships
     media: Mapped[list['ReviewMediaModel']] = relationship(lazy='noload')
-    product: Mapped['ProductModel'] = relationship(lazy='noload')
     size: Mapped['ProductSizeModel'] = relationship(lazy='noload')
 
 
@@ -81,4 +77,3 @@ class ReviewMediaModel(Base):
     review_id: Mapped[int] = mapped_column(
         ForeignKey('products_review.id', ondelete='CASCADE', onupdate='CASCADE')
     )
-

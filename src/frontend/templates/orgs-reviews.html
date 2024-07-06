@@ -25,6 +25,59 @@
 <script src="{{ url_for('static', path='assets/js/app-ecommerce-dashboard.js') }}"></script>
 <script src="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.js') }}"></script>
 
+
+<!-- GET PRODS FOR SELECT IN FORM -->
+<script>
+
+    const url = window.location.href;
+    var arr = url.split('/')
+    var org_id = arr[arr.length - 1]
+
+    $.ajax({
+
+        url: '/products/getOwned?org_id=' + org_id,
+        method: 'get',
+
+        success: function (data) {
+
+            var selectElement = $('#size_id');
+
+            $.each(data, function (i, product) {
+                $.each(product.sizes, function (j, size) {
+                    if (size.is_active) {
+                        var prod_title = product.wb_title
+
+                        if (size.wb_size_origName !== null) {
+                            prod_title = '(' + size.wb_size_origName + ') ' + prod_title
+                        }
+
+                        if (prod_title.length >= 25) {
+                            prod_title = prod_title.slice(0, 25) + '...'
+                        }
+
+                        var optionText = prod_title
+                        var optionValue = size.id
+                        var optionDataSubtext = product.wb_article
+
+                        var option = $('<option>').text(optionText).attr('data-subtext', optionDataSubtext).val(optionValue);
+                        selectElement.append(option);
+                    }
+
+                });
+            });
+
+            selectElement.selectpicker('refresh');
+
+        },
+
+        error: function (data) {
+            toastr.error('Ошибка получения товаров: ' + data.responseJSON.detail)
+        }
+    });
+
+</script>
+
+
 <!-- GET AND DISABLE REVIEWS -->
 <script>
 
@@ -54,9 +107,6 @@
         return str.slice(0, maxLength) + "...";
     }
 
-    const url = window.location.href;
-    var arr = url.split('/')
-    var org_id = arr[arr.length - 1]
     var v_modals = ''
 
     $.ajax({
@@ -72,6 +122,7 @@
                 "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
                 "searching": true,
                 "ordering": true,
+                autoWidth: false,
                 "columns": [
                     {
                         data: 'id'
@@ -81,11 +132,11 @@
 
                             var avatar_src = "{{ url_for('static', path='assets/img/avatars/def-product.jpg') }}"
 
-                            if (row.product.media !== null) {
-                                avatar_src = 'https://storage.yandexcloud.net/greedybear/' + row.product.media
+                            if (row.size.product.media !== null) {
+                                avatar_src = 'https://storage.yandexcloud.net/greedybear/' + row.size.product.media
                             }
 
-                            var wb_url = 'https://www.wildberries.ru/catalog/' + row.product.wb_article + '/detail.aspx'
+                            var wb_url = 'https://www.wildberries.ru/catalog/' + row.size.product.wb_article + '/detail.aspx'
 
                             return '' +
                                 '<div class="d-flex justify-content-start align-items-center product-name">' +
@@ -95,8 +146,8 @@
                                 '       </div>' +
                                 '   </div>' +
                                 '   <div class="d-flex flex-column">' +
-                                '       <h6 class="text-body text-nowrap mb-0"><a target="_blank" href="' + wb_url + '">' + truncateString(row.product.wb_title) + '</a></h6>' +
-                                '       <small class="text-muted text-truncate d-none d-sm-block">' + row.product.wb_article + '</small>' +
+                                '       <h6 class="text-body text-nowrap mb-0"><a target="_blank" href="' + wb_url + '">' + truncateString(row.size.product.wb_title) + '</a></h6>' +
+                                '       <small class="text-muted text-truncate d-none d-sm-block">' + row.size.product.wb_article + '</small>' +
                                 '   </div>' +
                                 '</div>'
                         }
@@ -104,13 +155,23 @@
                     {
                         "data": 'text',
                         "render": function (data, type, row) {
-                            return data ? data : '—'
-                        }
+                            if (data) {
+                                return '<span >'  + data  +  '</span>'
+                            }
+
+                            return '—'
+                        },
+
                     },
                     {
                         "data": 'size',
                         "render": function (data, type, row) {
-                            var cell = data ? data.wb_size_name : '—'
+                            var cell = '—'
+
+                            if (data.wb_size_origName !== null) {
+                                cell = data.wb_size_origName
+                            }
+
                             return '<span class="text-nowrap">' + cell + '</span>'
                         }
                     },
@@ -119,6 +180,9 @@
                         "render": function (data, type, row) {
                             var cell = '—'
                             if (data != null) {
+                                if (row.match === 0) {
+                                    cell = 'Не указывать'
+                                }
                                 if (row.match === 1) {
                                     cell = 'Соответствует'
                                 }
@@ -173,7 +237,7 @@
                                         media_list = media_list + '' +
                                             '<div class="avatar-wrapper">' +
                                             '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
-                                            '<a href="'+mu+'" target="_blank"><img src="'+mu+'" class="rounded-2"></a>' +
+                                            '<a href="' + mu + '" target="_blank"><img src="' + mu + '" class="rounded-2"></a>' +
                                             '</div>\<' +
                                             '/div>'
                                     }
@@ -265,28 +329,17 @@
 
         const text = document.getElementById('rev-text');
 
-        var prodselect = document.getElementById('prod-id')
-        var prodid = prodselect.options[prodselect.selectedIndex].value
-
-        var sizeselect = document.getElementById('size-id')
+        var sizeselect = document.getElementById('size_id')
         var sizeid = sizeselect.options[sizeselect.selectedIndex].value
 
-        if (sizeid != 0) {
-            url.searchParams.append('size_id', sizeid);
-        }
 
         var radioButtons = document.querySelectorAll('input[name="default-radio-1"]');
 
         for (var i = 0; i < radioButtons.length; i++) {
             if (radioButtons[i].checked) {
-
                 var mtchid = radioButtons[i].value;
                 break;
             }
-        }
-
-        if (mtchid != 0) {
-            url.searchParams.append('match', mtchid);
         }
 
         var txt = text.value
@@ -294,8 +347,8 @@
             url.searchParams.append('text', txt);
         }
 
-        url.searchParams.append('product_id', prodid);
-
+        url.searchParams.append('match', mtchid);
+        url.searchParams.append('size_id', sizeid);
 
         $.ajax({
             url: url,
@@ -304,115 +357,13 @@
             contentType: false,
             processData: false,
 
-            success: function (data) {
+            success: function () {
                 location.reload()
-
             },
 
             error: function (data) {
                 toastr.error(data.responseJSON.detail)
                 submitButton.classList.remove('disabled');
-            }
-        });
-
-    });
-</script>
-
-
-<!-- GET PRODS FOR SELECT IN FORM -->
-<script>
-
-    var prods = []
-
-    // Функция для добавления опций второго выпадающего списка
-    function addOptionsToSelect2(pri) {
-        var optionsArr = [];
-
-        for (var i = 0; i < prods.length; i++) {
-            if (prods[i].id == pri) {
-                optionsArr = prods[i]['sizes'];
-                break;
-            }
-        }
-
-        $("#size-id").selectpicker('destroy');
-        $("#size-id").empty();
-        $("#size-id").selectpicker("refresh");
-
-        $("#size-id").append($('<option>').text('Не указывать размер в отзыве').val(0));
-
-        for (var j = 0; j < optionsArr.length; j++) {
-
-            if (optionsArr[j].wb_size_name !== null && optionsArr[j].is_active !== false) {
-                var op_txt = optionsArr[j].wb_size_name;
-                var op_val = optionsArr[j].id;
-                var op_sub = optionsArr[j].wb_size_origName;
-
-                var sizeOP = $('<option>').text(op_txt).attr('data-subtext', op_sub).val(op_val);
-
-                $("#size-id").append(sizeOP);
-            }
-        }
-
-        $("#size-id").selectpicker('refresh');
-    }
-
-
-    $(document).ready(function () {
-
-        const url = window.location.href;
-
-        var arr = url.split('/')
-        var id = arr[arr.length - 1]
-
-        $.ajax({
-
-            url: '/products/getOwned?org_id=' + id,
-            method: 'get',
-
-            success: function (data) {
-                var selectElement = $('#prod-id');
-
-                prods = data
-
-                $.each(data, function (index, item) {
-
-                    var prod_title = item.wb_title
-
-                    if (prod_title.length >= 25) {
-                        prod_title = prod_title.slice(0, 25) + '...'
-                    }
-
-                    var optionText = prod_title
-                    var optionValue = item.id
-                    var optionDataSubtext = item.wb_article
-
-
-                    var option = $('<option>').text(optionText).attr('data-subtext', optionDataSubtext).val(optionValue);
-                    selectElement.append(option);
-
-                    if (index === 0) {
-                        addOptionsToSelect2(item.id);
-                    }
-
-                });
-
-                selectElement.selectpicker('refresh');
-
-                var select1 = document.getElementById('prod-id');
-
-                $("#prod-id").change(function () {
-
-                    var selectedValue = select1.value;
-                    addOptionsToSelect2(selectedValue);
-
-                });
-
-
-            },
-
-            error: function (data) {
-                toastr.error('Ошибка получения товаров: ' + data.responseJSON.detail)
             }
         });
 
@@ -449,7 +400,7 @@
                         <tr>
                             <th>#ID</th>
                             <th>Товар</th>
-                            <th>Отзыв</th>
+                            <th>Текст</th>
                             <th>Размер</th>
                             <th>Соответствие</th>
                             <th>Медиа</th>
@@ -474,30 +425,12 @@
         <div class="offcanvas-body">
             <form id="create-review-form" enctype="multipart/form-data">
                 <div class="mb-4 row">
-                    <label for="prod-id" class="form-label">Товар</label>
-                    <select id="prod-id" class="selectpicker w-100" data-style="btn-default"
-                            data-show-subtext="true">
+                    <label for="size_id" class="form-label">Товар</label>
+                    <select id="size_id" class="selectpicker w-100" data-style="btn-default"
+                            data-show-subtext="true" data-live-search="true">
                     </select>
                 </div>
-                <div class="mb-4 row" id="size-id-div">
 
-                    <label for="size-id" class="form-label">Размер</label>
-                    <select id="size-id" class="selectpicker w-100" data-style="btn-default"
-                            data-show-subtext="true">
-                    </select>
-                </div>
-                <div class="mb-4 row">
-                    <label for="rev-text" class="form-label">Текст отзыва</label>
-                    <div class="col">
-                        <input class="form-control" type="text" placeholder="Товар очень понравился!" id="rev-text">
-                    </div>
-                </div>
-                <div class="mb-4 row">
-                    <label for="rev-text" class="form-label">МЕДИА (JPEG, PNG, MOV | < 50MB)</label>
-                    <div class="col">
-                        <input type="file" name="files" class="form-control" multiple>
-                    </div>
-                </div>
                 <div class="row mb-4">
                     <div class="col">
                         <label class="form-label">Соответствие размеру</label>
@@ -518,6 +451,19 @@
                             <input name="default-radio-1" class="form-check-input" type="radio" value="3" id="smr-4">
                             <label class="form-check-label" for="smr-4">Большемерит</label>
                         </div>
+                    </div>
+                </div>
+
+                <div class="mb-4 row">
+                    <label for="rev-text" class="form-label">Текст отзыва</label>
+                    <div class="col">
+                        <input class="form-control" type="text" placeholder="Товар очень понравился!" id="rev-text">
+                    </div>
+                </div>
+                <div class="mb-4 row">
+                    <label for="rev-text" class="form-label">МЕДИА (JPEG, PNG, MOV | < 50MB)</label>
+                    <div class="col">
+                        <input type="file" name="files" class="form-control" multiple>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary">Добавить</button>

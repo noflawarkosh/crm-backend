@@ -18,6 +18,11 @@ class OrganizationModel(Base):
     inn: Mapped[str]
     status: Mapped[int]
     created_at: Mapped[dt]
+    balance_limit: Mapped[int | None] = mapped_column(default=-100000)
+
+    server_id: Mapped[int | None] = mapped_column(
+        ForeignKey('orders_server.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
     level_id: Mapped[int | None] = mapped_column(
         ForeignKey('balance_prices.id')
     )

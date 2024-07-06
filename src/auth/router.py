@@ -1,4 +1,7 @@
+from io import BytesIO
 from typing import Annotated, List, Optional
+
+import pandas as pd
 from fastapi import APIRouter, Depends, Response, Request, HTTPException, File, UploadFile
 from sqlalchemy import func
 
@@ -53,11 +56,10 @@ async def not_authed(request: Request = Request):
 
 @router.post('/register')
 async def register(data: Annotated[UserCreateSchema, Depends()], session: UserSessionModel = Depends(not_authed)):
-
     data.telnum = data.telnum.replace(' ', '+')
     unique_fields = [
-        ('email', data.email, string_user_email_exist),
-        ('username', data.username, string_user_username_exist),
+        ('email', data.email.lower(), string_user_email_exist),
+        ('username', data.username.lower(), string_user_username_exist),
         ('telnum', data.telnum, string_user_telnum_exist),
         ('telegram', data.telegram, string_user_telegram_exist),
     ]
@@ -71,6 +73,8 @@ async def register(data: Annotated[UserCreateSchema, Depends()], session: UserSe
             raise HTTPException(status_code=409, detail=error)
 
     data.password = hash_password(data.password)
+    data.username = data.username.lower()
+    data.email = data.email.lower()
 
     await DefaultRepository.save_records([{'model': UserModel, 'records': [{**data.model_dump(), 'status': 1}]}])
 
@@ -173,3 +177,5 @@ async def update_password(opw: str, npw: str, session: UserSessionModel = Depend
     ])
 
     await AuthRepository.expire_sessions(session.user.id, exclude_token=session.token)
+
+

@@ -27,43 +27,49 @@ async def get_plan(org_id: int, date: datetime.datetime, session: UserSessionMod
 
     records = await DefaultRepository.get_records(
         model=OrdersOrderModel,
-        filters=[OrdersOrderModel.org_id == org_id, OrdersOrderModel.dt_planed == date],
-        prefetch_related=[OrdersOrderModel.size, OrdersOrderModel.product]
+        filters=[OrdersOrderModel.dt_planed == date],
+        select_related=[OrdersOrderModel.size],
+        deep_related=[[OrdersOrderModel.size, ProductSizeModel.product]],
+        joins=[ProductSizeModel, ProductModel],
+        filtration=[ProductModel.org_id == org_id]
     )
 
     return [OrdersOrderReadModel.model_validate(record, from_attributes=True) for record in records]
 
 
 @router.post('/savePlan')
-async def save_data(amount: int,
-                    data: Annotated[OrdersOrderCreateModel, Depends()],
+async def save_data(amount: int, data: Annotated[OrdersOrderCreateModel, Depends()],
                     session: UserSessionModel = Depends(authed)):
-    await check_access(data.org_id, session.user.id, 4)
-
     if amount > 100:
         raise HTTPException(status_code=400, detail=string_orders_max_amount)
 
-    products = await DefaultRepository.get_records(
-        model=ProductModel,
-        filters=[ProductModel.id == data.product_id, ProductModel.org_id == data.org_id, ProductModel.status != 3],
-        select_related=[ProductModel.sizes]
+    sizes = await DefaultRepository.get_records(
+        ProductSizeModel,
+        filters=[ProductSizeModel.id == data.size_id],
+        select_related=[ProductSizeModel.product]
     )
 
-    if len(products) != 1:
+    if len(sizes) != 1:
         raise HTTPException(status_code=404, detail=string_products_product_not_found)
 
-    if not data.size_id:
-        raise HTTPException(status_code=400, detail=string_product_size_not_selected)
-
-    if data.size_id not in [size.id for size in products[0].sizes]:
-        raise HTTPException(status_code=400, detail=string_403)
-
-    sizes = await DefaultRepository.get_records(ProductSizeModel, filters=[ProductSizeModel.id == data.size_id])
-
-    if len(sizes) != 1:
-        raise HTTPException(status_code=404, detail=string_product_size_not_found)
-
     size = sizes[0]
+
+    records = await DefaultRepository.get_records(
+        model=OrdersOrderModel,
+        filters=[OrdersOrderModel.dt_planed == data.dt_planed],
+        select_related=[OrdersOrderModel.size],
+        deep_related=[[OrdersOrderModel.size, ProductSizeModel.product]],
+        joins=[ProductSizeModel, ProductModel],
+        filtration=[ProductModel.org_id == size.product.org_id]
+    )
+
+    if len(records) + amount > 500:
+        raise HTTPException(status_code=403, detail=string_products_max_tasks_per_day)
+
+    if size.product.status == 3:
+        raise HTTPException(status_code=404, detail=string_products_product_not_found)
+
+    await check_access(size.product.org_id, session.user.id, 8)
 
     if not size.is_active:
         raise HTTPException(status_code=403, detail=string_product_size_not_active)

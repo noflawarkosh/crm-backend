@@ -5,7 +5,6 @@ from pydantic import BaseModel, constr
 from orgs.schemas import OrganizationReadSchema
 
 
-
 # Balance Action
 class BalanceActionSchema(BaseModel):
     id: int
@@ -20,8 +19,8 @@ class BalanceHistoryReadSchema(BaseModel):
     amount: int
     date: datetime.datetime
 
-    organization: 'OrganizationReadSchema'
-    action: 'BalanceActionSchema'
+    organization: Optional['OrganizationReadSchema']
+    action: Optional['BalanceActionSchema']
 
 
 # Balance Source
@@ -58,3 +57,20 @@ class BalanceBillReadSchema(BalanceBillCreateSchema):
     status: Optional['BalanceBillStatusSchema']
 
 
+class BalanceLevelSchema(BaseModel):
+    id: int
+    title: str
+    number: int
+    amount: int | None
+    is_public: bool
+
+    price_buy: int
+    price_collect: int
+    price_review: int
+    price_review_media: int
+    price_review_request: int
+    price_box: int
+    price_pass: int
+    price_percent: float
+    price_percent_limit: int
+    price_percent_penalty: float

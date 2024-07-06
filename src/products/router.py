@@ -1,6 +1,8 @@
 import datetime
+from io import BytesIO
 from typing import Annotated, List
 
+import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy import func
 
@@ -9,6 +11,7 @@ from admin.utils import generate_filename, s3_save, verify_file
 from auth.models import UserSessionModel
 from auth.router import authed
 from database import DefaultRepository
+from orgs.models import OrganizationModel
 
 from orgs.router import check_access
 from products.models import ProductModel, ReviewModel, ProductSizeModel
@@ -58,8 +61,7 @@ async def create_product(data: Annotated[ProductPOSTSchema, Depends()], session:
 
 
 @router_products.get('/refresh')
-async def refresh_product(product_id: int,
-                          session: UserSessionModel = Depends(authed)):
+async def refresh_product(product_id: int, session: UserSessionModel = Depends(authed)):
     products = await DefaultRepository.get_records(
         ProductModel,
         filters=[ProductModel.id == product_id, ProductModel.status != 3],
@@ -71,7 +73,7 @@ async def refresh_product(product_id: int,
 
     await check_access(products[0].org_id, session.user.id, 2)
 
-    if False and products[0].last_update + datetime.timedelta(minutes=5) > datetime.datetime.now():
+    if products[0].last_update + datetime.timedelta(minutes=5) > datetime.datetime.now():
         remaining = (products[0].last_update + datetime.timedelta(minutes=5)) - datetime.datetime.now()
 
         raise HTTPException(
@@ -144,8 +146,6 @@ async def refresh_product(product_id: int,
                 }
             )
 
-
-
     await DefaultRepository.save_records(
         [
             {'model': ProductSizeModel, 'records': records},
@@ -161,31 +161,12 @@ async def refresh_product(product_id: int,
 
     )
 
-    products = await DefaultRepository.get_records(
-        ProductModel,
-        filters=[ProductModel.id == product_id, ProductModel.status != 3],
-        select_related=[ProductModel.sizes]
-    )
-
-    if len(products) != 1:
-        raise HTTPException(status_code=404, detail=string_products_product_not_found)
-
-    product = products[0]
-
-    is_active = True
-    for size in product.sizes:
-        if not size.barcode:
-            is_active = False
-            break
-
-    if is_active:
-        await DefaultRepository.save_records([{'model': ProductModel, 'records': [{'id': product.id, 'status': 2}]}])
-    else:
-        await DefaultRepository.save_records([{'model': ProductModel, 'records': [{'id': product.id, 'status': 1}]}])
-
 
 @router_products.get('/getOwned')
 async def get_owned_products(org_id: int, session: UserSessionModel = Depends(authed)):
+
+    await check_access(org_id, session.user.id, 30)
+
     products = await DefaultRepository.get_records(
         ProductModel,
         filters=[ProductModel.org_id == org_id, ProductModel.status != 3],
@@ -195,7 +176,7 @@ async def get_owned_products(org_id: int, session: UserSessionModel = Depends(au
 
 
 @router_products.post('/updateSize')
-async def create_barcode(size_id: int, status: bool, session: UserSessionModel = Depends(authed)):
+async def update_size_status(size_id: int, status: bool, session: UserSessionModel = Depends(authed)):
     sizes = await DefaultRepository.get_records(
         ProductSizeModel,
         filters=[ProductSizeModel.id == size_id],
@@ -214,7 +195,7 @@ async def create_barcode(size_id: int, status: bool, session: UserSessionModel =
 
 
 @router_products.post('/barcode')
-async def create_barcode(size_id: int, barcode: str, session: UserSessionModel = Depends(authed)):
+async def update_size_barcode(size_id: int, barcode: str, session: UserSessionModel = Depends(authed)):
     sizes = await DefaultRepository.get_records(
         ProductSizeModel,
         filters=[ProductSizeModel.id == size_id],
@@ -234,30 +215,9 @@ async def create_barcode(size_id: int, barcode: str, session: UserSessionModel =
     await DefaultRepository.save_records(
         [{'model': ProductSizeModel, 'records': [{'id': size_id, 'barcode': barcode}]}])
 
-    products = await DefaultRepository.get_records(
-        ProductModel,
-        filters=[ProductModel.id == size.product_id, ProductModel.status != 3],
-        select_related=[ProductModel.sizes]
-    )
-
-    if len(sizes) != 1:
-        raise HTTPException(status_code=404, detail=string_products_product_not_found)
-
-    product = products[0]
-
-    is_active = True
-    for size in product.sizes:
-        if not size.barcode:
-            is_active = False
-            break
-
-    if is_active:
-        await DefaultRepository.save_records([{'model': ProductModel, 'records': [{'id': product.id, 'status': 2}]}])
-
 
 @router_products.get('/disable')
-async def disable_product(product_id: int,
-                          session: UserSessionModel = Depends(authed)):
+async def disable_product(product_id: int, session: UserSessionModel = Depends(authed)):
     products = await DefaultRepository.get_records(
         ProductModel,
         filters=[ProductModel.id == product_id, ProductModel.status != 3],
@@ -272,50 +232,38 @@ async def disable_product(product_id: int,
 
 
 @router_reviews.post('/create')
-async def create_review(data: Annotated[ReviewCreateSchema, Depends()],
-                        files: List[UploadFile] = File(...),
-                        session: UserSessionModel = Depends(authed)
-                        ):
+async def create_review(data: Annotated[ReviewCreateSchema, Depends()], files: List[UploadFile] = File(default=None),
+                        session: UserSessionModel = Depends(authed)):
     if len(files) > 5:
         raise HTTPException(status_code=400, detail=string_product_too_many_files)
 
-    products = await DefaultRepository.get_records(
-        ProductModel,
-        filters=[ProductModel.id == data.product_id, ProductModel.status != 3],
-        select_related=[ProductModel.sizes]
+    sizes = await DefaultRepository.get_records(
+        ProductSizeModel,
+        filters=[ProductSizeModel.id == data.size_id],
+        select_related=[ProductSizeModel.product]
     )
 
-    if len(products) != 1:
+    if len(sizes) != 1:
         raise HTTPException(status_code=404, detail=string_products_product_not_found)
 
-    await check_access(products[0].org_id, session.user.id, 8)
+    size = sizes[0]
 
-    if data.size_id and data.size_id not in [size.id for size in products[0].sizes]:
-        raise HTTPException(status_code=400, detail=string_403)
+    if size.product.status == 3:
+        raise HTTPException(status_code=404, detail=string_products_product_not_found)
 
-    if data.size_id:
-        sizes = await DefaultRepository.get_records(ProductSizeModel, filters=[ProductSizeModel.id == data.size_id])
+    await check_access(size.product.org_id, session.user.id, 8)
 
-        if len(sizes) != 1:
-            raise HTTPException(status_code=404, detail=string_product_size_not_found)
+    if not size.is_active:
+        raise HTTPException(status_code=403, detail=string_product_size_not_active)
 
-        size = sizes[0]
+    if not size.barcode:
+        raise HTTPException(status_code=403, detail=string_product_size_no_barcode)
 
-        if not size.is_active:
-            raise HTTPException(status_code=403, detail=string_product_size_not_active)
+    if not size.wb_in_stock:
+        raise HTTPException(status_code=403, detail=string_product_size_not_in_stock)
 
-        if not size.barcode:
-            raise HTTPException(status_code=403, detail=string_product_size_no_barcode)
-
-        if not size.wb_in_stock:
-            raise HTTPException(status_code=403, detail=string_product_size_not_in_stock)
-
-    if data.match:
-        if not data.size_id:
-            raise HTTPException(status_code=400, detail=string_product_size_not_selected_but_match)
-
-        if data.match not in [1, 2, 3]:
-            raise HTTPException(status_code=404, detail=string_404)
+    if data.match not in [0, 1, 2, 3]:
+        raise HTTPException(status_code=404, detail=string_404)
 
     ordered_files = []
     for file in files:
@@ -338,32 +286,32 @@ async def create_review(data: Annotated[ReviewCreateSchema, Depends()],
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"{file.name}: {str(e)}")
 
-    await ReviewsRepository.create_review(data, ordered_files)
-
     for file in ordered_files:
-        await s3_save(file.content, file.href, file.filename.rsplit('.', maxsplit=1)[1])
+        file_name, file_type = await s3_save(file.content, file.href, file.filename.rsplit('.', maxsplit=1)[1])
+        file.filename = f'{file_name}.{file_type}'
+
+    await ReviewsRepository.create_review(data, ordered_files)
 
 
 @router_reviews.get('/getOwned')
-async def get_reviews_of_organization(org_id: int, session: UserSessionModel = Depends(authed)
-                                      ) -> list[ReviewReadSchema]:
+async def get_reviews_of_organization(org_id: int, session: UserSessionModel = Depends(authed)):
     await check_access(org_id, session.user.id, 8)
     reviews = await ReviewsRepository.get_owned_by_org_id(org_id)
     return [ReviewReadSchema.model_validate(record, from_attributes=True) for record in reviews]
 
 
 @router_reviews.get('/disable')
-async def disable_review(review_id: int,
-                         session: UserSessionModel = Depends(authed)):
+async def disable_review(review_id: int, session: UserSessionModel = Depends(authed)):
     reviews = await DefaultRepository.get_records(
         ReviewModel,
         filters=[ReviewModel.id == review_id],
-        select_related=[ReviewModel.product]
+        select_related=[ReviewModel.size],
+        deep_related=[[ReviewModel.size, ProductSizeModel.product]]
     )
 
     if len(reviews) != 1:
         raise HTTPException(status_code=404, detail=string_404)
 
-    await check_access(reviews[0].product.org_id, session.user.id, 8)
+    await check_access(reviews[0].size.product.org_id, session.user.id, 8)
 
     await DefaultRepository.save_records([{'model': ReviewModel, 'records': [{'id': review_id, 'status': 4}]}])

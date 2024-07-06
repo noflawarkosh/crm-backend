@@ -85,7 +85,7 @@
             $.each(data, function (index, item) {
                 var optionText = item.bank;
                 var optionValue = item.id
-                var optionDataSubtext = (item.description ? item.description  : '')
+                var optionDataSubtext = (item.description ? item.description : '')
 
                 var option = $('<option>').text(optionText).attr('data-subtext', optionDataSubtext).val(optionValue);
                 selectElement.append(option);
@@ -135,7 +135,7 @@
                     {
                         data: 'amount',
                         "render": function (data, type, row) {
-                            return '<b>' + data + '</b>'
+                            return '<b>' + data.toLocaleString('ru-RU') + ' ₽</b>'
                         }
                     },
                     {
@@ -195,10 +195,35 @@
 <!-- Get History -->
 <script>
 
-    var total = 0
-    var free = 0
-    var freezed = 0
-    var spent = 0
+    function calcTotal(x) {
+        var add = 0
+        var freeze = 0
+        var spent = 0
+        var unfreezed = 0
+
+        for (var i in x) {
+            if (x[i].action_id === 1) {
+                add = add + x[i].amount
+            }
+            if (x[i].action_id === 2) {
+                freeze = freeze + x[i].amount
+            }
+            if (x[i].action_id === 3) {
+                spent = spent + x[i].amount
+            }
+            if (x[i].action_id === 4) {
+                unfreezed = unfreezed + x[i].amount
+            }
+        }
+
+        return {
+            'add': add,
+            'freeze': freeze,
+            'spent': spent,
+            'unfreezed': unfreezed,
+            'total': add + unfreezed - freeze - spent
+        }
+    }
 
     var arr = url.split('/')
     var org_id = arr[arr.length - 1]
@@ -209,92 +234,74 @@
         type: 'GET',
 
         success: function (data) {
+            var tt = calcTotal(data)
 
-            for (var i = 0; i < data.length; i++) {
-                if (data[i].action_id === 1) {
-                    total += data[i].amount
-                }
+            document.getElementById('ctr-1').innerHTML = '<b>₽ ' + (tt['add'] - tt['spent']).toLocaleString('ru-RU') + '</b>'
+            document.getElementById('ctr-2').innerHTML = '<b>₽ ' + (tt['total']).toLocaleString('ru-RU') + '</b>'
+            document.getElementById('ctr-3').innerHTML = '<b>₽ ' + (tt['freeze'] - tt['unfreezed']).toLocaleString('ru-RU') + '</b>'
+            document.getElementById('ctr-4').innerHTML = '<b>₽ ' + tt['spent'].toLocaleString('ru-RU') + '</b>'
 
-                if (data[i].action_id === 2) {
-                    freezed += data[i].amount
+            if ((tt['total']) < 0) {
+                document.getElementById('balance_alert').style.display = 'block';
+                document.getElementById('balance_alert').innerHTML = 'Необходимо пополнить баланс на сумму <b>' + (tt['total']).toLocaleString('ru-RU').toString().replace('-', '') + ' ₽</b> во избежание возникновения задолженности'
+            }
+
+            var dayss = {}
+
+            for (var i in data) {
+
+                var d = moment(data[i].date).format('DD.MM.YYYY')
+
+                if (!dayss[d]) {
+                    dayss[d] = 0
                 }
 
                 if (data[i].action_id === 3) {
-                    total -= data[i].amount
-                    spent += data[i].amount
+                    dayss[d] -= data[i]['amount']
                 }
+
+
             }
 
-            document.getElementById('ctr-1').innerText = '₽ ' + total
-            document.getElementById('ctr-2').innerText = '₽ ' + (total - freezed)
-            document.getElementById('ctr-3').innerText = '₽ ' + freezed
-            document.getElementById('ctr-4').innerText = '₽ ' + spent
-
+            var res = []
+            for (var i in dayss) {
+                res.push({
+                    'date': i,
+                    'amount': dayss[i]
+                })
+            }
 
             $('#dt_user_history').DataTable({
-                "data": data,
+                "data": res,
                 "paging": true,
                 "pageLength": 10,
                 "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
                 "searching": true,
                 "ordering": true,
+                autoWidth: false,
 
                 columns: [
                     {
                         data: 'date',
                         "render": function (data, type, row) {
-                            return moment(data).format('DD.MM.YYYY HH:mm')
+                            return data
                         }
                     },
                     {
                         data: 'amount',
                         "render": function (data, type, row) {
-                            var sign = '-'
 
-                            if (row.action_id === 1) {
-                                sign = '+'
+                            var color = 'text-danger'
+                            if (data >= 0) {
+                                color = 'text-success'
                             }
 
-                            return '<b>' + sign + data + '</b>'
+                            return '<b class="text-nowrap ' + color + '">' + data.toLocaleString('ru-RU') + ' ₽</b>'
                         }
                     },
                     {
-                        data: 'action',
                         "render": function (data, type, row) {
-                            var action = 'Не указано'
-                            var color = 'info'
-                            if (data.id === 1) {
-                                action = 'Пополнение'
-                                color = 'success'
-                            }
-
-                            if (data.id === 2) {
-                                action = 'Заморозка'
-                                color = 'warning'
-                            }
-
-                            if (data.id === 3) {
-                                action = 'Списание'
-                                color = 'danger'
-                            }
-
-                            if (data.id ===  4)  {
-                                action =  'Разморозка'
-                                color =  'success'
-                            }
-
-                            return '<span class="badge bg-label-' + color + '">' + action + '</span>'
-                        }
-                    },
-                    {
-                        data: 'description',
-                        "render": function (data, type, row) {
-                            var ds = '—'
-
-                            if (row.description !== null) {
-                                ds = data
-                            }
-                            return ds
+                            return '<a href="/wallet/' + org_id + '/' + row.date.replaceAll('.', '') + row.date.replaceAll('.', '') + '">Детализация</a>'
                         }
                     },
 
@@ -302,9 +309,11 @@
 
                 "order": [[0, "desc"]]
             });
+
             document.getElementById('hst-div').style.display = 'block';
             document.getElementById('ctrs').style.display = 'flex';
             document.getElementById('hst-ldr').style.display = 'none';
+
         },
 
         error: function (data) {
@@ -321,11 +330,11 @@
     <div class="row mb-4 g-3" id="ctrs" style="display: none">
         <div class="col-sm-6 col-xl-3">
             <div class="card">
-                <div class="card-body">
+                <div class="card-body border border-secondary rounded">
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="content-left">
                             <h3 class="mb-0" id="ctr-1"></h3>
-                            <small>Всего</small>
+                            <small>Баланс</small>
                         </div>
                         <span class="badge bg-label-primary rounded-circle p-2">
                             <i class="bx bx-dollar bx-sm"></i>
@@ -340,10 +349,10 @@
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="content-left">
                             <h3 class="mb-0" id="ctr-2"></h3>
-                            <small>Свободных</small>
+                            <small>Баланс с учетом заморозки</small>
                         </div>
                         <span class="badge bg-label-success rounded-circle p-2">
-                            <i class="bx bx-gift bx-sm"></i>
+                            <i class="bx bx-smile bx-sm"></i>
                         </span>
                     </div>
                 </div>
@@ -357,8 +366,8 @@
                             <h3 class="mb-0" id="ctr-3"></h3>
                             <small>Заморожено</small>
                         </div>
-                        <span class="badge bg-label-danger rounded-circle p-2">
-                            <i class="bx bx-user bx-sm"></i>
+                        <span class="badge bg-label-warning rounded-circle p-2">
+                            <i class="bx bx-fridge bx-sm"></i>
                         </span>
                     </div>
                 </div>
@@ -370,9 +379,9 @@
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="content-left">
                             <h3 class="mb-0" id="ctr-4"></h3>
-                            <small>Потрачено</small>
+                            <small>Траты за все время</small>
                         </div>
-                        <span class="badge bg-label-info rounded-circle p-2">
+                        <span class="badge bg-label-danger rounded-circle p-2">
                             <i class="bx bx-infinite bx-sm"></i>
                         </span>
                     </div>
@@ -380,14 +389,12 @@
             </div>
         </div>
     </div>
+    <div class="alert alert-danger" role="alert" id="balance_alert" style="display: none"></div>
     <div class="row">
         <div class="col">
             <div class="card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">История кошелька
-                        <a href="javascript:var u = '/payments/getHistory?org_id=' + org_id; dt_refresh('dt_user_history', u)" id="rb">
-                            <i class="bx bx-refresh"></i>
-                        </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="hst-ldr"></span>
                     </h5>
                     <small class="card-subtitle">За весь период существования организации</small>
@@ -397,9 +404,8 @@
                         <thead>
                         <tr>
                             <th>Дата</th>
-                            <th>Сумма</th>
-                            <th>Операция</th>
-                            <th>Описание</th>
+                            <th>Расходы за день</th>
+                            <th>Действия</th>
                         </tr>
                         </thead>
                     </table>
@@ -418,7 +424,8 @@
                            aria-controls="off-create-bill">
                             <i class="bx bxs-plus-square"></i>
                         </a>
-                        <a href="javascript:var u = '/payments/getOwnedBills?org_id=' + id; dt_refresh('dt_user_bills', u)" id="rb1">
+                        <a href="javascript:var u = '/payments/getOwnedBills?org_id=' + id; dt_refresh('dt_user_bills', u)"
+                           id="rb1">
                             <i class="bx bx-refresh"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="bls-ldr"></span>

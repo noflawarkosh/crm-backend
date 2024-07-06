@@ -43,6 +43,7 @@ class CrmSettingsModel(Base):
     __tablename__ = 'admin_crm_settings'
 
     id: Mapped[pk]
+    crm_maintenance: Mapped[bool]
 
 
 class PickerSettingsModel(Base):
@@ -62,3 +63,20 @@ class PickerSettingsModel(Base):
     al: Mapped[int]
 
     k_format: Mapped[str]
+
+
+class PickerHistoryModel(Base):
+    __tablename__ = 'admin_picker_history'
+
+    id: Mapped[pk]
+    date: Mapped[dt]
+    logs: Mapped[str]
+    result: Mapped[str | None]
+
+    # FK
+    server_id: Mapped[int] = mapped_column(
+        ForeignKey('orders_server.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+
+    # Relationships
+    server: Mapped['OrdersServerModel'] = relationship(lazy=False)

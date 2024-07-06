@@ -22,7 +22,7 @@ class OrdersServerContractorModel(Base):
     load_t_min: Mapped[int]
     load_t_max: Mapped[int]
     load_i: Mapped[int]
-    load_m: Mapped[datetime.datetime]
+    load_m: Mapped[datetime.date]
 
     # FK
     contractor_id: Mapped[int] = mapped_column(
@@ -74,7 +74,7 @@ class OrdersAccountModel(Base):
     id: Mapped[pk]
     number: Mapped[str]
     name: Mapped[str]
-    reg_date: Mapped[dt]
+    reg_date: Mapped[datetime.date | None]
     is_active: Mapped[bool]
 
     # FK
@@ -109,7 +109,7 @@ class OrdersAddressModel(Base):
     is_active: Mapped[bool]
 
     # FK
-    contractor_id: Mapped[int] = mapped_column(
+    contractor_id: Mapped[int | None] = mapped_column(
         ForeignKey('orders_contractor.id', ondelete='CASCADE', onupdate='CASCADE')
     )
 
@@ -122,32 +122,28 @@ class OrdersOrderModel(Base):
     __tablename__ = 'orders_order'
 
     id: Mapped[pk]
-    wb_uuid: Mapped[str | None]
+
     wb_keyword: Mapped[str]
     wb_price: Mapped[int | None]
+    wb_uuid: Mapped[str | None]
     wb_status: Mapped[str | None]
+    wb_collect_code: Mapped[str | None]
+
     status: Mapped[int]
     description: Mapped[str | None]
+
     dt_planed: Mapped[datetime.date | None]
     dt_ordered: Mapped[datetime.date | None]
     dt_delivered: Mapped[datetime.date | None]
     dt_collected: Mapped[datetime.date | None]
 
     # FK
-    product_id: Mapped[int] = mapped_column(
-        ForeignKey('products_product.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
     size_id: Mapped[int] = mapped_column(
         ForeignKey('products_product_size.id', ondelete='CASCADE', onupdate='CASCADE')
     )
     account_id: Mapped[int | None] = mapped_column(
         ForeignKey('orders_account.id', ondelete='CASCADE', onupdate='CASCADE')
     )
-    org_id: Mapped[int] = mapped_column(
-        ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
 
-    product: Mapped['ProductModel'] = relationship(lazy='noload')
     size: Mapped['ProductSizeModel'] = relationship(lazy='noload')
     account: Mapped['OrdersAccountModel'] = relationship(lazy='noload')
-    organization: Mapped['OrganizationModel'] = relationship(lazy='noload')

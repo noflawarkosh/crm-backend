@@ -11,8 +11,10 @@ class OrganizationCreateSchema(BaseModel):
     inn: constr(min_length=10, max_length=12)
 
 
-class OrganizationReadSchema(OrganizationCreateSchema):
+class OrganizationReadSchema(BaseModel):
     id: int
+    title: str
+    inn: str
     owner: Optional['UserReadSchema']
 
 

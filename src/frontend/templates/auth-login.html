@@ -119,32 +119,7 @@
 
 <script>
     // Inputmasks
-    $(document).ready(function () {
 
-        passwordOptions = {
-            mask: '*{8,16}',
-            definitions: {
-                '*': {
-                    validator: '[A-Za-z0-9!@#$%^&*]',
-                },
-            },
-            placeholder: ''
-        };
-
-        usernameOptions = {
-            mask: '*{5,20}',
-            definitions: {
-                '*': {
-                    validator: '[a-z0-9]',
-                },
-            },
-            placeholder: ''
-        };
-
-        $('#username').inputmask(usernameOptions);
-        $('#password').inputmask(passwordOptions);
-
-    });
 </script>
 
 <script>

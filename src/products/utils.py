@@ -75,7 +75,7 @@ def parse_wildberries_card(url):
             'wb_in_stock': True if size['stocks'] else False,
             'wb_price': size['price']['total'] if size['stocks'] else None,
             'barcode': None,
-            'is_active': False,
+            'is_active': True,
         }))
 
     try:

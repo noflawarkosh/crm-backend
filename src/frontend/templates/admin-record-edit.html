@@ -69,11 +69,15 @@
 
                                 } else if (type === 'DATETIME') {
                                     var date = new Date(data[field]);
-                                    var formattedDate = date.toISOString().slice(0, 16);
+                                    var formattedDate = new Date(date.toLocaleString("en-US", {timeZone: "Europe/Moscow"})).toISOString().slice(0, 16);
+
                                     el = '<input class="form-control" type="datetime-local" id="' + field + '" value="' + formattedDate + '">'
 
                                 } else if (type === 'TIME') {
                                     el = '<input class="form-control" type="time" step="1" id="' + field + '" ' + value + '>'
+
+                                } else if (type === 'DATE') {
+                                    el = '<input class="form-control" type="date" step="1" id="' + field + '" ' + value + '>'
 
                                 } else if (type === 'FLOAT') {
                                     el = '<input class="form-control" type="number" step="0.1" id="' + field + '" ' + value + '>'
@@ -192,7 +196,7 @@
 
         var payload = {}
         payload[model] = [b_data]
-
+        console.log(payload)
         $.ajax({
             type: "POST",
             url: '/admin/save',

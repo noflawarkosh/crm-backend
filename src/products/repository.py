@@ -49,7 +49,7 @@ class ReviewsRepository:
                 for file in files:
                     session.add(ReviewMediaModel(
                         review_id=review.id,
-                        media=f"{file.href}.{file.filename.rsplit('.', maxsplit=1)[1]}")
+                        media=file.filename)
                     )
 
                 await session.commit()
@@ -68,10 +68,12 @@ class ReviewsRepository:
                     select(ReviewModel)
                     .options(
                         selectinload(ReviewModel.media),
-                        selectinload(ReviewModel.product),
                         selectinload(ReviewModel.size),
+                        selectinload(ReviewModel.size, ProductSizeModel.product)
                     )
-                    .join(ReviewModel.product)
+                    .join(ProductSizeModel)
+                    .join(ProductModel)
+
                     .filter(ProductModel.org_id == org_id)
                     .filter(ProductModel.status != 3)
                 )

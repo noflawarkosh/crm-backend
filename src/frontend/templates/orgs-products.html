@@ -282,21 +282,6 @@
                         },
                         {
                             render: function (data, type, row) {
-                                if (row.status === 1) {
-                                    return '<span class="badge bg-label-warning">Указаны не все штрих-коды</span>'
-                                }
-
-                                if (row.status === 2) {
-                                    return '<span class="badge bg-label-success">Активен</span>'
-                                }
-
-                                if (row.status === 3) {
-                                    return '<span class="badge bg-label-error">Удален</span>'
-                                }
-                            }
-                        },
-                        {
-                            render: function (data, type, row) {
                                 return '<span class="text-nowrap">' + moment(row.last_update).format('DD.MM.YYYY HH:mm') + '</span>'
                             }
                         },
@@ -366,7 +351,6 @@
             },
 
             error: function (data) {
-                console.log(data)
                 toastr.error(data.responseJSON.detail)
                 submitButton.disabled = false
             }
@@ -404,7 +388,6 @@
                             <th>#ID</th>
                             <th>Товар</th>
                             <th>О товаре</th>
-                            <th>Статус</th>
                             <th>Обновление WB</th>
                             <th>Действия</th>
                         </tr>

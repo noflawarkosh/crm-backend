@@ -154,6 +154,27 @@ async def page(request: Request,
     return templates.TemplateResponse('general-dashboard.html', {'request': request})
 
 
+@router.get('/wallet/{org_id}/{dates}')
+async def page(request: Request, org_id: int, dates: str = None, session: UserSessionModel = Depends(every)):
+    if not session:
+        return RedirectResponse('/login')
+
+    organizations = await DefaultRepository.get_records(
+        OrganizationModel,
+        filters=[OrganizationModel.id == org_id]
+    )
+
+    if len(organizations) != 1:
+        return RedirectResponse('/404')
+
+    organization = organizations[0]
+
+    if organization.owner_id != session.user.id:
+        return RedirectResponse('/403')
+
+    return templates.TemplateResponse(f'payments-details.html', {'request': request})
+
+
 @router.get('/organization/{section}/{org_id}')
 async def page(request: Request,
                section: str,

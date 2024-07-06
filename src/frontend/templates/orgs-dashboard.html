@@ -129,11 +129,10 @@
 
         success: function (data) {
             document.title = data.title + ' - GreedyBear'
-            document.getElementById('org-name').innerText = data.title
-            document.getElementById('org-inn').innerText = 'ИНН ' + data.inn
+            document.getElementById('org-name').innerText = data.title + ' · ИНН ' + data.inn
 
             document.getElementById('org-div').style.display = 'block';
-            document.getElementById('org-ldr').style.display = 'none';
+
         },
 
         error: function (data) {
@@ -392,33 +391,307 @@
         }
     });
 </script>
+
+<script>
+
+    $.ajax({
+
+        url: '/payments/currentLevel?org_id=' + id,
+        type: 'GET',
+
+        success: function (current) {
+
+            var curr_level = document.getElementById('current_level')
+            if (current.personal) {
+                curr_level.innerHTML = '<div class="card border-secondary border shadow-none">\n' +
+                    '                    <div class="card-body position-relative">\n' +
+                    '                        <div class="position-absolute end-0 me-4 top-0 mt-4">\n' +
+                    '                            <span class="badge bg-label-secondary">PERSONAL</span>\n' +
+                    '                        </div>\n' +
+                    '                        <div class="my-3 pt-2 text-center pt-4">\n' +
+                    '                            <i class="bx bxs-zap text-warning"></i>\n' +
+                    '                        </div>\n' +
+                    '                        <h3 class="card-title text-center text-capitalize mb-1">' + current.level.title + '</h3>\n' +
+                    '                        <p class="text-center"><i class="bx bx-infinite"></i></p>\n' +
+                    '                        <hr class="mx-n4 mb-4">\n' +
+                    '                        <div class="p-2">\n' +
+                    '\n' +
+                    '                            <h6>Стоимость услуг</h6>\n' +
+                    '                            <dl class="row mb-0">\n' +
+                    '                                <dt class="col-6 fw-normal">Выкуп</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + current.level.price_buy.toLocaleString('ru-RU') + '</dd>\n' +
+                    '\n' +
+                    '                                <dt class="col-6 fw-normal">Логистика</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + current.level.price_collect.toLocaleString('ru-RU') + '</dd>\n' +
+                    '\n' +
+                    '                                <dt class="col-6 fw-normal">Отзыв</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + current.level.price_review.toLocaleString('ru-RU') + '</dd>\n' +
+                    '\n' +
+                    '                                <dt class="col-6 fw-normal">Отзыв с фото</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + current.level.price_review_media.toLocaleString('ru-RU') + '</dd>\n' +
+                    '\n' +
+                    '                                <dt class="col-6 fw-normal">Отзыв по запросу</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + current.level.price_review_request.toLocaleString('ru-RU') + '</dd>\n' +
+                    '                            </dl>\n' +
+                    '                        </div>\n' +
+                    '                    </div>\n' +
+                    '                </div>'
+            } else {
+
+                var stars = ''
+                for (var i = 1; i <= current.level.number; i += 1)
+
+                    stars += '<i class="bx bxs-star text-warning me-1"></i>'
+
+                curr_level.innerHTML = '<div class="card border border shadow-none">\n' +
+                    '                    <div class="card-body position-relative">\n' +
+                    '                        <div class="my-3 pt-2 text-center">\n' + stars +
+                    '                        </div>\n' +
+                    '                        <h3 class="card-title text-center text-capitalize mb-1">' + current.level.title + '</h3>\n' +
+                    '                        <p class="text-center">до воскресенья</p>\n' +
+                    '                        <hr class="mx-n4 mb-4">\n' +
+                    '                        <div class="p-2">\n' +
+                    '\n' +
+                    '                            <h6>Стоимость услуг</h6>\n' +
+                    '                            <dl class="row mb-0">\n' +
+                    '                                <dt class="col-6 fw-normal">Выкуп</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + current.level.price_buy.toLocaleString('ru-RU') + '</dd>\n' +
+                    '\n' +
+                    '                                <dt class="col-6 fw-normal">Логистика</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + current.level.price_collect.toLocaleString('ru-RU') + '</dd>\n' +
+                    '\n' +
+                    '                                <dt class="col-6 fw-normal">Отзыв</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + current.level.price_review.toLocaleString('ru-RU') + '</dd>\n' +
+                    '\n' +
+                    '                                <dt class="col-6 fw-normal">Отзыв с фото</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + current.level.price_review_media.toLocaleString('ru-RU') + '</dd>\n' +
+                    '\n' +
+                    '                                <dt class="col-6 fw-normal">Отзыв по запросу</dt>\n' +
+                    '                                <dd class="col-6 fw-medium text-end">₽ ' + current.level.price_review_request.toLocaleString('ru-RU') + '</dd>\n' +
+                    '                            </dl>\n' +
+                    '                        </div>\n' +
+                    '                    </div>\n' +
+                    '                </div>'
+
+            }
+
+            $.ajax({
+
+                url: '/payments/futureLevel?org_id=' + id,
+                type: 'GET',
+
+                success: function (future) {
+                    var ul_el = document.getElementById('levels_all')
+                    var level_modals_div = document.getElementById('level_modals')
+                    var li_els = ''
+                    var level_modals = ''
+
+
+                    if (future.all.length > 0) {
+
+                        var stars = ''
+                        for (var y = 1; y <= future.all[0].number; y += 1)
+
+                            stars += '<i class="bx bxs-star text-warning me-1"></i>'
+
+                        level_modals += '<div class="modal fade" id="level_' + future.all[0].id + '" aria-labelledby="modalToggleLabel-' + future.all[0].id + '" tabindex="-1" style="display: none;"\n' +
+                            '         aria-hidden="true">\n' +
+                            '        <div class="modal-dialog modal-dialog-centered modal">\n' +
+                            '            <div class="modal-content">\n' +
+                            '                <div class="modal-header">\n' +
+                            '                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
+                            '                </div>\n' +
+                            '                <div class="modal-body">' + '<div class="card border border shadow-none">\n' +
+                            '                    <div class="card-body position-relative">\n' +
+                            '                        <div class="my-3 text-center">\n' + stars +
+                            '                        </div>\n' +
+                            '                        <h3 class="card-title text-center text-capitalize mb-1">' + future.all[0].title + '</h3>\n' +
+                            '                        <p class="text-center">' + 0 + '-' + (future.all[0].amount - 1) + ' выкупов в неделю</p>\n' +
+                            '                        <hr class="mx-n4 mb-4">\n' +
+                            '                        <div class="p-2">\n' +
+                            '\n' +
+                            '                            <h6>Стоимость услуг</h6>\n' +
+                            '                            <dl class="row mb-0">\n' +
+                            '                                <dt class="col-6 fw-normal">Выкуп</dt>\n' +
+                            '                                <dd class="col-6 fw-medium text-end">₽ ' + future.all[0].price_buy.toLocaleString('ru-RU') + '</dd>\n' +
+                            '\n' +
+                            '                                <dt class="col-6 fw-normal">Логистика</dt>\n' +
+                            '                                <dd class="col-6 fw-medium text-end">₽ ' + future.all[0].price_collect.toLocaleString('ru-RU') + '</dd>\n' +
+                            '\n' +
+                            '                                <dt class="col-6 fw-normal">Отзыв</dt>\n' +
+                            '                                <dd class="col-6 fw-medium text-end">₽ ' + future.all[0].price_review.toLocaleString('ru-RU') + '</dd>\n' +
+                            '\n' +
+                            '                                <dt class="col-6 fw-normal">Отзыв с фото</dt>\n' +
+                            '                                <dd class="col-6 fw-medium text-end">₽ ' + future.all[0].price_review_media.toLocaleString('ru-RU') + '</dd>\n' +
+                            '\n' +
+                            '                                <dt class="col-6 fw-normal">Отзыв по запросу</dt>\n' +
+                            '                                <dd class="col-6 fw-medium text-end">₽ ' + future.all[0].price_review_request.toLocaleString('ru-RU') + '</dd>\n' +
+                            '                            </dl>\n' +
+                            '                        </div>\n' +
+                            '                    </div>\n' +
+                            '                </div>' +
+                            '                </div>' +
+                            '            </div>\n' +
+                            '        </div>\n' +
+                            '    </div>'
+
+
+                        li_els += '<li class="list-group-item list-group-timeline-success">\n' +
+                            '                            <div class="row">\n' +
+                            '                                <div class="col-4">\n' +
+                            '                                    <span class="text-nowrap"> <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#level_' + future.all[0].id + '">' + future.all[0].title + '</a></span>\n' +
+                            '                                </div>\n' +
+                            '                                <div class="col-4">\n' +
+                            '                                    <span class="text-nowrap"> ' + '<i class="bx bx-check"></i>' + '</span>\n' +
+                            '                                </div>\n' +
+
+                            '                                <div class="col pt-1">\n' +
+                            '                                    <div class="progress">\n' +
+                            '                                        <div class="progress-bar" role="progressbar" style="width: ' + 100 + '%;"\n' +
+                            '                                             aria-valuenow="' + 100 + '"\n' +
+                            '                                             aria-valuemin="0" aria-valuemax="100">' +
+                            '                                        </div>\n' +
+                            '                                    </div>\n' +
+                            '                                </div>\n' +
+                            '                            </div>\n' +
+                            '                        </li>'
+                    }
+
+                    for (var i = 1; i < future.all.length; i += 1) {
+
+                        var li_color = 'secondary'
+
+
+                        var now = future.purchases
+                        var of = future.all[i - 1].amount
+
+                        var percent = (100 / of * now).toFixed(1);
+                        var p_on_bar = percent
+                        var s_title = 'еще ' + (of - now) + ' выкупов'
+                        var p_label = ''
+
+                        if (percent >= 100) {
+                            p_on_bar = 100
+                            s_title = '<i class="bx bx-check"></i>'
+                            li_color = 'success'
+                        }
+
+                        if (percent > 15) {
+                            p_label = percent + '%'
+                            if (percent >= 100) {
+                                p_label = ''
+                            }
+                        }
+
+                        li_els += '<li class="list-group-item list-group-timeline-' + li_color + '">\n' +
+                            '                            <div class="row">\n' +
+                            '                                <div class="col-4">\n' +
+                            '                                    <span class="text-nowrap"> <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#level_' + future.all[i].id + '">' + future.all[i].title + '</a></span>\n' +
+                            '                                </div>\n' +
+                            '                                <div class="col-4">\n' +
+                            '                                    <span class="text-nowrap"> ' + s_title + '</span>\n' +
+                            '                                </div>\n' +
+
+                            '                                <div class="col pt-1">\n' +
+                            '                                    <div class="progress">\n' +
+                            '                                        <div class="progress-bar" role="progressbar" style="width: ' + p_on_bar + '%;"\n' +
+                            '                                             aria-valuenow="' + p_on_bar + '"\n' +
+                            '                                             aria-valuemin="0" aria-valuemax="100">' + p_label +
+                            '                                        </div>\n' +
+                            '                                    </div>\n' +
+                            '                                </div>\n' +
+                            '                            </div>\n' +
+                            '                        </li>'
+
+                        stars = ''
+                        for (y = 1; y <= future.all[i].number; y += 1)
+
+                            stars += '<i class="bx bxs-star text-warning me-1"></i>'
+
+                        level_modals += '<div class="modal fade" id="level_' + future.all[i].id + '" aria-labelledby="modalToggleLabelLevel-' + future.all[i].id + '"  style="display: none;"\n' +
+                            '         aria-hidden="true">\n' +
+                            '        <div class="modal-dialog modal-dialog-centered modal">\n' +
+                            '            <div class="modal-content">\n' +
+                            '                <div class="modal-header">\n' +
+                            '                    <h5 class="modal-title" id="modalToggleLabelLevel-' + future.all[i].id + '"></h5>\n' +
+                            '                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
+                            '                </div>\n' +
+                            '                <div class="modal-body">' + '<div class="card border border shadow-none">\n' +
+                            '                    <div class="card-body position-relative">\n' +
+                            '                        <div class="my-3 text-center">\n' + stars +
+                            '                        </div>\n' +
+                            '                        <h3 class="card-title text-center text-capitalize mb-1">' + future.all[i].title + '</h3>\n' +
+                            '                        <p class="text-center">' + of + '-' + (future.all[i].amount - 1) + ' выкупов в неделю</p>\n' +
+                            '                        <hr class="mx-n4 mb-4">\n' +
+                            '                        <div class="p-2">\n' +
+                            '\n' +
+                            '                            <h6>Стоимость услуг</h6>\n' +
+                            '                            <dl class="row mb-0">\n' +
+                            '                                <dt class="col-6 fw-normal">Выкуп</dt>\n' +
+                            '                                <dd class="col-6 fw-medium text-end">₽ ' + future.all[i].price_buy.toLocaleString('ru-RU') + '</dd>\n' +
+                            '\n' +
+                            '                                <dt class="col-6 fw-normal">Логистика</dt>\n' +
+                            '                                <dd class="col-6 fw-medium text-end">₽ ' + future.all[i].price_collect.toLocaleString('ru-RU') + '</dd>\n' +
+                            '\n' +
+                            '                                <dt class="col-6 fw-normal">Отзыв</dt>\n' +
+                            '                                <dd class="col-6 fw-medium text-end">₽ ' + future.all[i].price_review.toLocaleString('ru-RU') + '</dd>\n' +
+                            '\n' +
+                            '                                <dt class="col-6 fw-normal">Отзыв с фото</dt>\n' +
+                            '                                <dd class="col-6 fw-medium text-end">₽ ' + future.all[i].price_review_media.toLocaleString('ru-RU') + '</dd>\n' +
+                            '\n' +
+                            '                                <dt class="col-6 fw-normal">Отзыв по запросу</dt>\n' +
+                            '                                <dd class="col-6 fw-medium text-end">₽ ' + future.all[i].price_review_request.toLocaleString('ru-RU') + '</dd>\n' +
+                            '                            </dl>\n' +
+                            '                        </div>\n' +
+                            '                    </div>\n' +
+                            '                </div>' +
+                            '                </div>' +
+                            '            </div>\n' +
+                            '        </div>\n' +
+                            '    </div>'
+                    }
+
+
+                    ul_el.innerHTML = li_els
+                    level_modals_div.innerHTML = level_modals
+                },
+                error: function (data) {
+                    toastr.error('Ошибка загрузки уровней')
+                    toastr.error(data.responseJSON.detail)
+                }
+            });
+        },
+        error: function (data) {
+            toastr.error('Ошибка загрузки уровней')
+            toastr.error(data.responseJSON.detail)
+        }
+    });
+
+
+</script>
+
 {% endblock %}
 
 {% block content %}
 <div class="container-xxl flex-grow-1 container-p-y" id="page_container">
     <div class="row">
+        <div class="col-lg-4">
+            <div class="col-lg mb-md-0 mb-4" id="current_level">
+
+            </div>
+        </div>
         <div class="col">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-header">
                     <h5 class="card-title mb-1" id="org-name">Организация
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="org-ldr"></span>
                     </h5>
-                    <small class="card-subtitle" id="org-inn"></small>
+                    <small>Прогноз уровня с понедельника. <a href="">Как это работает?</a></small>
                 </div>
-                <div class="card-body table-responsive" id="org-div" style="display: none;">
-                    <table id="dt_user_levels" class="datatables-ajax table table-bordered dataTable no-footer">
-                        <thead>
-                        <tr>
-                            <th>Код</th>
-                            <th>Уровень</th>
-                            <th>Создано</th>
-                            <th>Истекает</th>
-                            <th>Использовано</th>
-                            <th>Осталось</th>
-                            <th>Действия</th>
-                        </tr>
-                        </thead>
-                    </table>
+                <div class="card-body" id="org-div" style="display: none;">
+                    <ul class="list-group list-group-timeline" id="levels_all">
+
+                    </ul>
                 </div>
             </div>
         </div>
@@ -432,7 +705,8 @@
                            aria-controls="off-create-invitation">
                             <i class="bx bxs-plus-square"></i>
                         </a>
-                        <a href="javascript:var u = '/organizations/readInvitations?org_id=' + id; dt_refresh('dt_user_invitations', u)" id="rb2">
+                        <a href="javascript:var u = '/organizations/readInvitations?org_id=' + id; dt_refresh('dt_user_invitations', u)"
+                           id="rb2">
                             <i class="bx bx-refresh"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="inv-ldr"></span>
@@ -466,7 +740,8 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="card-title mb-1">Участники вашей организации
-                        <a href="javascript:var u = '/organizations/readOrganizationMemberships?org_id=' + id; dt_refresh('dt_user_members', u)" id="rb1">
+                        <a href="javascript:var u = '/organizations/readOrganizationMemberships?org_id=' + id; dt_refresh('dt_user_members', u)"
+                           id="rb1">
                             <i class="bx bx-refresh"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="mem-ldr"></span>
@@ -538,4 +813,6 @@
         </div>
     </div>
 </div>
+
+<div id="level_modals"></div>
 {% endblock %}

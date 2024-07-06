@@ -1,11 +1,18 @@
+import random
+import string
+from io import BytesIO
+
+import pandas as pd
 from fastapi import APIRouter, Depends, Response, Request, HTTPException, UploadFile, File
 from datetime import datetime, timedelta
 
 from sqlalchemy import func, inspect
 
-from admin.models import AdminSessionModel, AdminUserModel, PickerSettingsModel, CrmSettingsModel
+from admin.models import AdminSessionModel, AdminUserModel, PickerSettingsModel, CrmSettingsModel, PickerHistoryModel
+
 from admin.schemas import AdminSessionCreateSchema
-from admin.utils import set_type, verify_file, generate_filename, s3_save
+from admin.utils import set_type, verify_file, generate_filename, s3_save, refresh_active_and_collected, \
+    generate_plan_xlsx, identify_orders_xlsx
 from auth.models import UserModel, UserSessionModel
 
 from auth.utils import hash_password, generate_token
@@ -15,6 +22,8 @@ from orders.models import OrdersAddressModel, OrdersOrderModel, OrdersContractor
 from orgs.models import OrganizationModel
 from payments.models import BalanceBillModel, BalanceSourceModel, BalancePricesModel, BalanceHistoryModel
 from products.models import ProductModel, ReviewModel, ProductSizeModel
+from products.repository import ProductsRepository
+from products.utils import parse_wildberries_card
 from strings import *
 
 router = APIRouter(
@@ -46,6 +55,7 @@ tables_access = {
     'servercontractors': (OrdersServerContractorModel, 8, {}),
     'pickersettings': (PickerSettingsModel, 2, {}),
     'settings': (CrmSettingsModel, 262144, {}),
+    'pickerhistory': (PickerHistoryModel, 2, {}),
 
     'servers': (
         OrdersServerModel, 1,
@@ -259,23 +269,6 @@ async def reading_fields(section: str, record_id: int, session: AdminSessionMode
     await DefaultRepository.delete_record(model, record_id)
 
 
-@router.post('/test')
-async def test(request: Request, session: AdminSessionModel = Depends(authed)):
-    data = dict(await request.form())
-
-    servers = await AdminRepository.read_records('OrdersServerModel', filtration={'is_active': 'true'})
-    for server in servers:
-        if not data.get(f'active-{server.id}', None) or data.get(f'active-{server.id}') == 'undefined':
-            raise HTTPException(status_code=400, detail=f'Отсутствует файл с активными заказами для {server.name}')
-
-        if not data.get(f'collected-{server.id}', None) or data.get(f'collected-{server.id}') == 'undefined':
-            raise HTTPException(status_code=400, detail=f'Отсутствует файл с полученными заказами для {server.name}')
-
-    result = await refresh_orders_and_accounts(data, servers)
-
-    return str(result)
-
-
 @router.post('/uploadBillMedia')
 async def test(bill_id: int, file: UploadFile = File(), session: AdminSessionModel = Depends(authed)):
     try:
@@ -300,3 +293,58 @@ async def test(bill_id: int, file: UploadFile = File(), session: AdminSessionMod
     await DefaultRepository.save_records([
         {'model': BalanceBillModel, 'records': [record]}
     ])
+
+
+@router.post('/refreshOrders')
+async def refresh_orders(request: Request, session: AdminSessionModel = Depends(authed)):
+    data = dict(await request.form())
+
+    servers = await DefaultRepository.get_records(
+        OrdersServerModel,
+        filters=[OrdersServerModel.is_active],
+        select_related=[OrdersServerModel.contractors, OrdersServerModel.schedule]
+    )
+
+    for server in servers:
+        if not data.get(f'active-{server.id}', None) or data.get(f'active-{server.id}') == 'undefined':
+            raise HTTPException(status_code=400, detail=f'Отсутствует файл с активными заказами для {server.name}')
+
+        if not data.get(f'collected-{server.id}', None) or data.get(f'collected-{server.id}') == 'undefined':
+            raise HTTPException(status_code=400, detail=f'Отсутствует файл с полученными заказами для {server.name}')
+
+    try:
+        return await refresh_active_and_collected(data, servers)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'{str(e)}')
+
+
+@router.post('/generatePlan')
+async def generate_plan(request: Request, session: AdminSessionModel = Depends(authed)):
+    servers = await DefaultRepository.get_records(
+        OrdersServerModel,
+        filters=[OrdersServerModel.is_active],
+        select_related=[OrdersServerModel.contractors, OrdersServerModel.schedule]
+    )
+
+    data = dict(await request.form())
+    bad_accounts = data['bad_accounts']
+
+    try:
+        await generate_plan_xlsx(servers, bad_accounts)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'{str(e)}')
+
+
+@router.post('/identifyOrders')
+async def identify_orders(request: Request, session: AdminSessionModel = Depends(authed)):
+    data = dict(await request.form())
+    if not data.get('orders') or data.get('orders') == 'undefined':
+        raise HTTPException(status_code=400, detail='Выберите файл с заказами')
+
+    try:
+        return await identify_orders_xlsx(data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'{str(e)}')
+
+
+

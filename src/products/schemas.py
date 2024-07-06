@@ -16,6 +16,7 @@ class ProductSizeCreateSchema(BaseModel):
 
 class ProductSizeReadSchema(ProductSizeCreateSchema):
     id: int
+    product: Optional['ProductReadSchema']
 
 
 # Product schemas
@@ -38,6 +39,7 @@ class ProductReadSchema(BaseModel):
     wb_title: str
     org_id: int
     media: Optional[str] = None
+    last_update: datetime.datetime
 
     sizes: Optional[list[ProductSizeReadSchema]]
 
@@ -51,7 +53,6 @@ class ReviewMediaReadSchema(BaseModel):
 
 class ReviewCreateSchema(BaseModel):
     text: Optional[str] = None
-    product_id: int
     size_id: Optional[int] = None
     match: Optional[int] = None
 
@@ -63,7 +64,6 @@ class ReviewReadSchema(ReviewCreateSchema):
     status: int
 
     media: Optional[list[ReviewMediaReadSchema]] = None
-    product: Optional[ProductReadSchema]
     size: Optional[ProductSizeReadSchema]
 
 

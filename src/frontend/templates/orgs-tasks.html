@@ -55,6 +55,7 @@
     });
 
     document.getElementById('divider-text').innerText = 'Запланированные выкупы на ' + moment(currentDate).format('DD.MM.YYYY')
+
     const url = window.location.href;
     var arr = url.split('/')
     var id = arr[arr.length - 1]
@@ -64,7 +65,7 @@
             url: '/orders/getPlan?org_id=' + id + '&date=' + formattedDate,
             method: 'get',
             success: function (data) {
-
+                console.log(data)
                 $('#dt_plan').DataTable({
                     "data": data,
                     "paging": true,
@@ -72,34 +73,28 @@
                     "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
                     "searching": true,
                     "ordering": true,
+                    autoWidth: false,
 
                     "columns": [
                         {"data": 'id'},
                         {
-                            "data": 'product',
+                            "data": 'size',
                             "render": function (data, type, row) {
-                                return data.wb_article
+                                return data.product.wb_article
                             }
                         },
                         {
-                            "data": 'product',
+                            "data": 'size',
                             "render": function (data, type, row) {
-                                return data.wb_title
+                                return data.product.wb_title
                             }
                         },
                         {
                             "data": 'size',
                             "render": function (data, type, row) {
                                 var cell = '—'
-                                if (data.wb_size_name !== null && data.wb_size_origName !== null) {
-                                    cell = data.wb_size_origName + ' (' + data.wb_size_name + ')'
-                                }
 
-                                if (data.wb_size_name !== null && data.wb_size_origName === null) {
-                                    cell = data.wb_size_name
-                                }
-
-                                if (data.wb_size_name === null && data.wb_size_origName !== null) {
+                                if (data.wb_size_origName !== null) {
                                     cell = data.wb_size_origName
                                 }
 
@@ -109,16 +104,7 @@
                         {
                             "data": 'wb_keyword',
                         },
-                        {
-                            "render": function (data, type, row) {
 
-                                if (row.status !== 1) {
-                                    return '₽ ' + row.wb_price.toLocaleString('ru-RU')
-                                } else {
-                                    return '<span class="text-nowrap">Не оплачен</span>'
-                                }
-                            }
-                        },
                         {
                             "render": function (data, type, row) {
 
@@ -128,12 +114,22 @@
 
                                 if (row.status === 1) {
                                     status = 3
-                                    title = 'Запланирован'
+                                    title = 'Не оплачен'
                                 }
 
                                 if (row.status === 2) {
                                     status = 2
                                     title = 'Оплачен'
+                                }
+
+                                if (row.status === 3) {
+                                    status = 1
+                                    title = 'Едет'
+                                }
+
+                                if (row.status === 4) {
+                                    status = 4
+                                    title = 'Отмена'
                                 }
 
 
@@ -186,21 +182,6 @@
 
         });
     });
-
-    function getPrice(item) {
-
-        if (item.size.wb_in_stock == null) {
-            return 'Не в наличии'
-        }
-
-        if (item.wb_price !== null) {
-            return item.wb_price
-        }
-
-        if (item.size.wb_price !== null) {
-            return item.size.wb_price / 100
-        }
-    }
 
     function calculatePayment() {
         var modal_title = document.getElementById('modal_title')
@@ -302,11 +283,12 @@
                     "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
                     "searching": true,
                     "ordering": true,
+                    autoWidth:  false,
 
                     "columns": [
                         {"data": "order_id"},
                         {"data": "wb_article"},
-                        {"data": "wb_size_name"},
+                        {"data": "wb_size_origName"},
                         {"data": "price_product"},
                         {"data": "price_commission"},
                         {"data": "price_buy"},
@@ -410,18 +392,11 @@
         var data = {
             'wb_keyword': document.getElementById('keywords').value,
             'dt_planed': dateInput.value,
-            'product_id': document.getElementById('product_id').value,
             'size_id': document.getElementById('size_id').value,
-            'org_id': id,
-        }
-
-        if (data.product_id == '') {
-            toastr.error('Выберите товар')
-            return
         }
 
         if (data.size_id == '') {
-            toastr.error('Выберите размер. К выбору доступны только размеры с включенным отображением. Подробнее в разделе Товары')
+            toastr.error('Выберите товар')
             return
         }
 
@@ -472,105 +447,49 @@
 <!-- GET PRODS FOR SELECT IN FORM -->
 <script>
 
+    $.ajax({
 
-    var prods = []
+        url: '/products/getOwned?org_id=' + id,
+        method: 'get',
 
+        success: function (data) {
 
-    function addOptionsToSelect2(pri) {
-        var optionsArr = [];
+            var selectElement = $('#size_id');
 
-        for (var i = 0; i < prods.length; i++) {
-            if (prods[i].id == pri) {
-                optionsArr = prods[i]['sizes'];
-                break;
-            }
-        }
+            $.each(data, function (i, product) {
+                $.each(product.sizes, function (j, size) {
+                    if (size.is_active) {
+                        var prod_title = product.wb_title
 
-        $("#size_id").selectpicker('destroy');
-        $("#size_id").empty();
-        $("#size_id").selectpicker("refresh");
+                        if (size.wb_size_origName !== null) {
+                            prod_title = '(' + size.wb_size_origName + ') ' + prod_title
+                        }
 
-        if (optionsArr.length === 1 && optionsArr[0].wb_size_name === null && optionsArr[0].wb_size_origName === null) {
-            $("#size_id").append($('<option>').text('Товар с одним размером').val(optionsArr[0].id));
-        }
+                        if (prod_title.length >= 25) {
+                            prod_title = prod_title.slice(0, 25) + '...'
+                        }
 
-        for (var j = 0; j < optionsArr.length; j++) {
+                        var optionText = prod_title
+                        var optionValue = size.id
+                        var optionDataSubtext = product.wb_article
 
-            if (optionsArr[j].wb_size_name !== null && optionsArr[j].is_active === true) {
-                var op_txt = optionsArr[j].wb_size_name;
-                var op_val = optionsArr[j].id;
-                var op_sub = optionsArr[j].wb_size_origName;
-
-                var sizeOP = $('<option>').text(op_txt).attr('data-subtext', op_sub).val(op_val);
-
-                $("#size_id").append(sizeOP);
-            }
-        }
-
-        $("#size_id").selectpicker('refresh');
-    }
-
-
-    $(document).ready(function () {
-
-        const url = window.location.href;
-
-        var arr = url.split('/')
-        var id = arr[arr.length - 1]
-
-        $.ajax({
-
-            url: '/products/getOwned?org_id=' + id,
-            method: 'get',
-
-            success: function (data) {
-                var selectElement = $('#product_id');
-
-                prods = data
-
-                $.each(data, function (index, item) {
-
-                    var prod_title = item.wb_title
-
-                    if (prod_title.length >= 25) {
-                        prod_title = prod_title.slice(0, 25) + '...'
-                    }
-
-                    var optionText = prod_title
-                    var optionValue = item.id
-                    var optionDataSubtext = item.wb_article
-
-
-                    var option = $('<option>').text(optionText).attr('data-subtext', optionDataSubtext).val(optionValue);
-                    selectElement.append(option);
-
-                    if (index === 0) {
-                        addOptionsToSelect2(item.id);
+                        var option = $('<option>').text(optionText).attr('data-subtext', optionDataSubtext).val(optionValue);
+                        selectElement.append(option);
                     }
 
                 });
+            });
 
-                selectElement.selectpicker('refresh');
+            selectElement.selectpicker('refresh');
 
-                var select1 = document.getElementById('product_id');
+        },
 
-                $("#product_id").change(function () {
-
-                    var selectedValue = select1.value;
-                    addOptionsToSelect2(selectedValue);
-
-                });
-
-            },
-
-            error: function (data) {
-                toastr.error('Ошибка получения товаров')
-            }
-        });
-
+        error: function (data) {
+            toastr.error('Ошибка получения товаров: ' + data.responseJSON.detail)
+        }
     });
-</script>
 
+</script>
 {% endblock %}
 
 {% block content %}
@@ -599,27 +518,25 @@
                     </div>
 
                     <div class="row mt-3">
-                        <div class="col-lg-6 col-sm">
-                            <label for="product_id" class="form-label">Товар</label>
-                            <select id="product_id" class="selectpicker w-100" data-style="btn-default"
-                                    data-show-subtext="true">
-                            </select>
-                        </div>
-                        <div class="col-lg-6 col-sm">
-                            <label for="size_id" class="form-label">Размер</label>
-                            <select id="size_id" class="selectpicker w-100" data-style="btn-default"
+                        <div class="col">
+                            <label for="size_id" class="form-label">Товар</label>
+                            <select id="size_id" class="selectpicker w-100" data-live-search="true"
+                                    data-style="btn-default"
                                     data-show-subtext="true">
                             </select>
                         </div>
                     </div>
 
                     <div class="row mt-3">
-                        <div class="col-lg-6 col-sm">
+                        <div class="col col-sm">
                             <label for="keywords" class="form-label">Ключевой запрос</label>
                             <input type="text" class="form-control" id="keywords">
                         </div>
-                        <div class="col-lg-6 col-sm">
-                            <label for="amount" class="form-label">Количество</label>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col col-sm">
+                            <label for="amount" class="form-label">Количество выкупов товара</label>
                             <input type="number" class="form-control" id="amount" value="1">
                         </div>
                     </div>
@@ -642,20 +559,18 @@
 
 
                     </div>
-
-                    <div class="card-body table-responsive">
-                        <div class="divider text-start">
-                            <div class="divider-text" id="divider-text"></div>
-                        </div>
+                    <div class="divider text-start mt-4">
+                        <div class="divider-text" id="divider-text"></div>
+                    </div>
+                    <div class="card-body table-responsive mt-0 pt-0">
                         <table id="dt_plan" class="datatables-ajax table table-bordered dataTable no-footer">
                             <thead>
                             <tr>
-                                <th>#ID</th>
+                                <th>№</th>
                                 <th>Артикул</th>
                                 <th>Товар</th>
                                 <th>Размер</th>
                                 <th>Ключевой запрос</th>
-                                <th>Сумма</th>
                                 <th>Статус</th>
                                 <th>Описание</th>
                                 <th>Действия</th>
