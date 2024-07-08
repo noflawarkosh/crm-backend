@@ -2,7 +2,7 @@ import boto3
 from sqlalchemy import update, select, delete
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine , AsyncSession
 from sqlalchemy.orm import DeclarativeBase, selectinload, joinedload
-from config import DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER
+from config import DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER, S3KID, S3KEY
 
 
 DATABASE_URL = f'postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
@@ -13,7 +13,9 @@ async_session_factory = async_sessionmaker(async_engine)
 storage = boto3.session.Session()
 s3 = storage.client(
     service_name='s3',
-    endpoint_url='https://storage.yandexcloud.net'
+    endpoint_url='https://storage.yandexcloud.net',
+    aws_access_key_id=S3KID,
+    aws_secret_access_key=S3KEY
 )
 
 
