@@ -11,6 +11,11 @@ class BalanceActionSchema(BaseModel):
     title: str
 
 
+class BalanceTargetSchema(BaseModel):
+    id: int
+    title: str
+
+
 class BalanceHistoryReadSchema(BaseModel):
     id: int
     action_id: int
@@ -18,9 +23,11 @@ class BalanceHistoryReadSchema(BaseModel):
     org_id: int
     amount: int
     date: datetime.datetime
+    record_id: int | None
 
     organization: Optional['OrganizationReadSchema']
     action: Optional['BalanceActionSchema']
+    target: Optional['BalanceTargetSchema']
 
 
 # Balance Source

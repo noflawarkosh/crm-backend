@@ -1,23 +1,173 @@
-{% extends "!base.html" %}
-{% block title %}Детализация{% endblock %}
+{% extends "!base-admin.html" %}
+{% block title %}Управление кошельком | {% endblock %}
+{% block head %}
+
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.css') }}"/>
+
+{% endblock %}
 {% block js %}
+
+<script src="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.js') }}"></script>
+
 <script>
+
     const url = window.location.href;
-    var arr = url.split('/')
-    var org_id = arr[arr.length - 2]
-    var dates = arr[arr.length - 1]
+    const urlObj = new URL(url);
+    const params = new URLSearchParams(urlObj.search);
+    const org_id = params.get('org_id')
+
+    $.ajax({
+        url: '/admin/get/organizations_full?id=' + org_id,
+        type: 'GET',
+        success: function (data) {
+            if (data.length !== 1) {
+                toastr.error('Организация не нейдена')
+            }
+            data = data[0]
+
+            $.ajax({
+                url: '/admin/get_managers?org_id=' + org_id,
+                type: 'GET',
+                success: function (m) {
+                    var mng_div = document.getElementById('managers')
+                    var mng = ''
+                    for (var i in m) {
+
+                        var telegram = ''
+                        if (m[i].user.telegram != null) {
+                            telegram = ' | <a target="_blank" href="https://t.me/' + m[i].user.telegram + '"><i class="bx bxl-telegram"></i>' + m[i].user.telegram + '</a>'
+                        }
+
+                        mng += '<br><a target="_blank" href="/admin-edit/users/' + m[i].user.id + '">' + m[i].user.username + '</a>' + telegram
+                    }
+
+                    mng_div.innerHTML = mng
+                },
+                error: function () {
+                    toastr.error('Ошибка получения менеджеров')
+                }
+            })
 
 
-    const firstDateStr = dates.slice(0, 8);
-    const firstDate = new Date(`${firstDateStr.slice(2, 4)}/${firstDateStr.slice(0, 2)}/${firstDateStr.slice(4)}`);
+            var st = {
+                1: 'Ожидает подтверждение',
+                2: 'Активна',
+                3: 'Приостановлена'
+            }
+
+            var telegram = ''
+            if (data.owner.telegram != null) {
+                telegram = ' | <a target="_blank" href="https://t.me/' + data.owner.telegram + '"><i class="bx bxl-telegram"></i>' + data.owner.telegram + '</a>'
+            }
+
+            var server = '—'
+            if (data.server_id !== null) {
+                server = data.server.name
+            }
+
+            var level = '<b class="small">зависит от выкупов</b>'
+            if (data.level_id !== null) {
+                level = data.level.title
+            }
+
+            document.getElementById('title').innerHTML = data.title + '<span><a href="/admin-edit/organizations/' + data.id + '"><i class="bx bx-edit-alt"></i></a></span>';
+            document.getElementById('org_id').innerHTML = data.id;
+            document.getElementById('inn').innerHTML = data.inn;
+            document.getElementById('balance_limit').innerHTML = data.balance_limit;
+            document.getElementById('status').innerHTML = st[data.status];
+            document.getElementById('created_at').innerHTML = moment(data.created_at).format('DD.MM.YYYY');
+            document.getElementById('owner_id').innerHTML = '<a target="_blank" href="/admin-edit/users/' + data.owner.id + '">' + data.owner.username + '</a>' + telegram;
+            document.getElementById('server_id').innerHTML = server;
+            document.getElementById('level_id').innerHTML = level;
+        }
+
+    })
+
+    $.ajax({
+        url: '/admin/get/actions',
+        type: 'GET',
+        success: function (data) {
+            var selectElement = $('#action_id');
+
+            $.each(data, function (j, action) {
+                var optionText = action.title
+                var optionValue = action.id
+
+                var option = $('<option>').text(optionText).val(optionValue);
+                selectElement.append(option);
+            });
+            selectElement.selectpicker('refresh');
+            document.getElementById('act_pay_btn').classList.remove('disabled')
+        }
+    })
+
+
+    function actPay() {
+        document.getElementById('act_pay_btn').classList.add('disabled')
+
+        var action_id = document.getElementById('action_id').value
+        var amount = document.getElementById('amount').value
+        var description = document.getElementById('description').value
+
+        if (amount === '') {
+            toastr.error('Введите сумму')
+            document.getElementById('act_pay_btn').classList.remove('disabled')
+            return
+        }
+
+        if (amount < 0) {
+            toastr.error('Сумма должна быть больше или равна нулю')
+            document.getElementById('act_pay_btn').classList.remove('disabled')
+            return
+        }
+
+        if (action_id === '') {
+            toastr.error('Выберите операцию')
+            document.getElementById('act_pay_btn').classList.remove('disabled')
+            return
+        }
+
+        var b_data = {
+            'org_id': org_id,
+            'action_id': action_id,
+            'amount': amount,
+        }
+
+        if (description !== '') {
+            b_data['description'] = description
+        }
+
+        var payload = {}
+        payload['balance'] = [b_data]
+
+        $.ajax({
+            type: "POST",
+            url: '/admin/save',
+            data: JSON.stringify(payload),
+            contentType: "application/json",
+            success: function () {
+                toastr.success('Операция успешно выполнена')
+                document.getElementById('act_pay_btn').classList.remove('disabled');
+                refreshDetails()
+            },
+            error: function () {
+                toastr.error('Ошибка выполнения операции. Проверьте правильность введенных данных')
+                document.getElementById('act_pay_btn').classList.remove('disabled');
+            }
+        })
+
+    }
+
+
+    const firstDate = new Date();
     const start_year = firstDate.getFullYear();
     const start_month = String(firstDate.getMonth() + 1).padStart(2, '0');
     const start_day = String(firstDate.getDate()).padStart(2, '0');
     const formattedStartDate = `${start_year}-${start_month}-${start_day}`
 
-    const secondDateStr = dates.slice(8);
-    const secondDate = new Date(`${secondDateStr.slice(2, 4)}/${secondDateStr.slice(0, 2)}/${secondDateStr.slice(4)}`);
 
+    const secondDate = new Date();
     const end_year = secondDate.getFullYear();
     const end_month = String(secondDate.getMonth() + 1).padStart(2, '0');
     const end_day = String(secondDate.getDate()).padStart(2, '0');
@@ -61,7 +211,7 @@
     }
 
     $.ajax({
-        url: '/payments/getPaymentsDetails?org_id=' + org_id + '&start=' + formattedStartDate + '&end=' + formattedEndDate,
+        url: '/admin/getPaymentsDetails?org_id=' + org_id + '&start=' + formattedStartDate + '&end=' + formattedEndDate,
         method: 'get',
         success: function (data) {
 
@@ -75,7 +225,6 @@
                     '<span>Разморозка: ' + t['unfreezed'].toLocaleString('ru-RU') + ' ₽</span>' +
                     '<span>Итого: ' + t['total'].toLocaleString('ru-RU') + ' ₽</span>'
             }
-
 
             $('#dt_wallet_details').DataTable({
                 "data": data,
@@ -154,28 +303,6 @@
                         }
                     },
                     {
-                        data: 'target',
-                        "render": function (data, type, row) {
-                            var ds = '—'
-
-                            if (row.target !== null) {
-                                ds = data.title
-                            }
-                            return ds
-                        }
-                    },
-                    {
-                        data: 'record_id',
-                        "render": function (data, type, row) {
-                            var ds = '—'
-
-                            if (row.record_id !== null) {
-                                ds = data
-                            }
-                            return ds
-                        }
-                    },
-                    {
                         data: 'description',
                         "render": function (data, type, row) {
                             var ds = '—'
@@ -188,7 +315,6 @@
                     },
 
                 ],
-                autoWidth: false,
 
                 "initComplete": function () {
 
@@ -196,7 +322,7 @@
                     var newRow = $('<tr></tr>');
                     $(table).append(newRow);
 
-                    var searchColumns = [0, 1, 2, 3, 4, 5, 6];
+                    var searchColumns = [1, 2, 3, 4];
 
                     this.api().columns().every(function (i) {
                         var column = this;
@@ -217,7 +343,7 @@
                     });
                 },
 
-                "order": [[0, "desc"]]
+                "order": [[1, "desc"]]
             });
 
             document.getElementById('refresh_details_btn').classList.remove('disabled')
@@ -275,22 +401,104 @@
 
         });
     }
+
+
 </script>
 {% endblock %}
 
 {% block content %}
 <div class="flex-grow-1">
-    <div class="row">
+    <div class="row mb-3">
+        <div class="col-xl-4 col-lg-5 col-md-5 order-1 order-md-0">
+            <div class="card h-100">
+                <div class="card-body pt-12">
+                    <div class="info-container">
+                        <h5 class="pb-4 border-bottom text-capitalize mt-6 mb-4" id="title">Организация</h5>
 
+                        <ul class="list-unstyled mb-6">
+                            <li class="mb-2">
+                                <span class="h6 me-1">ID:</span>
+                                <span id="org_id"></span>
+                            </li>
+                            <li class="mb-2">
+                                <span class="h6 me-1">ИНН:</span>
+                                <span id="inn"></span>
+                            </li>
+                            <li class="mb-2">
+                                <span class="h6 me-1">Лимит баланса:</span>
+                                <span id="balance_limit"></span>
+                            </li>
+                            <li class="mb-2">
+                                <span class="h6 me-1">Статус:</span>
+                                <span id="status"></span>
+                            </li>
+                            <li class="mb-2">
+                                <span class="h6 me-1">Зарегистрирована:</span>
+                                <span id="created_at"></span>
+                            </li>
+                            <li class="mb-2">
+                                <span class="h6 me-1">Владелец:</span>
+                                <span id="owner_id"></span>
+                            </li>
+                            <li class="mb-2">
+                                <span class="h6 me-1">Менеджеры:</span>
+                                <span id="managers"></span>
+                            </li>
+                            <li class="mb-2">
+                                <span class="h6 me-1">Сервер:</span>
+                                <span id="server_id"></span>
+                            </li>
+
+                            <li class="mb-2">
+                                <span class="h6 me-1">Уровень:</span>
+                                <span id="level_id"></span>
+                            </li>
+                        </ul>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-8 col-lg-7 col-md-7 order-0 order-md-1">
+            <div class="card h-100">
+                <div class="card-body pt-12">
+                    <div class="divider text-start">
+                        <div class="divider-text">Операция</div>
+                    </div>
+                    <div class="col-lg-4">
+                        <select id="action_id" class="selectpicker w-100" data-style="btn-default"
+                                data-show-subtext="true" data-live-search="true">
+                        </select>
+                    </div>
+                    <div class="divider text-start">
+                        <div class="divider-text">Сумма</div>
+                    </div>
+                    <div class="col-lg-4">
+                        <input type="number" class="form-control" id="amount">
+                    </div>
+                    <div class="divider text-start">
+                        <div class="divider-text">Описание</div>
+                    </div>
+                    <div class="col-lg-4 mb-3">
+                        <input type="text" class="form-control" id="description">
+                    </div>
+                    <div class="col-lg-4">
+                        <a href="javascript:actPay()" class="btn btn-primary disabled"
+                           id="act_pay_btn">Выполнить</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+    <div class="row">
         <div class="col">
             <div class="card">
-
                 <div class="card-header">
-
                     <h5 class="card-title mb-0">Детализация кошелька</h5>
-
                     <div class="card-body table-responsive">
-
                         <div class="row mt-3 mb-3">
                             <div class="col-lg-auto">
                                 <input type="date" class="form-control" id="date_start">
@@ -300,12 +508,10 @@
                             </div>
                             <div class="col-lg-auto">
                                 <a href="javascript:refreshDetails()" class="btn btn-primary disabled"
-                                   id="refresh_details_btn">Обновить</a>
+                                   id="refresh_details_btn">Показать</a>
                             </div>
                         </div>
-
                         <div class="row mt-3 mb-3" id="total_on_range"></div>
-
                         <table id="dt_wallet_details" class="datatables-ajax table table-bordered dataTable no-footer ">
                             <thead>
                             <tr>
@@ -313,8 +519,6 @@
                                 <th>Дата и время</th>
                                 <th>Сумма</th>
                                 <th>Тип операции</th>
-                                <th>Цель</th>
-                                <th>Номер задачи</th>
                                 <th>Описание</th>
                             </tr>
                             </thead>
@@ -322,10 +526,8 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
-
 </div>
 
 

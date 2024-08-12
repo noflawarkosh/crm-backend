@@ -83,7 +83,7 @@
                                 st = 'success'
                             }
 
-                            return '<span class="badge badge-dot bg-' + st + ' me-1"></span> ' + data.address
+                            return '<div class="text-nowrap"><span class="badge badge-dot bg-' + st + ' me-1"></span><span class="text-nowrap">' + data.address + '</span></div>'
                         }
                     },
                     {
@@ -95,7 +95,7 @@
                                 st = 'success'
                             }
 
-                            return '<span class="badge badge-dot bg-' + st + ' me-1"></span> ' + data.name
+                            return '<div class="text-nowrap"><span class="badge badge-dot bg-' + st + ' me-1"></span><span class="text-nowrap">' + data.name + '</span></div>'
                         }
                     },
                     {
@@ -114,12 +114,41 @@
                     }
                 ],
 
-                "order": [[0, "desc"]]
+                "order": [[0, "desc"]],
+
+                "initComplete": function () {
+
+                    var table = this.api().table().header();
+                    var newRow = $('<tr></tr>');
+                    $(table).append(newRow);
+
+                    var searchColumns = [0, 1, 2, 3, 4, 5, 6];
+
+                    this.api().columns().every(function (i) {
+                        var column = this;
+                        if (searchColumns.includes(i)) {
+
+                            var input = $('<input type="text" class="form-control" placeholder="" />');
+                            $(newRow).append($('<th></th>').append(input));
+
+                            input.on('keyup change clear', function () {
+                                if (column.search() !== this.value) {
+                                    column.search(this.value).draw();
+                                }
+                            });
+                        } else {
+                            $(newRow).append($('<th></th>'))
+
+                        }
+                    });
+                },
             });
 
+            document.getElementById('accs_ldr').style.display = 'none'
         },
         error: function () {
             toastr.error('Ошибка получения аккаунтов')
+            document.getElementById('accs_ldr').style.display = 'none'
 
         }
     })
@@ -129,15 +158,17 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-xxl flex-grow-1 container-p-y">
+<div class="flex-grow-1">
     <div class="row">
         <div class="col">
             <div class="card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Аккаунты
-                        <a href="javascript:dt_refresh('dt_accounts', '/admin/get/accounts')" id="rb"><i class="bx bx-refresh"></i></a>
+                        <a href="javascript:dt_refresh('dt_accounts', '/admin/get/accounts')" id="rb"><i
+                                class="bx bx-refresh"></i>
+                        </a>
+                        <span class="spinner-border spinner-border-sm text-primary" role="status" id="accs_ldr"></span>
                     </h5>
-                    <small class="card-subtitle" id="prod-cntr"></small>
                 </div>
                 <div class="card-datatable p-4">
                     <table id="dt_accounts" class="datatables-ajax table table-bordered dataTable no-footer">

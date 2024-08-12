@@ -180,7 +180,7 @@
 
                 ],
 
-                "order": [[1, "desc"]]
+                "order": [[0, "desc"]]
             });
             document.getElementById('bls-div').style.display = 'block';
             document.getElementById('bls-ldr').style.display = 'none';
@@ -227,6 +227,21 @@
 
     var arr = url.split('/')
     var org_id = arr[arr.length - 1]
+
+    $.ajax({
+        url: '/payments/currentBalance?org_id=' + org_id,
+        type: 'GET',
+        success: function (data) {
+            var tx = ''
+
+            if (data[0] < 0) {
+                tx = ' (Остаток: <b>' + (Math.abs(data[1]) - Math.abs(data[0])).toLocaleString('ru-RU') + '  ₽</b>)'
+            }
+
+            document.getElementById('balance_info').innerHTML = 'Размер обещанного платежа составляет <b>' + Math.abs(data[1]).toLocaleString('ru-RU') + '  ₽ </b>' + tx
+            document.getElementById('balance_info').style.display = 'block';
+        }
+    })
 
     $.ajax({
 
@@ -307,7 +322,7 @@
 
                 ],
 
-                "order": [[0, "desc"]]
+                "order": [[0, "asc"]]
             });
 
             document.getElementById('hst-div').style.display = 'block';
@@ -326,7 +341,7 @@
 
 
 {% block content %}
-<div class="container-xxl flex-grow-1 container-p-y">
+<div class="flex-grow-1">
     <div class="row mb-4 g-3" id="ctrs" style="display: none">
         <div class="col-sm-6 col-xl-3">
             <div class="card">
@@ -389,6 +404,7 @@
             </div>
         </div>
     </div>
+    <div class="alert alert-primary" role="alert" id="balance_info" style="display: none"></div>
     <div class="alert alert-danger" role="alert" id="balance_alert" style="display: none"></div>
     <div class="row">
         <div class="col">

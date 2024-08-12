@@ -65,7 +65,7 @@
             url: '/orders/getPlan?org_id=' + id + '&date=' + formattedDate,
             method: 'get',
             success: function (data) {
-                console.log(data)
+
                 $('#dt_plan').DataTable({
                     "data": data,
                     "paging": true,
@@ -128,10 +128,24 @@
                                 }
 
                                 if (row.status === 4) {
-                                    status = 4
-                                    title = 'Отмена'
+                                    status = 1
+                                    title = 'Готов'
                                 }
 
+                                if (row.status === 5) {
+                                    status = 1
+                                    title = 'Получен'
+                                }
+
+                                if (row.status === 6) {
+                                    status = 4
+                                    title = 'Отменен'
+                                }
+
+                                if (row.status === 7) {
+                                    status = 4
+                                    title = 'Отменен'
+                                }
 
                                 var statuses = {
                                     1: 'success',
@@ -156,8 +170,9 @@
                         {
                             "render": function (data, type, row) {
                                 var edit = ''
-                                if (row.is_cancelled === false && row.wb_price === null) {
-                                    edit += '<a href="javascript:updateBillStatus(' + row.id + ', 5)"><i class="bx bx-x"></i></a>'
+
+                                if (row.status === 1) {
+                                    edit += '<a href="javascript:cancelTask(' + row.id + ')"><i class="bx bx-x"></i></a>'
                                 }
                                 return edit
                             }
@@ -490,10 +505,31 @@
     });
 
 </script>
+
+
+<script>
+    function cancelTask(task_id) {
+        if (confirm('Отменить задачу?')) {
+            $.ajax({
+                url: '/orders/cancelTask?task_id=' + task_id,
+                method: 'post',
+                success: function (data) {
+                    toastr.success('Задача успешно отменена')
+                    drawPlan(dateInput.value)
+                },
+                error: function (data) {
+                    toastr.error('Ошибка отмены задачи')
+
+                }
+
+            })
+        }
+    }
+</script>
 {% endblock %}
 
 {% block content %}
-<div class="container-xxl flex-grow-1 container-p-y">
+<div class="flex-grow-1">
     <div class="row">
 
         <div class="col">

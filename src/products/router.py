@@ -1,25 +1,20 @@
 import datetime
-from io import BytesIO
 from typing import Annotated, List
-
-import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy import func
 
-from admin.schemas import FileSchema
-from admin.utils import generate_filename, s3_save, verify_file
 from auth.models import UserSessionModel
 from auth.router import authed
-from database import DefaultRepository
-from orgs.models import OrganizationModel
+from database import Repository
+from gutils import Strings
 
 from orgs.router import check_access
 from products.models import ProductModel, ReviewModel, ProductSizeModel
 from products.repository import ProductsRepository, ReviewsRepository
 from products.schemas import ProductPOSTSchema, ProductReadSchema, ProductCreateSchema, ReviewCreateSchema, \
-    ReviewReadSchema
+    ReviewReadSchema, ReviewUpdateSchema
 
-from products.utils import parse_wildberries_card
+from products.utils import parse_wildberries_card, process_reviews_xlsx
 
 from strings import *
 
@@ -40,10 +35,16 @@ async def create_product(data: Annotated[ProductPOSTSchema, Depends()], session:
 
     try:
         title, article, sizes, picture_data = parse_wildberries_card(data.wb_url)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    filename = generate_filename() if picture_data else None
+    product_check = await Repository.get_records(ProductModel, filters=[ProductModel.wb_article == article])
+
+    if product_check:
+        raise HTTPException(status_code=400, detail=string_products_product_already_exists)
+
+    filename = Strings.alphanumeric(32) if picture_data else None
 
     await ProductsRepository.create_product(
         {
@@ -57,12 +58,12 @@ async def create_product(data: Annotated[ProductPOSTSchema, Depends()], session:
     )
 
     if picture_data:
-        await s3_save(picture_data, filename, 'webp')
+        await Repository.s3_save_image(picture_data, filename + '.webp')
 
 
 @router_products.get('/refresh')
 async def refresh_product(product_id: int, session: UserSessionModel = Depends(authed)):
-    products = await DefaultRepository.get_records(
+    products = await Repository.get_records(
         ProductModel,
         filters=[ProductModel.id == product_id, ProductModel.status != 3],
         select_related=[ProductModel.sizes]
@@ -146,7 +147,7 @@ async def refresh_product(product_id: int, session: UserSessionModel = Depends(a
                 }
             )
 
-    await DefaultRepository.save_records(
+    await Repository.save_records(
         [
             {'model': ProductSizeModel, 'records': records},
             {'model': ProductModel, 'records': [
@@ -164,10 +165,9 @@ async def refresh_product(product_id: int, session: UserSessionModel = Depends(a
 
 @router_products.get('/getOwned')
 async def get_owned_products(org_id: int, session: UserSessionModel = Depends(authed)):
-
     await check_access(org_id, session.user.id, 30)
 
-    products = await DefaultRepository.get_records(
+    products = await Repository.get_records(
         ProductModel,
         filters=[ProductModel.org_id == org_id, ProductModel.status != 3],
         select_related=[ProductModel.sizes]
@@ -177,7 +177,7 @@ async def get_owned_products(org_id: int, session: UserSessionModel = Depends(au
 
 @router_products.post('/updateSize')
 async def update_size_status(size_id: int, status: bool, session: UserSessionModel = Depends(authed)):
-    sizes = await DefaultRepository.get_records(
+    sizes = await Repository.get_records(
         ProductSizeModel,
         filters=[ProductSizeModel.id == size_id],
         select_related=[ProductSizeModel.product]
@@ -190,13 +190,13 @@ async def update_size_status(size_id: int, status: bool, session: UserSessionMod
 
     await check_access(size.product.org_id, session.user.id, 2)
 
-    await DefaultRepository.save_records(
+    await Repository.save_records(
         [{'model': ProductSizeModel, 'records': [{'id': size_id, 'is_active': status}]}])
 
 
 @router_products.post('/barcode')
 async def update_size_barcode(size_id: int, barcode: str, session: UserSessionModel = Depends(authed)):
-    sizes = await DefaultRepository.get_records(
+    sizes = await Repository.get_records(
         ProductSizeModel,
         filters=[ProductSizeModel.id == size_id],
         select_related=[ProductSizeModel.product]
@@ -212,13 +212,13 @@ async def update_size_barcode(size_id: int, barcode: str, session: UserSessionMo
     if size.barcode:
         raise HTTPException(status_code=403, detail=string_403)
 
-    await DefaultRepository.save_records(
+    await Repository.save_records(
         [{'model': ProductSizeModel, 'records': [{'id': size_id, 'barcode': barcode}]}])
 
 
 @router_products.get('/disable')
 async def disable_product(product_id: int, session: UserSessionModel = Depends(authed)):
-    products = await DefaultRepository.get_records(
+    products = await Repository.get_records(
         ProductModel,
         filters=[ProductModel.id == product_id, ProductModel.status != 3],
     )
@@ -228,7 +228,7 @@ async def disable_product(product_id: int, session: UserSessionModel = Depends(a
 
     await check_access(products[0].org_id, session.user.id, 2)
 
-    await DefaultRepository.save_records([{'model': ProductModel, 'records': [{'id': product_id, 'status': 3}]}])
+    await Repository.save_records([{'model': ProductModel, 'records': [{'id': product_id, 'status': 3}]}])
 
 
 @router_reviews.post('/create')
@@ -237,7 +237,7 @@ async def create_review(data: Annotated[ReviewCreateSchema, Depends()], files: L
     if len(files) > 5:
         raise HTTPException(status_code=400, detail=string_product_too_many_files)
 
-    sizes = await DefaultRepository.get_records(
+    sizes = await Repository.get_records(
         ProductSizeModel,
         filters=[ProductSizeModel.id == data.size_id],
         select_related=[ProductSizeModel.product]
@@ -262,35 +262,44 @@ async def create_review(data: Annotated[ReviewCreateSchema, Depends()], files: L
     if not size.wb_in_stock:
         raise HTTPException(status_code=403, detail=string_product_size_not_in_stock)
 
-    if data.match not in [0, 1, 2, 3]:
+    if data.match not in [None, 0, 1, 2, 3]:
         raise HTTPException(status_code=404, detail=string_404)
 
-    ordered_files = []
-    for file in files:
-        if file.size > 0:
+    if files[0].size != 0 or files[0].filename != '':
+        for file in files:
+            try:
+                await Repository.verify_file(file, ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov'])
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")
+
+    filenames = []
+    if files[0].size != 0 or files[0].filename != '':
+        for file in files:
             content = await file.read()
-            ordered_files.append(
-                FileSchema.model_validate(
-                    {
-                        'filename': file.filename,
-                        'size': len(content),
-                        'content': content,
-                        'href': generate_filename()
-                    }
-                )
-            )
+            n, t = await Repository.s3_autosave(content,
+                                                f"{Strings.alphanumeric(32)}.{file.filename.rsplit('.', maxsplit=1)[1]}")
+            filenames.append(f"{n}.{t}")
 
-    for file in ordered_files:
-        try:
-            await verify_file(file, ['image', 'video'])
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"{file.name}: {str(e)}")
+    await ReviewsRepository.create_review(data, filenames)
 
-    for file in ordered_files:
-        file_name, file_type = await s3_save(file.content, file.href, file.filename.rsplit('.', maxsplit=1)[1])
-        file.filename = f'{file_name}.{file_type}'
 
-    await ReviewsRepository.create_review(data, ordered_files)
+@router_reviews.post('/xlsxUpload')
+async def get_reviews_of_organization(org_id: int, file: UploadFile = File(...),
+                                      session: UserSessionModel = Depends(authed)):
+
+    await check_access(org_id, session.user.id, 8)
+
+    try:
+        await Repository.verify_file(file, ['xlsx'])
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")
+
+    try:
+        await process_reviews_xlsx(file, org_id)
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")
+
 
 
 @router_reviews.get('/getOwned')
@@ -300,9 +309,30 @@ async def get_reviews_of_organization(org_id: int, session: UserSessionModel = D
     return [ReviewReadSchema.model_validate(record, from_attributes=True) for record in reviews]
 
 
+@router_reviews.get('/get')
+async def get_reviews_of_organization(review_id: int, session: UserSessionModel = Depends(authed)):
+    reviews = await Repository.get_records(
+        ReviewModel,
+        filters=[ReviewModel.id == review_id],
+        select_related=[ReviewModel.size, ReviewModel.media],
+        deep_related=[[ReviewModel.size, ProductSizeModel.product]],
+        joins=[ProductSizeModel, ProductModel],
+        filtration=[ProductModel.status != 3]
+    )
+
+    if len(reviews) != 1:
+        raise HTTPException(status_code=404, detail=string_404)
+
+    review = reviews[0]
+
+    await check_access(review.size.product.org_id, session.user.id, 8)
+
+    return ReviewReadSchema.model_validate(review, from_attributes=True)
+
+
 @router_reviews.get('/disable')
 async def disable_review(review_id: int, session: UserSessionModel = Depends(authed)):
-    reviews = await DefaultRepository.get_records(
+    reviews = await Repository.get_records(
         ReviewModel,
         filters=[ReviewModel.id == review_id],
         select_related=[ReviewModel.size],
@@ -314,4 +344,26 @@ async def disable_review(review_id: int, session: UserSessionModel = Depends(aut
 
     await check_access(reviews[0].size.product.org_id, session.user.id, 8)
 
-    await DefaultRepository.save_records([{'model': ReviewModel, 'records': [{'id': review_id, 'status': 4}]}])
+    await Repository.save_records([{'model': ReviewModel, 'records': [{'id': review_id, 'status': 4}]}])
+
+
+@router_reviews.post('/update')
+async def update_review(data: Annotated[ReviewUpdateSchema, Depends()], session: UserSessionModel = Depends(authed)):
+    reviews = await Repository.get_records(
+        ReviewModel,
+        filters=[ReviewModel.id == data.id],
+        select_related=[ReviewModel.size],
+        deep_related=[[ReviewModel.size, ProductSizeModel.product]]
+    )
+
+    if len(reviews) != 1:
+        raise HTTPException(status_code=404, detail=string_404)
+
+    review = reviews[0]
+
+    await check_access(review.size.product.org_id, session.user.id, 8)
+
+    if review.status != 1:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    await Repository.save_records([{'model': ReviewModel, 'records': [data.model_dump()]}])

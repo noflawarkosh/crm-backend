@@ -12,3 +12,18 @@ HASHSALT = os.environ.get('HASHSALT')
 
 S3KID = os.environ.get('S3KID')
 S3KEY = os.environ.get('S3KEY')
+S3BUCKET = os.environ.get('S3BUCKET')
+
+ACCEPTABLE_IMAGE_TYPES = {
+    'jpeg': 1048576 * 10,
+    'png': 1048576 * 10,
+    'jpg': 1048576 * 10,
+    'webp': 1048576 * 10,
+}
+
+ACCEPTABLE_FILE_TYPES = {
+    'mp4': 1048576 * 50,
+    'mov': 1048576 * 50,
+    'pdf': 1048576 * 10,
+    'xlsx': 1048576 * 30,
+}

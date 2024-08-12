@@ -5,7 +5,7 @@ from sqlalchemy import func
 
 from auth.models import UserSessionModel
 from auth.router import authed
-from database import DefaultRepository
+from database import Repository
 from orgs.models import OrganizationModel, OrganizationInvitationModel, OrganizationMembershipModel
 
 from orgs.schemas import (
@@ -28,7 +28,7 @@ router = APIRouter(
 
 
 async def check_access(org_id: int, user_id: int, level: int):
-    organizations = await DefaultRepository.get_records(
+    organizations = await Repository.get_records(
         OrganizationModel,
         filters=[OrganizationModel.id == org_id]
     )
@@ -56,14 +56,14 @@ async def check_access(org_id: int, user_id: int, level: int):
 @router.post('/createOrganization')
 async def create_organization(data: Annotated[OrganizationCreateSchema, Depends()],
                               session: UserSessionModel = Depends(authed)):
-    await DefaultRepository.save_records(
+    await Repository.save_records(
         [{'model': OrganizationModel, 'records': [{**data.model_dump(), 'owner_id': session.user.id, 'status': 1, 'level_id': None}]}]
     )
 
 
 @router.get('/readOrganizations')
 async def read_user_organizations(session: UserSessionModel = Depends(authed)) -> list[OrganizationReadSchema]:
-    organizations = await DefaultRepository.get_records(
+    organizations = await Repository.get_records(
         OrganizationModel,
         filters=[OrganizationModel.owner_id == session.user.id]
     )
@@ -86,7 +86,7 @@ async def create_invitation(data: Annotated[OrganizationInvitationCreateSchema, 
     if data.expires <= datetime.datetime.now():
         raise HTTPException(status_code=400, detail=string_inv_wrong_expires)
 
-    invitations = await DefaultRepository.get_records(
+    invitations = await Repository.get_records(
         OrganizationInvitationModel,
         filters=[OrganizationInvitationModel.org_id == data.org_id]
     )
@@ -94,7 +94,7 @@ async def create_invitation(data: Annotated[OrganizationInvitationCreateSchema, 
     if len(invitations) >= 5:
         raise HTTPException(status_code=403, detail=string_inv_max_invitations)
 
-    await DefaultRepository.save_records(
+    await Repository.save_records(
         [{'model': OrganizationInvitationModel, 'records': [{**data.model_dump(), 'code': generate_invitation_code()}]}]
     )
 
@@ -105,7 +105,7 @@ async def read_invitations(org_id: int,
                            ) -> list[OrganizationInvitationReadSchema]:
     await check_access(org_id, session.user.id, 0)
 
-    invitations = await DefaultRepository.get_records(
+    invitations = await Repository.get_records(
         OrganizationInvitationModel,
         filters=[OrganizationInvitationModel.org_id == org_id, OrganizationInvitationModel.expires > func.now()],
         prefetch_related=[OrganizationInvitationModel.usages]
@@ -118,7 +118,7 @@ async def read_invitations(org_id: int,
 @router.post('/disableInvitation')
 async def disable_invitations(invitation_id: int,
                               session: UserSessionModel = Depends(authed)):
-    invitations = await DefaultRepository.get_records(
+    invitations = await Repository.get_records(
         OrganizationInvitationModel,
         filters=[OrganizationInvitationModel.id == invitation_id]
     )
@@ -130,7 +130,7 @@ async def disable_invitations(invitation_id: int,
 
     await check_access(invitation.org_id, session.user.id, 0)
 
-    await DefaultRepository.save_records(
+    await Repository.save_records(
         [{'model': OrganizationInvitationModel, 'records': [{'id': invitation.id, 'expires': func.now()}]}]
     )
 
@@ -138,7 +138,7 @@ async def disable_invitations(invitation_id: int,
 @router.post('/acceptInvitation')
 async def accept_invitation(code: str,
                             session: UserSessionModel = Depends(authed)):
-    invitations = await DefaultRepository.get_records(
+    invitations = await Repository.get_records(
         OrganizationInvitationModel,
         filters=[OrganizationInvitationModel.code == code]
     )
@@ -151,7 +151,7 @@ async def accept_invitation(code: str,
     if invitation.expires <= datetime.datetime.now():
         raise HTTPException(status_code=403, detail=string_inv_expired)
 
-    invitation_usages = await DefaultRepository.get_records(
+    invitation_usages = await Repository.get_records(
         OrganizationMembershipModel,
         filters=[OrganizationMembershipModel.invitation_id == invitation.id]
     )
@@ -159,7 +159,7 @@ async def accept_invitation(code: str,
     if len(invitation_usages) >= invitation.amount:
         raise HTTPException(status_code=403, detail=string_inv_max_usages)
 
-    organizations = await DefaultRepository.get_records(
+    organizations = await Repository.get_records(
         OrganizationModel,
         filters=[OrganizationModel.id == invitation.org_id]
     )
@@ -182,7 +182,7 @@ async def accept_invitation(code: str,
         if current_membership.status == 4:
             raise HTTPException(status_code=403, detail=string_inv_blocked_member)
 
-    await DefaultRepository.save_records([
+    await Repository.save_records([
         {
             'model': OrganizationMembershipModel,
             'records': [{

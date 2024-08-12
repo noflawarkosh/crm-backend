@@ -18,7 +18,7 @@ class OrganizationModel(Base):
     inn: Mapped[str]
     status: Mapped[int]
     created_at: Mapped[dt]
-    balance_limit: Mapped[int | None] = mapped_column(default=-100000)
+    balance_limit: Mapped[int | None] = mapped_column(default=-1000)
 
     server_id: Mapped[int | None] = mapped_column(
         ForeignKey('orders_server.id', ondelete='CASCADE', onupdate='CASCADE')
@@ -34,6 +34,8 @@ class OrganizationModel(Base):
 
     # Relationships
     owner: Mapped['UserModel'] = relationship(lazy='noload')
+    level: Mapped['BalancePricesModel'] = relationship(lazy='noload')
+    server: Mapped['PickerServerModel'] = relationship(lazy='noload')
 
 
 # Membership

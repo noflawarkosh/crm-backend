@@ -1,29 +1,29 @@
-import random
-import string
 from io import BytesIO
+from zipfile import ZipFile
 
 import pandas as pd
 from fastapi import APIRouter, Depends, Response, Request, HTTPException, UploadFile, File
 from datetime import datetime, timedelta
 
 from sqlalchemy import func, inspect
+from starlette.responses import StreamingResponse
 
-from admin.models import AdminSessionModel, AdminUserModel, PickerSettingsModel, CrmSettingsModel, PickerHistoryModel
+from admin.models import AdminSessionModel, AdminUserModel
 
-from admin.schemas import AdminSessionCreateSchema
-from admin.utils import set_type, verify_file, generate_filename, s3_save, refresh_active_and_collected, \
-    generate_plan_xlsx, identify_orders_xlsx
+from admin.utils import set_type, process_reviews_tasks_xlsx
 from auth.models import UserModel, UserSessionModel
+from orgs.repository import MembershipRepository
+from payments.router import current_prices
+from picker.models import PickerServerScheduleModel, PickerSettingsModel, PickerServerContractorModel, \
+    PickerHistoryModel, PickerServerModel, PickerOrderStatus
 
-from auth.utils import hash_password, generate_token
-from database import DefaultRepository
-from orders.models import OrdersAddressModel, OrdersOrderModel, OrdersContractorModel, OrdersServerScheduleModel, \
-    OrdersServerModel, OrdersServerContractorModel, OrdersAccountModel
+from gutils import Strings
+from database import Repository
+from orders.models import OrdersAddressModel, OrdersOrderModel, OrdersContractorModel, OrdersAccountModel
 from orgs.models import OrganizationModel
-from payments.models import BalanceBillModel, BalanceSourceModel, BalancePricesModel, BalanceHistoryModel
+from payments.models import BalanceBillModel, BalanceSourceModel, BalancePricesModel, BalanceHistoryModel, \
+    BalanceTargetModel, BalanceActionModel
 from products.models import ProductModel, ReviewModel, ProductSizeModel
-from products.repository import ProductsRepository
-from products.utils import parse_wildberries_card
 from strings import *
 
 router = APIRouter(
@@ -34,8 +34,10 @@ router = APIRouter(
 tables_access = {
     'users': (UserModel, 4096, {}),
     'organizations': (OrganizationModel, 2048, {}),
-    'organizations_full': (OrganizationModel, 2048, {'select_related': [OrganizationModel.owner]}),
+    'organizations_full': (OrganizationModel, 2048, {
+        'select_related': [OrganizationModel.owner, OrganizationModel.level, OrganizationModel.server]}),
     'sizes': (ProductSizeModel, 64, {}),
+    'actions': (BalanceActionModel, 256, {}),
     'orgs': (OrganizationModel, 2048, {}),
     'bills': (BalanceBillModel, 256, {}),
     'balance': (BalanceHistoryModel, 256, {}),
@@ -49,20 +51,58 @@ tables_access = {
     'usersessions': (UserSessionModel, 65536, {}),
     'adminsessions': (AdminSessionModel, 131072, {}),
     'contractors': (OrdersContractorModel, 8, {}),
+    'pickerstatuses': (PickerOrderStatus, 2, {}),
     'banks': (BalanceSourceModel, 1024, {}),
     'prices': (BalancePricesModel, 512, {}),
-    'schedules': (OrdersServerScheduleModel, 524288, {}),
-    'servercontractors': (OrdersServerContractorModel, 8, {}),
+    'schedules': (PickerServerScheduleModel, 524288, {}),
+    'servercontractors': (PickerServerContractorModel, 8, {}),
     'pickersettings': (PickerSettingsModel, 2, {}),
-    'settings': (CrmSettingsModel, 262144, {}),
     'pickerhistory': (PickerHistoryModel, 2, {}),
+    'levels': (BalancePricesModel, 2048, {}),
+    'sizes_full': (
+        ProductSizeModel, 64,
+        {
+            'select_related': [ProductSizeModel.product],
+            'deep_related': [
+                [ProductSizeModel.product, ProductModel.organization]
+            ]
+        }
+    ),
+
+    'reviews_full': (
+        ReviewModel, 128,
+        {
+            'select_related': [ReviewModel.size, ReviewModel.media],
+            'deep_related': [
+                [ReviewModel.size, ProductSizeModel.product],
+                [ReviewModel.size, ProductSizeModel.product, ProductModel.organization],
+            ]
+        }
+    ),
+    'products_full': (
+        ProductModel, 64,
+        {
+            'select_related': [ProductModel.sizes, ProductModel.organization]
+        }
+    ),
+    'orders_full': (
+        OrdersOrderModel, 16,
+        {
+            'select_related': [OrdersOrderModel.size, OrdersOrderModel.account],
+            'deep_related': [
+                [OrdersOrderModel.account, OrdersAccountModel.address],
+                [OrdersOrderModel.size, ProductSizeModel.product],
+                [OrdersOrderModel.size, ProductSizeModel.product, ProductModel.organization]
+            ]
+        }
+    ),
 
     'servers': (
-        OrdersServerModel, 1,
+        PickerServerModel, 1,
         {
             'prefetch_related': [
-                OrdersServerModel.schedule,
-                OrdersServerModel.contractors,
+                PickerServerModel.schedule,
+                PickerServerModel.contractors,
             ],
         }
     ),
@@ -85,7 +125,7 @@ async def every(request: Request = Request):
     if not token:
         return None
 
-    sessions = await DefaultRepository.get_records(
+    sessions = await Repository.get_records(
         AdminSessionModel,
         filters=[AdminSessionModel.token == token, AdminSessionModel.expires > func.now()],
         select_related=[AdminSessionModel.admin]
@@ -119,7 +159,7 @@ async def not_authed(request: Request = Request):
 @router.post('/login')
 async def login(request: Request, response: Response, username: str, password: str,
                 session: AdminSessionModel = Depends(not_authed)):
-    admin_check = await DefaultRepository.get_records(
+    admin_check = await Repository.get_records(
         AdminUserModel,
         filters=[AdminUserModel.username == username.lower().replace(' ', '')]
     )
@@ -127,11 +167,11 @@ async def login(request: Request, response: Response, username: str, password: s
     if len(admin_check) != 1:
         raise HTTPException(status_code=403, detail=string_user_wrong_password)
 
-    if hash_password(password) != admin_check[0].password:
+    if Strings.hmac(password) != admin_check[0].password:
         raise HTTPException(status_code=403, detail=string_user_wrong_password)
 
-    token = generate_token(256)
-    await DefaultRepository.save_records([
+    token = Strings.alphanumeric(256)
+    await Repository.save_records([
         {
             'model': AdminSessionModel,
             'records': [
@@ -151,7 +191,7 @@ async def login(request: Request, response: Response, username: str, password: s
 
 @router.get('/logout')
 async def logout(response: Response, session: AdminSessionModel = Depends(authed)):
-    await DefaultRepository.save_records([
+    await Repository.save_records([
         {'model': AdminSessionModel, 'records': [{'id': session.id, 'expires': func.now()}]}
     ])
     response.delete_cookie(cookies_admin_token_key)
@@ -180,8 +220,12 @@ async def reading_data(request: Request, section: str, session: AdminSessionMode
     if params:
         filters = []
         for key, value in params:
-            field = getattr(model, key)
-            filters.append(field == set_type(value, str(field.type)))
+            if key == 'limit':
+                if int(value) > 0:
+                    kwargs['limit'] = int(value)
+            else:
+                field = getattr(model, key)
+                filters.append(field == set_type(value, str(field.type)))
 
         if kwargs.get('filters', None):
             kwargs['filters'] = kwargs['filters'] + filters
@@ -189,7 +233,7 @@ async def reading_data(request: Request, section: str, session: AdminSessionMode
         else:
             kwargs['filters'] = filters
 
-    records = await DefaultRepository.get_records(model, **kwargs)
+    records = await Repository.get_records(model, **kwargs)
 
     return [record.__dict__ for record in records]
 
@@ -242,7 +286,7 @@ async def creating_data(data: dict[str, list[dict]], request: Request, session: 
                 typed_value = set_type(value, model_fields[field])
 
                 if field == 'password':
-                    typed_value = hash_password(str(typed_value))
+                    typed_value = Strings.hmac(str(typed_value))
 
                 model_record_with_typed_values[field] = typed_value
 
@@ -253,7 +297,7 @@ async def creating_data(data: dict[str, list[dict]], request: Request, session: 
             'records': model_with_typed_records
         })
 
-    await DefaultRepository.save_records(models_with_typed_records)
+    await Repository.save_records(models_with_typed_records)
 
 
 @router.delete('/delete/{section}/{record_id}')
@@ -266,85 +310,434 @@ async def reading_fields(section: str, record_id: int, session: AdminSessionMode
     if not level & session.admin.level:
         raise HTTPException(status_code=403, detail=string_403)
 
-    await DefaultRepository.delete_record(model, record_id)
+    await Repository.delete_record(model, record_id)
 
 
 @router.post('/uploadBillMedia')
-async def test(bill_id: int, file: UploadFile = File(), session: AdminSessionModel = Depends(authed)):
+async def uploading_bill_media(bill_id: int, file: UploadFile = File(), session: AdminSessionModel = Depends(authed)):
     try:
-        await verify_file(file, ['image', 'other'])
+        await Repository.verify_file(file, ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'zip', 'rar'])
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")
 
-    bills = await DefaultRepository.get_records(BalanceBillModel, filters=[BalanceBillModel.id == bill_id])
+    bills = await Repository.get_records(BalanceBillModel, filters=[BalanceBillModel.id == bill_id])
 
     if len(bills) != 1:
         raise HTTPException(status_code=404, detail=string_404)
+
     bill = bills[0]
 
     content = await file.read()
-    n, t = await s3_save(content, generate_filename(), file.filename.rsplit('.', maxsplit=1)[1])
+    n, t = await Repository.s3_autosave(content,
+                                        f"{Strings.alphanumeric(32)}.{file.filename.rsplit('.', maxsplit=1)[1]}")
 
     record = {'id': bill.id, 'media': f'{n}.{t}'}
 
     if bill.status_id == 6:
         record['status_id'] = 3
 
-    await DefaultRepository.save_records([
+    await Repository.save_records([
         {'model': BalanceBillModel, 'records': [record]}
     ])
 
 
-@router.post('/refreshOrders')
-async def refresh_orders(request: Request, session: AdminSessionModel = Depends(authed)):
-    data = dict(await request.form())
+@router.get("/xlsxReviewsTasks")
+async def download_xlsx_reviews(session: AdminSessionModel = Depends(authed)):
+    if not 128 & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
 
-    servers = await DefaultRepository.get_records(
-        OrdersServerModel,
-        filters=[OrdersServerModel.is_active],
-        select_related=[OrdersServerModel.contractors, OrdersServerModel.schedule]
+    reviews = await Repository.get_records(
+        ReviewModel,
+        filters=[
+            ReviewModel.status == 1,
+            ReviewModel.strict_match.is_(False),
+        ],
+        select_related=[
+            ReviewModel.media,
+            ReviewModel.size
+        ],
+        filtration=[
+            ReviewModel.media == None
+        ],
+        deep_related=[
+            [ReviewModel.size, ProductSizeModel.product]
+        ]
     )
 
-    for server in servers:
-        if not data.get(f'active-{server.id}', None) or data.get(f'active-{server.id}') == 'undefined':
-            raise HTTPException(status_code=400, detail=f'Отсутствует файл с активными заказами для {server.name}')
+    matches_ids = {
+        0: '',
+        1: 'Соответствует',
+        2: 'Маломерит',
+        3: 'Большемерит'
+    }
 
-        if not data.get(f'collected-{server.id}', None) or data.get(f'collected-{server.id}') == 'undefined':
-            raise HTTPException(status_code=400, detail=f'Отсутствует файл с полученными заказами для {server.name}')
+    tasks = {}
+    for review in reviews:
+        if tasks.get(review.size.product.wb_article):
+            tasks[review.size.product.wb_article].append(review)
+        else:
+            tasks[review.size.product.wb_article] = [review]
 
-    try:
-        return await refresh_active_and_collected(data, servers)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f'{str(e)}')
+    zip_file = BytesIO()
+    with ZipFile(zip_file, 'w') as zip_archive:
+        for article, reviews in tasks.items():
+            excel_file = BytesIO()
+            texts = []
+            matches = []
+            ids = []
+            for review in reviews:
+                texts.append(review.text)
+                matches.append(matches_ids[review.match])
+                ids.append(review.id)
 
+            data = {
+                "Отзыв": texts,
+                "Пол": [''] * len(texts),
+                "Размер": [''] * len(texts),
+                "Фото 1": [''] * len(texts),
+                "Фото 2": [''] * len(texts),
+                "Фото 3": [''] * len(texts),
+                "Фото 4": [''] * len(texts),
+                "Фото 5": [''] * len(texts),
+                "Видео": [''] * len(texts),
+                "Соответствие размеру": matches,
+                "Аккаунт": [''] * len(texts),
+                "Статус": [''] * len(texts),
+                "Результат": [''] * len(texts),
+                "Системный ID": ids
+            }
 
-@router.post('/generatePlan')
-async def generate_plan(request: Request, session: AdminSessionModel = Depends(authed)):
-    servers = await DefaultRepository.get_records(
-        OrdersServerModel,
-        filters=[OrdersServerModel.is_active],
-        select_related=[OrdersServerModel.contractors, OrdersServerModel.schedule]
+            df = pd.DataFrame(data)
+            df.to_excel(excel_file, index=False, sheet_name=article)
+            excel_file.seek(0)
+            zip_archive.writestr(f"{article}.xlsx", excel_file.getvalue())
+
+    zip_file.seek(0)
+
+    headers = {
+        'Content-Disposition': f'attachment; filename=tasks.zip'
+    }
+
+    await Repository.save_records(
+        [
+            {
+                'model': ReviewModel,
+                'records': [{'id': review.id, 'status': 2} for review in reviews]
+            }
+        ]
     )
 
-    data = dict(await request.form())
-    bad_accounts = data['bad_accounts']
+    return StreamingResponse(zip_file, media_type='application/zip', headers=headers)
+
+
+@router.post('/xlsxReviewsTasksPay')
+async def get_reviews_of_organization(file: UploadFile = File(...), session: AdminSessionModel = Depends(authed)):
+    if not 128 & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
 
     try:
-        await generate_plan_xlsx(servers, bad_accounts)
+        await Repository.verify_file(file, ['xlsx'])
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f'{str(e)}')
-
-
-@router.post('/identifyOrders')
-async def identify_orders(request: Request, session: AdminSessionModel = Depends(authed)):
-    data = dict(await request.form())
-    if not data.get('orders') or data.get('orders') == 'undefined':
-        raise HTTPException(status_code=400, detail='Выберите файл с заказами')
+        raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")
 
     try:
-        return await identify_orders_xlsx(data)
+        await process_reviews_tasks_xlsx(file)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f'{str(e)}')
+        raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")
+
+
+@router.post('/updateReviewStatus')
+async def update_review_status(review_id: int, status: int, session: AdminSessionModel = Depends(authed)):
+    if not 128 & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    reviews = await Repository.get_records(
+        ReviewModel,
+        filters=[
+            ReviewModel.id == review_id
+        ]
+    )
+
+    if len(reviews) != 1:
+        raise HTTPException(status_code=404, detail=string_404)
+
+    review = reviews[0]
+
+    if status not in [2, 4]:
+        raise HTTPException(status_code=400, detail=string_400)
+
+    if status == 2 and review.status != 1:
+        raise HTTPException(status_code=400, detail=string_400)
+
+    if status == 4 and review.status not in [1, 2]:
+        raise HTTPException(status_code=400, detail=string_400)
+
+    await Repository.save_records(
+        [
+            {
+                'model': ReviewModel,
+                'records': [{'id': review.id, 'status': status}]
+            }
+        ]
+    )
+
+
+@router.post('/payReview')
+async def update_review_status(review_id: int, session: AdminSessionModel = Depends(authed)):
+    if not 128 & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    reviews = await Repository.get_records(
+        ReviewModel,
+        filters=[
+            ReviewModel.id == review_id
+        ],
+        select_related=[ReviewModel.media, ReviewModel.size],
+        deep_related=[
+            [ReviewModel.size, ProductSizeModel.product],
+            [ReviewModel.size, ProductSizeModel.product, ProductModel.organization]
+        ]
+    )
+
+    if len(reviews) != 1:
+        raise HTTPException(status_code=404, detail=string_404)
+    review = reviews[0]
+
+    if review.status != 2:
+        raise HTTPException(status_code=400, detail=string_400)
+
+    level, purchases = await current_prices(review.size.product.organization)
+
+    price = level.price_review
+    target_id = 7
+
+    if review.media:
+        price = level.price_review_media
+        target_id = 5
+
+    if review.strict_match is True:
+        price = level.price_review_request
+        target_id = 6
+
+    await Repository.save_records(
+        [
+            {
+                'model': ReviewModel,
+                'records': [
+                    {
+                        'id': review.id,
+                        'status': 3
+                    }
+                ]
+            },
+            {
+                'model': BalanceHistoryModel,
+                'records': [
+                    {
+                        'amount': price,
+                        'org_id': review.size.product.organization.id,
+                        'target_id': target_id,
+                        'record_id': review.id,
+                        'action_id': 3
+                    }
+                ]
+            }
+        ]
+    )
+
+    target = await Repository.get_records(BalanceTargetModel, filters=[BalanceTargetModel.id == target_id])
+
+    return f'{target[0].title} ({price} руб.)'
+
+
+@router.get('/getPaymentsDetails')
+async def create_organization(org_id: int, start: datetime, end: datetime,
+                              session: AdminSessionModel = Depends(authed)):
+    if not 128 & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+    end = end.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    history = await Repository.get_records(
+        BalanceHistoryModel,
+        filters=[
+            BalanceHistoryModel.org_id == org_id,
+            BalanceHistoryModel.date >= start,
+            BalanceHistoryModel.date <= end,
+        ]
+    )
+
+    return [record.__dict__ for record in history]
+
+
+@router.get('/get_managers')
+async def create_organization(org_id: int, session: AdminSessionModel = Depends(authed)):
+    if not 128 & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
+
+
+    records = await MembershipRepository.read_memberships_of_organization(org_id)
+
+    return [record.__dict__ for record in records]
 
 
 
+
+
+
+# Forced saves
+"""
+async def force_save_product(wb_article, wb_title, wb_size_origName, wb_size_optionId, org_id):
+    try:
+        wb_url = f'https://www.wildberries.ru/catalog/{wb_article}/detail.aspx'
+
+        title, p_article, sizes, picture_data = parse_wildberries_card(wb_url)
+
+        filename = generate_filename() if picture_data else None
+
+        await ProductsRepository.create_product(
+            {
+                'org_id': int(org_id),
+                'wb_article': wb_article,
+                'wb_title': wb_title,
+                'status': 1,
+                'media': filename + '.webp',
+            },
+            [size.model_dump() for size in sizes]
+        )
+
+        if picture_data:
+            await s3_save(picture_data, filename, 'webp')
+
+        return True
+
+    except Exception as e:
+
+        await ProductsRepository.create_product(
+            {
+                'org_id': int(org_id),
+                'wb_article': wb_article,
+                'wb_title': wb_title,
+                'status': 1,
+            },
+            [{
+                'wb_size_origName': wb_size_origName,
+                'wb_size_optionId': wb_size_optionId,
+                'wb_in_stock': False,
+                'wb_price': None,
+                'barcode': None,
+                'is_active': True,
+            }]
+        )
+
+        return False
+
+
+async def force_save_order(x):
+    db_sizes = await DefaultRepository.get_records(ProductSizeModel)
+    db_products = await DefaultRepository.get_records(ProductModel)
+    db_organizations = await DefaultRepository.get_records(OrganizationModel)
+
+    df_products = pd.DataFrame([{'id': x.id, 'org_id': x.org_id, 'article': x.wb_article} for x in db_products])
+    df_organizations = pd.DataFrame([{'id': x.id, 'title': x.title} for x in db_organizations])
+    df_sizes = pd.DataFrame([{'id': x.id, 'product_id': x.product_id, 'wb_size_origName': x.wb_size_origName,
+                              'wb_size_name': x.wb_size_name} for x in db_sizes])
+    for xx in x:
+        if force_save:
+
+            query = df_organizations.query(f"title == '{line['organization_title']}'")
+            organization_id = query['id'].iloc[0] if len(query.values) != 0 else None
+
+            if not organization_id:
+                logs_orders.append(
+                    {
+                        'target': line['order_uuid'],
+                        'success': False,
+                        'detail': 'Организация не найдена',
+                        'value': line['organization_title'],
+                        'line': line['line_number'],
+                        'orders_type': orders_type,
+                        'server': server.name,
+                    }
+                )
+                continue
+
+            query = df_products.query(f"article == '{line['product_article']}'")
+            product_id = query['id'].iloc[0] if len(query.values) != 0 else None
+
+            if not product_id:
+                logs_orders.append(
+                    {
+                        'target': line['order_uuid'],
+                        'success': False,
+                        'detail': f'Товар не найден в списке товаров {line["organization_title"]}',
+                        'value': line['product_article'],
+                        'line': line['line_number'],
+                        'orders_type': orders_type,
+                        'server': server.name,
+                    }
+                )
+                continue
+
+            query = df_sizes.query(f'product_id == {product_id}')
+
+            if len(query) == 0:
+                logs_orders.append(
+                    {
+                        'target': line['order_uuid'],
+                        'success': False,
+                        'detail': f'Размеры товара не найдены',
+                        'value': line['product_article'],
+                        'line': line['line_number'],
+                        'orders_type': orders_type,
+                        'server': server.name,
+                    }
+                )
+                continue
+
+            size_id = query['id'].iloc[0]
+
+            if len(query) != 1:
+                for i, row in query.iterrows():
+                    if (row['wb_size_origName'] == line['product_size'] or
+                            row['wb_size_name'] == line['product_size']):
+                        size_id = row['id']
+                        break
+
+            data_orders_to_db.append(
+                {
+                    'wb_keyword': line['product_title'],
+                    'wb_price': int(line['price']),
+                    'wb_uuid': line['order_uuid'],
+                    'wb_status': line['status'],
+                    'wb_collect_code': line['collect_code'],
+
+                    'status': 3,
+                    'description': 'forced',
+
+                    'dt_planed': detect_date(line['dt_ordered']),
+                    'dt_ordered': detect_date(line['dt_ordered']),
+                    'dt_delivered': detect_date(line['dt_delivered']),
+                    'dt_collected': detect_date(line['dt_collected']),
+
+                    'size_id': int(size_id),
+                    'account_id': int(account_id)
+                }
+            )
+
+            logs_orders.append(
+                {
+                    'target': line['order_uuid'],
+                    'success': True,
+                    'detail': 'Заказ сохранен методом ForceSave',
+                    'value': line['order_uuid'],
+                    'line': line['line_number'],
+                    'orders_type': orders_type,
+                    'server': server.name,
+                }
+            )
+            continue
+
+"""

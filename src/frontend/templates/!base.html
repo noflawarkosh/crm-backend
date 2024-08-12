@@ -107,7 +107,7 @@
         <!-- Top Nav -->
         <div class="layout-page">
 
-            <nav class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
+            <nav class="layout-navbar navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
                  id="layout-navbar">
 
                 <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0   d-xl-none ">
@@ -253,21 +253,16 @@
                     </ul>
                 </div>
 
-                <!-- Search Small Screens -->
-                <div class="navbar-search-wrapper search-input-wrapper  d-none">
-                    <input type="text" class="form-control search-input container-xxl border-0"
-                           placeholder="Введите запрос"
-                           aria-label="Введите запрос...">
-                    <i class="bx bx-x bx-sm search-toggler cursor-pointer"></i>
-                </div>
 
             </nav>
 
             <!-- Content -->
             <div class="content-wrapper">
 
-                {% block content %}
-                {% endblock %}
+                <div class="container-p-y" style="padding-left: 26px; padding-right: 26px">
+                    {% block content %}
+                    {% endblock %}
+                </div>
 
                 <div class="content-backdrop fade"></div>
             </div>

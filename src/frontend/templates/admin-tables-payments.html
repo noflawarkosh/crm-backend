@@ -1,11 +1,13 @@
 {% extends "!base-admin.html" %}
 {% block title %}Платежи | {% endblock %}
-{% block css %}
-
+{% block head %}
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.css') }}"/>
 {% endblock %}
 
 {% block js %}
-<script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script src="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.js') }}"></script>
+
 <script>
 
     function set_watchers(data) {
@@ -54,7 +56,6 @@
 
         }
     }
-
 
     var d_bills = []
     var file_inputs = []
@@ -144,7 +145,7 @@
                         data: 'organization',
                         render: function (data, type, row) {
                             d_bills[row.id] = row
-                            return data.title
+                            return data.title + ' (' + data.inn + ')'
                         }
                     },
                     {
@@ -214,6 +215,33 @@
                         }
                     }
                 ],
+
+                "initComplete": function () {
+
+                    var table = this.api().table().header();
+                    var newRow = $('<tr></tr>');
+                    $(table).append(newRow);
+
+                    var searchColumns = [0, 1, 2, 3, 4, 5, 6,];
+
+                    this.api().columns().every(function (i) {
+                        var column = this;
+                        if (searchColumns.includes(i)) {
+
+                            var input = $('<input type="text" class="form-control" placeholder="" />');
+                            $(newRow).append($('<th></th>').append(input));
+
+                            input.on('keyup change clear', function () {
+                                if (column.search() !== this.value) {
+                                    column.search(this.value).draw();
+                                }
+                            });
+                        } else {
+                            $(newRow).append($('<th></th>'))
+
+                        }
+                    });
+                },
                 "order": [[0, "desc"]]
             });
 
@@ -225,7 +253,6 @@
 
         }
     })
-
 
     function refresh() {
         var table = $('#dt_payments').DataTable()
@@ -250,11 +277,59 @@
 
 </script>
 
+<script>
+    $.ajax({
+        url: '/admin/get/organizations',
+        method: 'get',
+        success: function (orgs) {
+
+            var orgsSelect = $('#org_id');
+            var option = $('<option>').text('Все').val('');
+            orgsSelect.append(option);
+
+            for (let i in orgs) {
+
+                var opTxt = orgs[i].title
+
+                var option = $('<option>').text(opTxt).val(orgs[i].id);
+
+                orgsSelect.append(option);
+            }
+            orgsSelect.selectpicker('refresh');
+        },
+
+        error: function (data) {
+
+
+        }
+    });
+</script>
 
 {% endblock %}
 
 {% block content %}
-<div class="container-xxl flex-grow-1 container-p-y">
+<div class="flex-grow-1">
+
+    <div class="row mb-3">
+
+        <div class="col">
+            <div class="card">
+
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Управление счетами</h5>
+                </div>
+
+                <div class="card-body">
+                    <div class="d-flex">
+                        <select id="org_id" class="form-control selectpicker me-2" data-live-search="true"></select>
+                        <button onclick="window.open('/admin-tables/balances?org_id=' + document.getElementById('org_id').value, '_blank')" class="btn btn-primary">Открыть</i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
 
     <div class="row">
 
@@ -262,7 +337,7 @@
             <div class="card">
 
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Платежи
+                    <h5 class="card-title mb-0">Пополнения
                         <a href="javascript:dt_refresh('dt_payments', '/admin/get/bills_full')"><i
                                 class="bx bx-refresh"></i></a>
                     </h5>
@@ -270,7 +345,7 @@
                     <small class="card-subtitle" id="prod-cntr"></small>
                 </div>
 
-                <div class="card-datatable p-4">
+                <div class="card-body table-responsive">
                     <table id="dt_payments" class="datatables-ajax table table-bordered dataTable no-footer">
                         <thead>
                         <tr>

@@ -31,6 +31,12 @@ class BalancePricesModel(Base):
     price_percent_penalty: Mapped[float]
 
 
+class BalanceTargetModel(Base):
+    __tablename__ = 'balance_target'
+    id: Mapped[pk]
+    title: Mapped[str]
+
+
 class BalanceActionModel(Base):
     __tablename__ = 'balance_action'
 
@@ -44,6 +50,7 @@ class BalanceHistoryModel(Base):
     id: Mapped[pk]
     description: Mapped[str | None]
     amount: Mapped[int]
+    record_id: Mapped[int | None]
     date: Mapped[dt]
 
     # FK
@@ -53,10 +60,14 @@ class BalanceHistoryModel(Base):
     action_id: Mapped[int] = mapped_column(
         ForeignKey('balance_action.id', ondelete='CASCADE', onupdate='CASCADE')
     )
+    target_id: Mapped[int | None] = mapped_column(
+        ForeignKey('balance_target.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
 
     # Relationships
     organization: Mapped['OrganizationModel'] = relationship(lazy='noload')
     action: Mapped['BalanceActionModel'] = relationship(lazy='noload')
+    target: Mapped['BalanceTargetModel'] = relationship(lazy=False)
 
 
 class BalanceBillStatusModel(Base):

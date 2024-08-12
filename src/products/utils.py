@@ -1,9 +1,128 @@
 import json
+from io import BytesIO
 
+import pandas as pd
 import requests
 
+from database import Repository
+from picker.utils import parse_excel_lines
+from products.models import ProductModel, ReviewModel
 from products.schemas import ProductSizeCreateSchema
 from strings import *
+
+
+async def process_reviews_xlsx(file, org_id):
+    excel_columns = {
+        'wb_article': 0,
+        'wb_size_origName': 1,
+        'text': 2,
+        'strict_match': 3,
+        'match': 4
+    }
+
+    xlsx_reviews_content = await file.read()
+    xlsx_reviews = await parse_excel_lines(pd.read_excel(BytesIO(xlsx_reviews_content), dtype=str).values.tolist(),
+                                           excel_columns)
+
+    if len(xlsx_reviews) <= 6:
+        raise Exception('В файле нет отзывов')
+
+    if len(xlsx_reviews[6:]) > 1000:
+        raise Exception('Допустимо не более 1000 отзывов')
+
+    products = await Repository.get_records(
+        ProductModel,
+        filters=[ProductModel.org_id == org_id],
+        select_related=[ProductModel.sizes]
+    )
+
+    product_articles = [p.wb_article for p in products]
+    records_to_insert = []
+
+    for line in xlsx_reviews[6:]:
+        print(line)
+        # Article check
+        if not line['wb_article']:
+            raise Exception(f"Строка {line['line_number']}: артикул не указан")
+
+        if line['wb_article'].replace(' ', '') not in product_articles:
+            raise Exception(f"Строка {line['line_number']}: товар не найден")
+
+        # Size check
+        selected_size = None
+        for product in products:
+            if product.wb_article == line['wb_article']:
+
+                # Search size
+                for size in product.sizes:
+                    if size.wb_size_origName == line['wb_size_origName']:
+                        selected_size = size
+                        break
+
+                if line['wb_size_origName'] and not selected_size:
+                    raise Exception(f"Строка {line['line_number']}: размер не найден")
+
+                # Size not found
+                if not selected_size:
+                    if len(product.sizes) == 1 and product.sizes[0].wb_size_origName is None:
+                        selected_size = product.sizes[0]
+                    else:
+                        for size in product.sizes:
+                            if size.wb_in_stock and size.barcode:
+                                selected_size = size
+                                break
+
+                if not selected_size:
+                    raise Exception(
+                        f"Строка {line['line_number']}: не удалось выбрать размер автоматически. Пожалуйста, укажите любой размер товара вручную")
+
+                if not selected_size.wb_in_stock:
+                    raise Exception(f"Строка {line['line_number']}: размер не в наличии")
+
+                if not selected_size.barcode:
+                    raise Exception(f"Строка {line['line_number']}: штрих-код размера не указан")
+
+                break
+
+        # Strict match check
+        if line['strict_match'] is None:
+            raise Exception(f"Строка {line['line_number']}: не указана необходимость в выборе аккаунта")
+
+        try:
+            int(str(line['strict_match']).replace(' ', ''))
+        except:
+            raise Exception(f"Строка {line['line_number']}: необходимость в выборе аккаунта должна быть целым числом")
+
+        strict_match = int(str(line['strict_match']).replace(' ', ''))
+        if strict_match not in [0, 1]:
+            raise Exception(f"Строка {line['line_number']}: необходимость в выборе аккаунта должна быть 0 или 1")
+
+        # Match check
+        if line['match'] is None:
+            raise Exception(f"Строка {line['line_number']}: не указано соответствие размеру")
+
+        try:
+            int(str(line['match']).replace(' ', ''))
+        except:
+            raise Exception(f"Строка {line['line_number']}: соответствие размеру должно быть целым числом")
+
+        match = int(str(line['match']).replace(' ', ''))
+        if match not in [0, 1, 2, 3]:
+            raise Exception(f"Строка {line['line_number']}: соответствие размеру должно быть 0, 1, 2 или 3")
+
+        records_to_insert.append(
+            {
+                'size_id': selected_size.id,
+                'status': 1,
+                'text': line['text'],
+                'strict_match': strict_match,
+                'match': match,
+            }
+        )
+
+    await Repository.save_records([{'model': ReviewModel,'records': records_to_insert}])
+
+
 
 
 def volHostV2(e):

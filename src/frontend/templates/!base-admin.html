@@ -83,7 +83,7 @@
         <!-- Top Nav -->
         <div class="layout-page">
 
-            <nav class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
+            <nav class="layout-navbar navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
                  id="layout-navbar">
 
                 <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none ">
@@ -169,22 +169,16 @@
                     </ul>
                 </div>
 
-                <!-- Search Small Screens -->
-                <div class="navbar-search-wrapper search-input-wrapper  d-none">
-                    <input type="text" class="form-control search-input container-xxl border-0"
-                           placeholder="Введите запрос"
-                           aria-label="Введите запрос...">
-                    <i class="bx bx-x bx-sm search-toggler cursor-pointer"></i>
-                </div>
+
 
             </nav>
 
             <!-- Content -->
             <div class="content-wrapper">
-
-                {% block content %}
-                {% endblock %}
-
+                <div class="container-p-y" style="padding-left: 26px; padding-right: 26px">
+                    {% block content %}
+                    {% endblock %}
+                </div>
                 <div class="content-backdrop fade"></div>
             </div>
         </div>
@@ -284,7 +278,32 @@
         'match': 'Соответствие',
         'text': 'Текст',
         'status': 'Статус',
-        'load_i': 'I'
+        'load_i': 'I',
+        'is_public': 'Публичный',
+        'price_buy': 'Стоимость выкупа',
+        'price_collect': 'Стоимость логистики',
+        'price_review': 'Стоимость отзыва',
+        'price_review_media': 'Стоимость отзыва с медиа',
+        'price_review_request': 'Стоимость отзыва по запросу',
+        'price_box': 'Стоимость коробки',
+        'price_pass': 'Стоимость проезда на склад',
+        'price_percent': 'Процент комиссии',
+        'price_percent_limit': 'Лимит стоимости товара без комиссии',
+        'price_percent_penalty': 'Процент комиссии при оплате',
+        'server_id': 'Сервер',
+        'address_id': 'Адрес ПВЗ',
+        'reg_date': 'Дата регистрации',
+        'created_at': 'Создано',
+        'level_id': 'Схема стоимости услуг',
+        'balance_limit': 'Лимит баланса',
+        'inn': 'ИНН',
+        'strict_match': 'подобрать аккаунт под размер',
+        'full_match': 'Полное совпадение строк при проверке статуса',
+        'status_number': 'номер статуса заказа',
+        'pay_product': 'Списать стоиомть товара',
+        'refund_product': 'Вернуть стоимость товара',
+        'refund_services': 'Вернуть стоимость услуг',
+
 
     }
 
@@ -414,12 +433,6 @@
                     'icon': 'bx bx-laptop',
                     'level': 131072,
                 },
-                {
-                    'title': 'Конфигурация',
-                    'href': '/admin-tables/settings',
-                    'icon': 'bx bx-edit',
-                    'level': 262144,
-                },
             ]
         },
     ]
@@ -434,7 +447,7 @@
         'products': 'Товары',
         'reviews': 'Отзывы',
         'payments': 'Касса',
-        'prices': 'Цены',
+        'prices': 'Схемы расчета стоимости',
         'banks': 'Банки',
         'organizations': 'Организации',
         'users': 'Пользователи',
@@ -443,7 +456,8 @@
         'usersessions': 'Сессии пользователей',
         'adminsessions': 'Сессии администраторов',
         'settings': 'Настройки',
-        'owner_id': 'Владелец'
+        'owner_id': 'Владелец',
+        'pickerstatuses': 'Статусы заказов'
     }
 
     const UEF = [
@@ -456,7 +470,15 @@
         'token',
     ]
 
-    const bools = ['is_active']
+    const bools = [
+        'is_active',
+        'full_match',
+        'pay_product',
+        'refund_product',
+        'refund_services',
+        'is_public'
+
+    ]
 
     // deep load
     const FML = {
@@ -469,6 +491,7 @@
         'size_id': ['sizes', 'wb_size_name'],
         'product_id': ['products', 'wb_title'],
         'account_id': ['accounts', 'number'],
+        'level_id': ['levels', 'title']
     }
 </script>
 

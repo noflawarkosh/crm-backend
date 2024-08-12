@@ -1,17 +1,23 @@
+import io
 import boto3
+from PIL import Image
 from sqlalchemy import update, select, delete
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine , AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, selectinload, joinedload
-from config import DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER, S3KID, S3KEY
 
+from strings import *
+from config import (
+    DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER,
+    S3KID, S3KEY, S3BUCKET,
+    ACCEPTABLE_IMAGE_TYPES, ACCEPTABLE_FILE_TYPES
+)
 
-DATABASE_URL = f'postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
-
-async_engine = create_async_engine(url=DATABASE_URL)
+# PostgreSQL
+async_engine = create_async_engine(url=f'postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}')
 async_session_factory = async_sessionmaker(async_engine)
 
-storage = boto3.session.Session()
-s3 = storage.client(
+# S3 Object Storage
+s3 = boto3.session.Session().client(
     service_name='s3',
     endpoint_url='https://storage.yandexcloud.net',
     aws_access_key_id=S3KID,
@@ -23,7 +29,67 @@ class Base(DeclarativeBase):
     pass
 
 
-class DefaultRepository:
+class Repository:
+
+    @classmethod
+    async def verify_file(cls, file, acceptable_types: list):
+
+        if file.size == 0:
+            raise Exception(string_storage_empty_file)
+
+        file_info = file.filename.rsplit('.', maxsplit=1)
+
+        if len(file_info) < 2:
+            raise Exception(string_storage_wrong_filetype)
+
+        file_name = file_info[0]
+        file_type = file_info[1].lower()
+
+        if len(file_name) == 0:
+            raise Exception(string_storage_empty_filename)
+
+        if file_type not in ACCEPTABLE_FILE_TYPES.keys() \
+                and file_type not in ACCEPTABLE_IMAGE_TYPES.keys() \
+                or file_type not in acceptable_types:
+            raise Exception(string_storage_wrong_filetype + f'. Только: {acceptable_types}')
+
+        if file.size > {**ACCEPTABLE_FILE_TYPES, **ACCEPTABLE_IMAGE_TYPES}[file_type]:
+            raise Exception(string_storage_max_size)
+
+        return file_name, file_type
+
+    @classmethod
+    async def c(cls, file_bytes, file_full_name):
+
+        file_info = file_full_name.rsplit('.', maxsplit=1)
+        file_name = file_info[0]
+        file_type = file_info[1].lower()
+
+        if file_type in ACCEPTABLE_IMAGE_TYPES.keys():
+            await cls.s3_save_image(file_bytes, file_full_name)
+            return file_name, 'webp'
+        else:
+            await cls.s3_save(file_bytes, file_full_name)
+            return file_name, file_type
+
+
+    @classmethod
+    async def s3_save_image(cls, file_bytes, file_full_name):
+        file_info = file_full_name.rsplit('.', maxsplit=1)
+        file_name = file_info[0]
+
+        image = Image.open(io.BytesIO(file_bytes))
+        image.save(io.BytesIO(), format='WEBP', optimize=True, quality=15)
+
+        webp_bytes = io.BytesIO()
+        image.save(webp_bytes, format='WebP')
+        file_content = webp_bytes.getvalue()
+        s3.upload_fileobj(io.BytesIO(file_content), S3BUCKET, f'{file_name}.webp')
+
+    @classmethod
+    async def s3_save(cls, file_bytes, file_full_name):
+        s3.upload_fileobj(io.BytesIO(file_bytes), S3BUCKET, file_full_name)
+
     @classmethod
     async def save_records(cls, models):
         """
@@ -47,7 +113,6 @@ class DefaultRepository:
             raise e
         finally:
             await session.close()
-
 
     @classmethod
     async def update_records(cls, model, records):
@@ -99,6 +164,8 @@ class DefaultRepository:
 
                 if order_by:
                     query = query.order_by(*order_by)
+                else:
+                    query = query.order_by(model.id.desc())
 
                 if limit:
                     query = query.limit(limit)

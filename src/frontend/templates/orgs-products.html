@@ -222,15 +222,6 @@
                                         s_n = size.wb_size_origName
                                     }
 
-                                    if (size.wb_size_name !== null) {
-                                        if (s_n !== null) {
-                                            s_n += ' (' + size.wb_size_name + ')'
-                                        } else {
-                                            s_n = size.wb_size_name
-                                        }
-
-                                    }
-
                                     var chkd = ''
                                     if (size.is_active === true) {
                                         chkd = 'checked=""'
@@ -361,7 +352,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-xxl flex-grow-1 container-p-y">
+<div class="flex-grow-1">
     <div class="row">
         <div class="col">
             <div class="card">

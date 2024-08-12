@@ -7,7 +7,7 @@ from auth.models import UserSessionModel
 from auth.schemas import UserReadSchema
 from auth.router import every
 from admin.router import every as admin_every
-from database import DefaultRepository
+from database import Repository
 from orgs.models import OrganizationModel
 from orgs.repository import MembershipRepository
 from payments.models import BalanceBillModel
@@ -32,6 +32,7 @@ pages_levels = {
     'addresses': 4,
     'contractors': 8,
     'orders': 16,
+    'balances': 256,
     'accounts': 32,
     'products': 64,
     'reviews': 128,
@@ -45,6 +46,7 @@ pages_levels = {
     'usersessions': 65536,
     'adminsessions': 131072,
     'settings': 262144,
+    'pickerstatuses': 2
 }
 
 
@@ -100,11 +102,17 @@ async def page(section: str,
 
 @router.get('/admin-edit/{table}/{id}')
 async def page(request: Request,
+               table: str,
                session: AdminSessionModel = Depends(admin_every)):
+
     if not session:
         return RedirectResponse('/admin-login')
 
-    return templates.TemplateResponse(f'admin-record-edit.html', {'request': request})
+    try:
+        return templates.TemplateResponse(f'admin-edit-{table}.html', {'request': request})
+
+    except:
+        return templates.TemplateResponse(f'admin-record-edit.html', {'request': request})
 
 
 # AUTH PAGES
@@ -159,7 +167,7 @@ async def page(request: Request, org_id: int, dates: str = None, session: UserSe
     if not session:
         return RedirectResponse('/login')
 
-    organizations = await DefaultRepository.get_records(
+    organizations = await Repository.get_records(
         OrganizationModel,
         filters=[OrganizationModel.id == org_id]
     )
@@ -183,7 +191,7 @@ async def page(request: Request,
     if not session:
         return RedirectResponse('/login')
 
-    organizations = await DefaultRepository.get_records(
+    organizations = await Repository.get_records(
         OrganizationModel,
         filters=[OrganizationModel.id == org_id]
     )
@@ -212,7 +220,7 @@ async def page(request: Request,
     if not session:
         return RedirectResponse('/login')
 
-    bills = await DefaultRepository.get_records(
+    bills = await Repository.get_records(
         BalanceBillModel,
         filters=[BalanceBillModel.id == bill_id]
     )
@@ -222,7 +230,7 @@ async def page(request: Request,
 
     bill = bills[0]
 
-    organizations = await DefaultRepository.get_records(
+    organizations = await Repository.get_records(
         OrganizationModel,
         filters=[OrganizationModel.id == bill.org_id]
     )

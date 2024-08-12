@@ -56,7 +56,7 @@
 
                             if (field.includes('_id')) {
 
-                                el = '<select id="' + field + '" class="selectpicker w-100" data-live-search="true"></select>'
+                                el = '<select id="' + field + '" class="form-control selectpicker" data-live-search="true"></select>'
                                 itl.push(field)
 
                             } else {
@@ -217,7 +217,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-xxl flex-grow-1 container-p-y">
+<div class="flex-grow-1">
     <div class="card">
         <div class="card-header">
             <h5 class="card-title mb-0">Редактирование записи</h5>

@@ -35,7 +35,7 @@ class ProductsRepository:
 class ReviewsRepository:
 
     @classmethod
-    async def create_review(cls, review_schema: ReviewCreateSchema, files: list):
+    async def create_review(cls, review_schema: ReviewCreateSchema, filenames: list):
 
         try:
             async with async_session_factory() as session:
@@ -46,10 +46,10 @@ class ReviewsRepository:
                 await session.flush()
 
                 # Add review media
-                for file in files:
+                for filename in filenames:
                     session.add(ReviewMediaModel(
                         review_id=review.id,
-                        media=file.filename)
+                        media=filename)
                     )
 
                 await session.commit()

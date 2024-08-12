@@ -2,7 +2,7 @@ import datetime
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
-from database import DefaultRepository
+from database import Repository
 from orders.models import OrdersOrderModel
 from payments.repository import PaymentsRepository
 from payments.utils import payment_week, get_previous_week_dates, get_current_week_dates
@@ -60,7 +60,7 @@ async def nex_prices(organization):
 
 
 async def get_purchases_count(ws, we, org_id):
-    return len(await DefaultRepository.get_records(
+    return len(await Repository.get_records(
         model=OrdersOrderModel,
         filters=[
             OrdersOrderModel.dt_ordered is not None,
@@ -75,7 +75,7 @@ async def get_purchases_count(ws, we, org_id):
 
 
 async def get_public_levels():
-    return await DefaultRepository.get_records(
+    return await Repository.get_records(
         BalancePricesModel,
         filters=[BalancePricesModel.is_public],
         order_by=[BalancePricesModel.number.asc()]
@@ -83,13 +83,38 @@ async def get_public_levels():
 
 
 async def get_level_by_id(level_id):
-    levels = await DefaultRepository.get_records(
+    levels = await Repository.get_records(
         BalancePricesModel,
         filters=[BalancePricesModel.id == level_id]
     )
     if len(levels) != 1:
         raise HTTPException(status_code=404, detail=string_payments_no_levels)
     return levels[0]
+
+
+async def get_current_balance(org_id):
+    history = await Repository.get_records(
+        BalanceHistoryModel,
+        filters=[BalanceHistoryModel.org_id == org_id]
+    )
+    total = 0
+    for record in history:
+        if record.action_id == 1:
+            total += record.amount
+        elif record.action_id == 2:
+            total -= record.amount
+        elif record.action_id == 3:
+            total -= record.amount
+        elif record.action_id == 4:
+            total += record.amount
+
+    return total
+
+
+@router.get('/currentBalance')
+async def current_level(org_id: int, session: UserSessionModel = Depends(authed)):
+    organization, membership = await check_access(org_id, session.user.id, 0)
+    return [await get_current_balance(org_id), organization.balance_limit]
 
 
 @router.get('/currentLevel')
@@ -115,7 +140,7 @@ async def current_level(org_id: int, session: UserSessionModel = Depends(authed)
 async def get_levels(org_id: int, session: UserSessionModel = Depends(authed)):
     organization, membership = await check_access(org_id, session.user.id, 0)
 
-    levels = await DefaultRepository.get_records(
+    levels = await Repository.get_records(
         BalancePricesModel,
         filters=[BalancePricesModel.is_public],
         order_by=[BalancePricesModel.number.asc()]
@@ -146,6 +171,7 @@ async def create_organization(data: Annotated[BalanceBillCreateSchema, Depends()
     if data.source_id == 1:
         status_id = 6
 
+
     bill_id = await PaymentsRepository.create_bill({**data.model_dump(), 'status_id': status_id})
     return bill_id
 
@@ -154,7 +180,7 @@ async def create_organization(data: Annotated[BalanceBillCreateSchema, Depends()
 async def create_organization(bill_id: int,
                               session: UserSessionModel = Depends(authed)
                               ) -> BalanceBillReadSchema:
-    bills = await DefaultRepository.get_records(
+    bills = await Repository.get_records(
         BalanceBillModel,
         filters=[BalanceBillModel.id == bill_id],
         prefetch_related=[
@@ -177,7 +203,7 @@ async def create_organization(org_id: int,
                               session: UserSessionModel = Depends(authed)
                               ) -> list[BalanceBillReadSchema]:
     await check_access(org_id, session.user.id, 0)
-    bills = await DefaultRepository.get_records(
+    bills = await Repository.get_records(
         BalanceBillModel,
         filters=[BalanceBillModel.org_id == org_id],
         prefetch_related=[
@@ -191,7 +217,7 @@ async def create_organization(org_id: int,
 @router.post('/updateBillStatus')
 async def create_organization(bill_id: int, status_id: int,
                               session: UserSessionModel = Depends(authed)):
-    bills = await DefaultRepository.get_records(
+    bills = await Repository.get_records(
         BalanceBillModel,
         filters=[BalanceBillModel.id == bill_id]
     )
@@ -210,14 +236,14 @@ async def create_organization(bill_id: int, status_id: int,
     elif status_id == 4 and bills[0].status_id not in [3]:
         raise HTTPException(status_code=403, detail=string_403)
 
-    await DefaultRepository.save_records(
+    await Repository.save_records(
         [{'model': BalanceBillModel, 'records': [{'id': bill_id, 'status_id': status_id}]}]
     )
 
 
 @router.get('/getActiveSources')
 async def create_organization(session: UserSessionModel = Depends(authed)) -> list[BalanceSourceSchema]:
-    sources = await DefaultRepository.get_records(
+    sources = await Repository.get_records(
         BalanceSourceModel,
         filters=[BalanceSourceModel.is_active]
     )
@@ -229,7 +255,7 @@ async def create_organization(org_id: int,
                               session: UserSessionModel = Depends(authed)
                               ) -> list[BalanceHistoryReadSchema]:
     await check_access(org_id, session.user.id, 0)
-    history = await DefaultRepository.get_records(
+    history = await Repository.get_records(
         BalanceHistoryModel,
         filters=[BalanceHistoryModel.org_id == org_id]
     )
@@ -245,7 +271,7 @@ async def create_organization(org_id: int, start: datetime.datetime, end: dateti
     start = start.replace(hour=0, minute=0, second=0, microsecond=0)
     end = end.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-    history = await DefaultRepository.get_records(
+    history = await Repository.get_records(
         BalanceHistoryModel,
         filters=[
             BalanceHistoryModel.org_id == org_id,
@@ -261,7 +287,7 @@ async def create_organization(org_id: int, start: datetime.datetime, end: dateti
 async def create_organization(org_id: int, data: list[int], session: UserSessionModel = Depends(authed)):
     organization, membership = await check_access(org_id, session.user.id, 0)
 
-    orders = await DefaultRepository.get_records(
+    orders = await Repository.get_records(
         model=OrdersOrderModel,
         filters=[OrdersOrderModel.id.in_(data)],
         select_related=[OrdersOrderModel.size],
@@ -311,6 +337,9 @@ async def create_organization(org_id: int, data: list[int], session: UserSession
     calculated_orders = []
     balance_records = []
 
+    total_to_pay = 0
+    current_balance = await get_current_balance(org_id)
+
     for order in orders:
         price_product = order.size.wb_price // 100
         price_commission = 0
@@ -319,40 +348,49 @@ async def create_organization(org_id: int, data: list[int], session: UserSession
             price_commission = int((price_product - level.price_percent_limit) * (level.price_percent / 100)) + 1
 
         balance_records.append({
-            'description': f'Заморозка стоимости товара по заказу №{order.id}',
             'amount': price_product,
             'org_id': org_id,
+            'target_id': 1,
+            'record_id': order.id,
             'action_id': 2
         })
 
         balance_records.append({
-            'description': f'Списание стоимости услуги выкупа по заказу №{order.id}',
             'amount': level.price_buy,
             'org_id': org_id,
+            'target_id': 2,
+            'record_id': order.id,
             'action_id': 3
         })
 
         balance_records.append({
-            'description': f'Списание стоимости услуг логистики по заказу №{order.id}',
             'amount': level.price_collect,
             'org_id': org_id,
+            'target_id': 3,
+            'record_id': order.id,
             'action_id': 3
         })
 
         if price_commission > 0:
             balance_records.append({
-                'description': f'Списание комиссии за стоимость товара по заказу №{order.id}',
                 'amount': price_commission,
                 'org_id': org_id,
+                'target_id': 4,
+                'record_id': order.id,
                 'action_id': 3
             })
 
         calculated_orders.append({'id': order.id, 'wb_price': price_product, 'status': 2})
 
-    await DefaultRepository.save_records(
+        total_to_pay += price_product + price_commission + level.price_collect + level.price_buy
+
+    if current_balance - total_to_pay < organization.balance_limit:
+        raise HTTPException(status_code=403, detail=string_payments_not_enough_balance + f'. Пополните кошелек минимум на {abs(current_balance - total_to_pay - organization.balance_limit)} рублей для совершения оплаты')
+
+    await Repository.save_records(
         [
-            {'model': OrdersOrderModel,'records': calculated_orders},
-            {'model': BalanceHistoryModel,'records': balance_records}
+            {'model': OrdersOrderModel, 'records': calculated_orders},
+            {'model': BalanceHistoryModel, 'records': balance_records}
         ]
     )
 
@@ -364,7 +402,7 @@ async def create_organization(org_id: int, date: datetime.date, session: UserSes
 
     organization, membership = await check_access(org_id, session.user.id, 4)
 
-    orders = await DefaultRepository.get_records(
+    orders = await Repository.get_records(
         model=OrdersOrderModel,
         filters=[
             OrdersOrderModel.status == 1,

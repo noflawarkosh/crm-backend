@@ -1,5 +1,5 @@
 {% extends "!base-admin.html" %}
-{% block title %}Организации | {% endblock %}
+{% block title %}Банки | {% endblock %}
 {% block css %}
 
 {% endblock %}
@@ -13,22 +13,22 @@
         $.ajax({
             type: "POST",
             url: '/admin/save',
-            data: JSON.stringify({organizations: [{id: org_id, status: status_id}]}),
+            data: JSON.stringify({banks: [{id: org_id, is_active: status_id}]}),
             dataType: "json",
             contentType: "application/json",
             success: function () {
                 var msg = 'Данные обновлены'
 
-                if (status_id === 2) {
-                    msg = 'Организация активирована'
+                if (status_id === true) {
+                    msg = 'Банк активен'
                 }
 
-                if (status_id === 3) {
-                    msg = 'Организация деактивирована'
+                if (status_id === false) {
+                    msg = 'Банк неактивен'
                 }
 
                 toastr.success(msg)
-                dt_refresh('dt_orgs', '/admin/get/organizations_full')
+                dt_refresh('dt_orgs', '/admin/get/banks')
 
             },
             error: function () {
@@ -40,8 +40,9 @@
 
     $.ajax({
         type: "GET",
-        url: '/admin/get/organizations_full',
+        url: '/admin/get/banks',
         success: function (data) {
+
             $('#dt_orgs').DataTable({
                 data: data,
                 "paging": true,
@@ -52,48 +53,21 @@
 
                 columns: [
                     {data: 'id'},
-                    {data: 'title'},
-                    {data: 'inn'},
+                    {data: 'bank'},
+                    {data: 'recipient'},
+                    {data: 'number'},
+                    {data: 'bill'},
+                    {data: 'description'},
                     {
-                        "data": "owner",
+                        "data": "is_active",
                         "render": function (data, type, row) {
 
-                            return '@' + data.username + ' (' + data.name + ')'
-                        }
-                    },
-                    {
-                        "data": "owner",
-                        "render": function (data, type, row) {
+                            var color = 'danger'
+                            var txt = 'Нет'
 
-                            return '<a target="_blank" href="https://t.me/' + data.telegram + '">@' + data.telegram + '</a>'
-                        }
-                    },
-                    {
-                        "data": "server",
-                        "render": function (data, type, row) {
-
-                            if (data !== null) {
-                                return data.name
-                            }
-
-                            return '<b class="text-danger"> Не указано </b>'
-                        }
-                    },
-                    {
-                        "data": "status",
-                        "render": function (data, type, row) {
-
-                            var color = 'warning'
-                            var txt = 'Ожидает подтверждения'
-
-                            if (data === 2) {
+                            if (data === true) {
                                 color = 'success'
-                                txt = 'Активна'
-                            }
-
-                            if (data === 3) {
-                                color = 'danger'
-                                txt = 'Приоставновлена'
+                                txt = 'Да'
                             }
 
                             return '<span class="badge bg-label-' + color + '">' + txt + '</span>'
@@ -101,22 +75,17 @@
                     },
 
                     {
-                        "data": "status",
+                        "data": "is_active",
                         "render": function (data, type, row) {
 
-                            var edit = '<a href="/admin-edit/organizations/' + row.id + '"><i class="bx bx-edit-alt"></i></a>'
+                            var edit = '<a href="/admin-edit/banks/' + row.id + '"><i class="bx bx-edit-alt"></i></a>'
 
-                            if (data === 1) {
-                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>' +
-                                    '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ')"><i class="bx bx-block"></i></a>'
+                            if (data === true) {
+                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + false + ')"><i class="bx bx-block"></i></a>'
                             }
 
-                            if (data === 2) {
-                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ')"><i class="bx bx-block"></i></a>'
-                            }
-
-                            if (data === 3) {
-                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>'
+                            if (data === false) {
+                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + true + ')"><i class="bx bx-check"></i></a>'
                             }
                         }
                     }
@@ -159,8 +128,6 @@
     })
 
 </script>
-
-
 {% endblock %}
 
 {% block content %}
@@ -169,9 +136,11 @@
         <div class="col">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Организации
-                        <a href="javascript:dt_refresh('dt_orgs', '/admin/get/organizations_full')"><i
+                    <h5 class="card-title mb-0">Банки
+                        <a href="javascript:dt_refresh('dt_orgs', '/admin/get/banks')"><i
                                 class="bx bx-refresh"></i></a>
+                        <a href="/admin-create/banks"><i
+                                class="bx bx-plus"></i></a>
                     </h5>
                     <small class="card-subtitle" id="prod-cntr"></small>
                 </div>
@@ -180,13 +149,12 @@
                         <thead>
                         <tr>
                             <th>#ID</th>
-                            <th>Название</th>
-                            <th>ИНН</th>
-                            <th>Владелец</th>
-                            <th>Telegram</th>
-                            <th>Сервер</th>
-
-                            <th>Статус</th>
+                            <th>Банк</th>
+                            <th>Получатель</th>
+                            <th>Номер телефона</th>
+                            <th>Номер счета</th>
+                            <th>Описание</th>
+                            <th>Активный</th>
                             <th>Действия</th>
                         </tr>
                         </thead>

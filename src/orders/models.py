@@ -9,64 +9,6 @@ pk = Annotated[int, mapped_column(primary_key=True)]
 dt = Annotated[datetime.datetime, mapped_column(server_default=text('NOW()'))]
 
 
-# Server
-class OrdersServerContractorModel(Base):
-    __tablename__ = 'orders_server_contractor'
-
-    id: Mapped[pk]
-    load_percent: Mapped[float]
-    load_j_min: Mapped[int]
-    load_j_max: Mapped[int]
-    load_l_min: Mapped[int]
-    load_l_max: Mapped[int]
-    load_t_min: Mapped[int]
-    load_t_max: Mapped[int]
-    load_i: Mapped[int]
-    load_m: Mapped[datetime.date]
-
-    # FK
-    contractor_id: Mapped[int] = mapped_column(
-        ForeignKey('orders_contractor.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
-    server_id: Mapped[int] = mapped_column(
-        ForeignKey('orders_server.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
-
-    # Relationships
-    contractor: Mapped['OrdersContractorModel'] = relationship(lazy='selectin')
-
-
-class OrdersServerScheduleModel(Base):
-    __tablename__ = 'orders_server_schedule'
-
-    id: Mapped[pk]
-    title: Mapped[str]
-    time_min_min_per_step: Mapped[float]
-    time_max_min_per_step: Mapped[float]
-    time_start: Mapped[datetime.time]
-    time_end: Mapped[datetime.time]
-    time_first_point: Mapped[datetime.time]
-    time_second_point: Mapped[datetime.time]
-
-
-class OrdersServerModel(Base):
-    __tablename__ = 'orders_server'
-
-    id: Mapped[pk]
-    number: Mapped[str]
-    name: Mapped[str]
-    is_active: Mapped[bool]
-
-    # FK
-    schedule_id: Mapped[int] = mapped_column(
-        ForeignKey('orders_server_schedule.id', ondelete='CASCADE', onupdate='CASCADE')
-    )
-
-    # Relationships
-    schedule: Mapped['OrdersServerScheduleModel'] = relationship(lazy='noload')
-    contractors: Mapped[list['OrdersServerContractorModel']] = relationship(lazy='noload')
-
-
 # Account
 class OrdersAccountModel(Base):
     __tablename__ = 'orders_account'
@@ -87,7 +29,7 @@ class OrdersAccountModel(Base):
 
     # Relationships
     address: Mapped['OrdersAddressModel'] = relationship(lazy='noload')
-    server: Mapped['OrdersServerModel'] = relationship(lazy='noload')
+    server: Mapped['PickerServerModel'] = relationship(lazy='noload')
 
 
 # Contractor

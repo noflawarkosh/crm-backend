@@ -55,9 +55,10 @@ class ReviewModel(Base):
 
     id: Mapped[pk]
     text: Mapped[str | None]
+    strict_match: Mapped[bool]
     match: Mapped[int | None]
     status: Mapped[int]
-
+    description: Mapped[str | None]
     size_id: Mapped[int | None] = mapped_column(
         ForeignKey('products_product_size.id', ondelete='CASCADE', onupdate='CASCADE')
     )

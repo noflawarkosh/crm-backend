@@ -673,7 +673,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-xxl flex-grow-1 container-p-y" id="page_container">
+<div class="container-xxl flex-grow-1" id="page_container">
     <div class="row">
         <div class="col-lg-4">
             <div class="col-lg mb-md-0 mb-4" id="current_level">
@@ -686,7 +686,8 @@
                     <h5 class="card-title mb-1" id="org-name">Организация
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="org-ldr"></span>
                     </h5>
-                    <small>Прогноз уровня с понедельника. <a href="">Как это работает?</a></small>
+                    <small>Прогноз уровня с понедельника. <a href="javascript:" data-bs-toggle="modal"
+                                                             data-bs-target="#modalCenter">Как это работает?</a></small>
                 </div>
                 <div class="card-body" id="org-div" style="display: none;">
                     <ul class="list-group list-group-timeline" id="levels_all">
@@ -813,6 +814,28 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="modalCenter" tabindex="-1" style="display: none;" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCenterTitle">Система лояльности</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Цена за выкупы динамическая и зависит от объёма ваших выкупов, которые вы заказали на предшествующей
+                неделе.</p>
+
+                <p>Если вы только начинаете, то на первую неделю у вас будет стартовый Уровень 1. По итогам этой недели
+                будет происходить подсчёт количества совершённых выкупов и ваш уровень будет повышаться: чем больше
+                выкупов, тем ниже будет цена за 1 выкуп.</p>
+
+                <p><b>Пример:</b> за 1-ю неделю в сделаете 100 выкупов, значит со следующей недели (с понедельника) у вас
+                применится Уровень 2. Если за вторую неделю работы вы сделаете уже 300 выкупов, то на 3-ю неделю ваш
+                Уровень поднимется сразу до Уровня 5 и вы получите минимальную цену на услугу выкупов.</p>
+            </div>
+
+        </div>
+    </div>
 
 <div id="level_modals"></div>
 {% endblock %}
