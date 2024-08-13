@@ -59,7 +59,7 @@ class Repository:
         return file_name, file_type
 
     @classmethod
-    async def c(cls, file_bytes, file_full_name):
+    async def s3_autosave(cls, file_bytes, file_full_name):
 
         file_info = file_full_name.rsplit('.', maxsplit=1)
         file_name = file_info[0]
