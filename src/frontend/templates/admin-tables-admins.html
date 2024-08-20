@@ -1,5 +1,5 @@
 {% extends "!base-admin.html" %}
-{% block title %}Пользователи | {% endblock %}
+{% block title %}Администраторы | {% endblock %}
 {% block css %}
 
 {% endblock %}
@@ -13,21 +13,21 @@
         $.ajax({
             type: "POST",
             url: '/admin/save',
-            data: JSON.stringify({users: [{status: status_id, id: user_id}]}),
+            data: JSON.stringify({admins: [{is_active: status_id, id: user_id}]}),
             contentType: "application/json",
             success: function () {
                 var msg = 'Данные пользователя обновлены'
 
-                if (status_id === 2) {
-                    msg = 'Пользователь разблокирован'
+                if (status_id === true) {
+                    msg = 'Администратор разблокирован'
                 }
 
-                if (status_id === 3) {
-                    msg = 'Пользователь заблокирован'
+                if (status_id === false) {
+                    msg = 'Администратор заблокирован'
                 }
 
                 toastr.success(msg)
-                dt_refresh('dt_users', '/admin/get/users')
+                dt_refresh('dt_users', '/admin/get/admins')
 
             },
             error: function () {
@@ -39,7 +39,7 @@
 
     $.ajax({
         type: "GET",
-        url: '/admin/get/users',
+        url: '/admin/get/admins',
         success: function (data) {
             $('#dt_users').DataTable({
                 data: data,
@@ -51,47 +51,39 @@
 
                 columns: [
                     {data: 'id'},
+                    {data: 'surname'},
                     {data: 'name'},
+                    {data: 'fathername'},
                     {data: 'username'},
-                    {data: 'email'},
-                    {data: 'telnum'},
-                    {data: 'telegram'},
+                    {data: 'post'},
+                    {data: 'level'},
                     {
-                        "data": "status",
+                        "data": "is_active",
                         "render": function (data, type, row) {
 
-                            var c = 'warning'
-                            var txt = 'Ожидает подтверждения'
-                            if (data === 2) {
+                            var c = 'danger'
+                            var txt = 'Заблокирован'
+
+                            if (data === true) {
                                 c = 'success'
                                 txt = 'Активный'
-                            }
-
-                            if (data === 3) {
-                                c = 'danger'
-                                txt = 'Не активный'
                             }
 
                             return '<span class="badge bg-label-' + c + '">' + txt + '</span>'
                         }
                     },
                     {
-                        "data": "status",
+                        "data": "is_active",
                         "render": function (data, type, row) {
 
-                            var edit = '<a href="/admin-edit/users/' + row.id + '"><i class="bx bx-edit-alt"></i></a>'
+                            var edit = '<a href="/admin-edit/admins/' + row.id + '"><i class="bx bx-edit-alt"></i></a>'
 
-                            if (data === 1) {
-                                edit += '<a href="##" onclick="updateUserStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>' +
-                                        '<a href="##" onclick="updateUserStatus(' + row.id + ', ' + 3 + ')"><i class="bx bx-x"></i></a>'
+                            if (data === false) {
+                                edit += '<a href="javascript:" onclick="updateUserStatus(' + row.id + ', ' + true + ')"><i class="bx bx-check"></i></a>'
                             }
 
-                            if (data === 2) {
-                                edit += '<a href="##" onclick="updateUserStatus(' + row.id + ', ' + 3 + ')"><i class="bx bx-block"></i></a>'
-                            }
-
-                            if (data === 3) {
-                                edit += '<a href="##" onclick="updateUserStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>'
+                            if ((data === true) && (row.id !== 1)){
+                                edit += '<a href="javascript:" onclick="updateUserStatus(' + row.id + ', ' + false + ')"><i class="bx bx-block"></i></a>'
                             }
 
                             return edit
@@ -105,7 +97,7 @@
                     var newRow = $('<tr></tr>');
                     $(table).append(newRow);
 
-                    var searchColumns = [0, 1, 2, 3, 4, 5, 6];
+                    var searchColumns = [0, 1, 2, 3, 4, 5, 6, 7];
 
                     this.api().columns().every(function (i) {
                         var column = this;
@@ -147,21 +139,23 @@
         <div class="col">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Пользователи
-                        <a href="javascript:dt_refresh('dt_users', '/admin/get/users')"><i class="bx bx-refresh"></i></a>
+                    <h5 class="card-title mb-0">Администраторы
+                        <a href="/admin-create/admins"><i class="bx bx-plus"></i></a>
+                        <a href="javascript:dt_refresh('dt_users', '/admin/get/admins')"><i class="bx bx-refresh"></i></a>
                     </h5>
                     <small class="card-subtitle" id="prod-cntr"></small>
                 </div>
-                <div class="card-datatable table-responsive p-4">
+                <div class="card-datatable p-4">
                     <table id="dt_users" class="datatables-ajax table table-bordered dataTable no-footer">
                         <thead>
                         <tr>
                             <th>#ID</th>
+                            <th>Фамилия</th>
                             <th>Имя</th>
+                            <th>Отчество</th>
                             <th>Логин</th>
-                            <th>Почта</th>
-                            <th>Телефон</th>
-                            <th>Telegram</th>
+                            <th>Должность</th>
+                            <th>Уровень</th>
                             <th>Статус</th>
                             <th>Действия</th>
                         </tr>

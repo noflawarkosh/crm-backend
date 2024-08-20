@@ -76,7 +76,7 @@
                             "data": 'size',
                             "render": function (data, type, row) {
 
-                                 var cell = '—'
+                                var cell = '—'
 
                                 if (data.wb_size_origName !== null) {
                                     cell = data.wb_size_origName
@@ -87,6 +87,25 @@
                         },
                         {
                             "data": 'wb_keyword',
+
+                        },
+                        {
+                            "data": 'dt_ordered',
+                            render: function (data, type, row) {
+                                return data ? moment(data).format('DD.MM.YYYY') : ''
+                            }
+                        },
+                        {
+                            "data": 'dt_collected',
+                            render: function (data, type, row) {
+                                return data ? moment(data).format('DD.MM.YYYY') : ''
+                            }
+                        },
+                        {
+                            "data": 'wb_price',
+                            render: function (data, type, row) {
+                                return '<b>' + data + ' ₽</b>'
+                            }
                         },
 
                         {
@@ -213,6 +232,9 @@
                             <th>Товар</th>
                             <th>Размер</th>
                             <th>Ключевой запрос</th>
+                            <th>Дата заказа</th>
+                            <th>Дата получения</th>
+                            <th>Цена товара</th>
                             <th>Статус</th>
                             <th>Описание</th>
                         </tr>

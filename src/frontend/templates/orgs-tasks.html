@@ -480,13 +480,11 @@
                             prod_title = '(' + size.wb_size_origName + ') ' + prod_title
                         }
 
-                        if (prod_title.length >= 25) {
-                            prod_title = prod_title.slice(0, 25) + '...'
-                        }
 
-                        var optionText = prod_title
+
+                        var optionText = product.wb_article
                         var optionValue = size.id
-                        var optionDataSubtext = product.wb_article
+                        var optionDataSubtext = prod_title
 
                         var option = $('<option>').text(optionText).attr('data-subtext', optionDataSubtext).val(optionValue);
                         selectElement.append(option);

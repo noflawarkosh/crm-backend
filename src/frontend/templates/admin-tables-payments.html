@@ -261,7 +261,7 @@
         table.draw()
         $.ajax({
             type: "GET",
-            url: '/admin/get/bills',
+            url: '/admin/get/bills_full',
             dataType: "json",
             success: function (data) {
                 table.rows.add(data).draw();
@@ -284,8 +284,6 @@
         success: function (orgs) {
 
             var orgsSelect = $('#org_id');
-            var option = $('<option>').text('Все').val('');
-            orgsSelect.append(option);
 
             for (let i in orgs) {
 

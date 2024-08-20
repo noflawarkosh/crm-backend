@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="ru" class="light-style layout-navbar-fixed layout-menu-fixed layout-compact " dir="ltr"
-      data-theme="theme-default" data-assets-path="../../assets/" data-template="vertical-menu-template">
+<html lang="ru" class="light-style layout-navbar-fixed layout-menu-fixed layout-compact ">
 
 <head>
     <meta charset="utf-8"/>
@@ -65,7 +64,7 @@
         <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
 
             <div class="app-brand demo ">
-                <a href="/admin/dashboard" class="app-brand-link">
+                <a href="" class="app-brand-link">
                     <span class="app-brand-logo demo"></span>
                     <span class="app-brand-text demo menu-text fw-bold ms-2">greedybear</span>
                 </a>
@@ -114,6 +113,14 @@
                         <a href="/admin-tables/payments" class="nav-link">
                             <i class="bx bx-credit-card-front bx-sm"></i>
                             <span class="badge bg-danger rounded-pill badge-notifications" id="c-bills"
+                                  style="display:none"></span>
+                        </a>
+                    </div>
+
+                    <div class="navbar-nav align-items-center me-3 me-xl-0" id="c-reviews-div" style="display:none">
+                        <a href="/admin-tables/reviews" class="nav-link">
+                            <i class="bx bx-comment bx-sm"></i>
+                            <span class="badge bg-danger rounded-pill badge-notifications" id="c-reviews"
                                   style="display:none"></span>
                         </a>
                     </div>
@@ -170,7 +177,6 @@
                 </div>
 
 
-
             </nav>
 
             <!-- Content -->
@@ -212,7 +218,10 @@
 
 <!-- const -->
 <script>
+
+
     const FT = {
+        'password': 'Пароль',
         'name': 'Имя',
         'username': 'Логин',
         'telnum': 'Телефон',
@@ -303,8 +312,37 @@
         'pay_product': 'Списать стоиомть товара',
         'refund_product': 'Вернуть стоимость товара',
         'refund_services': 'Вернуть стоимость услуг',
+        'status_id': 'Статус',
+        'is_success': 'Успешный',
+        'is_express': 'Срочный'
 
 
+    }
+
+    const CURRENT_LOCATION = window.location.pathname
+    const RETURNS = {
+        '/admin-create/contractors': '/admin-tables/contractors',
+        '/admin-edit/contractors': '/admin-tables/contractors',
+        '/admin-edit/servers': '/admin-tables/servers',
+        '/admin-edit/servercontractors': '/admin-tables/servers',
+        '/admin-edit/schedules': '/admin-tables/servers',
+        '/admin-create/addresses': '/admin-tables/addresses',
+        '/admin-edit/addresses': '/admin-tables/addresses',
+        '/admin-edit/orders': '/admin-tables/orders',
+        '/admin-edit/accounts': '/admin-tables/accounts',
+        '/admin-edit/reviews': '/admin-tables/reviews',
+        '/admin-create/prices': '/admin-tables/prices',
+        '/admin-edit/prices': '/admin-tables/prices',
+        '/admin-edit/banks': '/admin-tables/banks',
+        '/admin-create/banks': '/admin-tables/banks',
+        '/admin-edit/organizations': '/admin-tables/organizations',
+        '/admin-edit/users': '/admin-tables/users',
+        '/admin-create/admins': '/admin-tables/admins',
+        '/admin-edit/admins': '/admin-tables/admins',
+        '/admin-create/usersessions': '/admin-tables/usersessions',
+        '/admin-edit/usersessions': '/admin-tables/usersessions',
+        '/admin-create/adminsessions': '/admin-tables/adminsessions',
+        '/admin-edit/adminsessions': '/admin-tables/adminsessions',
     }
 
     const ASIDE = [
@@ -457,7 +495,9 @@
         'adminsessions': 'Сессии администраторов',
         'settings': 'Настройки',
         'owner_id': 'Владелец',
-        'pickerstatuses': 'Статусы заказов'
+        'pickerstatuses': 'Статусы заказов',
+        'address_statuses': 'Cтатусы адресов'
+
     }
 
     const UEF = [
@@ -491,7 +531,10 @@
         'size_id': ['sizes', 'wb_size_name'],
         'product_id': ['products', 'wb_title'],
         'account_id': ['accounts', 'number'],
-        'level_id': ['levels', 'title']
+        'level_id': ['levels', 'title'],
+        'status_id': ['address_statuses', 'title'],
+        'user_id': ['users', 'username'],
+
     }
 </script>
 
@@ -527,10 +570,11 @@
                     for (j = 0; j < ASIDE[i].items.length; j++) {
                         var href = ASIDE[i].items[j].href ? ASIDE[i].items[j].href : 'javascript:toastr.error("Раздел не найден")';
                         var icon = ASIDE[i].items[j].icon ? ASIDE[i].items[j].icon : 'bx bx-list';
+                        var is_active = window.location.pathname === ASIDE[i].items[j].href ? 'active' : '';
 
                         if (ASIDE[i].items[j].level & data.level) {
                             sideMenu += '' +
-                                '<li class="menu-item">' +
+                                '<li class="menu-item ' + is_active + '">' +
                                 '   <a href="' + href + '" class="menu-link">' +
                                 '       <i class="menu-icon tf-icons ' + icon + '"></i>' +
                                 '       <div class="text-truncate">' + ASIDE[i].items[j].title + '</div>' +
@@ -631,6 +675,22 @@
                 $('#c-bills-div').show()
                 $('#c-bills').show()
                 $('#c-bills').html(amount)
+            }
+        },
+    });
+
+    $.ajax({
+        url: '/admin/get/express_reviews',
+        method: 'get',
+
+        success: function (data) {
+
+            var amount = data.length
+
+            if (amount > 0) {
+                $('#c-reviews-div').show()
+                $('#c-reviews').show()
+                $('#c-reviews').html(amount)
             }
         },
     });

@@ -56,6 +56,7 @@ class ReviewCreateSchema(BaseModel):
     size_id: Optional[int] = None
     match: Optional[int]
     strict_match: bool
+    is_express: bool = False
 
 
 class ReviewUpdateSchema(BaseModel):
@@ -63,6 +64,7 @@ class ReviewUpdateSchema(BaseModel):
     text: Optional[str] = None
     match: Optional[int]
     strict_match: bool
+    is_express: bool
 
 
 class ReviewReadSchema(ReviewCreateSchema):
@@ -71,6 +73,8 @@ class ReviewReadSchema(ReviewCreateSchema):
     match: int | None
     status: int
     description: Optional[str] = None
+    strict_match: bool
+    is_express: bool
 
     media: Optional[list[ReviewMediaReadSchema]] = None
     size: Optional[ProductSizeReadSchema]

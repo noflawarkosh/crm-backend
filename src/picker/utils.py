@@ -322,7 +322,7 @@ async def refresh_active_and_collected(data, servers, is_test=True):
                         status_model = db_status
                         db_description = db_status.description
                         break
-                    elif not db_status.full_match and line['status'] in db_status.title:
+                    elif not db_status.full_match and db_status.title in line['status']:
                         status_model = db_status
                         db_description = db_status.description
                         break
@@ -710,7 +710,7 @@ async def generate_plan_xlsx_2(servers, date):
         ln = 1
         for task in db_tasks:
             ln += 1
-            ws_res[f'A{ln}'] = ln
+            ws_res[f'A{ln}'] = ln - 1
             ws_res[f'B{ln}'] = task.size.product.wb_article
             ws_res[f'C{ln}'] = 1
             ws_res[f'D{ln}'] = task.size.wb_size_origName

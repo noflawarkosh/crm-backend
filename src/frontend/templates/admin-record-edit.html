@@ -102,8 +102,14 @@
                     var promises = [];
 
                     for (var itl_i in itl) {
+
+                        var F = FML[itl[itl_i]][0]
+                        if (CURRENT_LOCATION === '/admin-edit/adminsessions' || CURRENT_LOCATION.substring(0, CURRENT_LOCATION.lastIndexOf('/')) === '/admin-edit/adminsessions') {
+                            F = 'admins'
+                        }
+
                         var promise = $.ajax({
-                            url: '/admin/get/' + FML[itl[itl_i]][0],
+                            url: '/admin/get/' + F,
                             type: 'GET'
                         }).then(function (select_data) {
                             var selectElement = $('#' + this);
@@ -203,8 +209,14 @@
             data: JSON.stringify(payload),
             contentType: "application/json",
             success: function () {
-                toastr.success('Изменения сохранены')
-                submitButton.classList.remove('disabled');
+                toastr.success('Сохранено');
+                if (RETURNS[CURRENT_LOCATION.substring(0, CURRENT_LOCATION.lastIndexOf('/'))] !== undefined) {
+                    setTimeout(function () {
+                        location.replace(RETURNS[CURRENT_LOCATION.substring(0, CURRENT_LOCATION.lastIndexOf('/'))]);
+                    }, 700);
+                } else {
+                    submitButton.classList.remove('disabled');
+                }
             },
             error: function () {
                 toastr.error('Ошибка сохранения. Проверьте правильность введенных данных')

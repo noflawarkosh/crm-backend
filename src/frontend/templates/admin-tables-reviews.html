@@ -11,6 +11,7 @@
     }
 
     var v_modals = ''
+    var t_modals = ''
 
     $.ajax({
         type: "GET",
@@ -73,7 +74,25 @@
                         "data": 'text',
                         "render": function (data, type, row) {
                             if (data) {
-                                return '<span >' + data + '</span>'
+
+                                var style = 'display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; text-overflow: ellipsis; line-height: 1.2em; max-height: 3.6em;'
+
+                                t_modals += '<div class="modal fade" id="textExpand-' + row.id + '" aria-labelledby="textExpandLabel-' + row.id + '" tabindex="-1" style="display: none;"\n' +
+                                    '         aria-hidden="true">\n' +
+                                    '        <div class="modal-dialog modal-dialog-centered">\n' +
+                                    '            <div class="modal-content">\n' +
+                                    '                <div class="modal-header">\n' +
+                                    '                    <h5 class="modal-title" id="textExpandLabel-' + row.id + '">' + 'Текст отзыва' + '</h5>\n' +
+                                    '                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
+                                    '                </div>\n' +
+                                    '                <div class="modal-body"><p>' + data + '</p></div></div>' +
+                                    '\n' +
+                                    '            </div>\n' +
+                                    '        </div>\n' +
+                                    '    </div>'
+
+
+                                return '<span style="' + style + '">' + '<a href="##" data-bs-toggle="modal" data-bs-target="#textExpand-' + row.id + '"><i class="bx bx-window"></i></a> ' + data + '</span>'
                             }
 
                             return '—'
@@ -88,6 +107,13 @@
 
                     },
                     {
+                        "data": 'is_express',
+                        "render": function (data, type, row) {
+                            return data ? 'Да <i class="bx bxs-zap text-warning"></i>' : 'Нет'
+                        },
+
+                    },
+                    {
                         "data": 'size',
                         "render": function (data, type, row) {
                             var cell = '—'
@@ -96,7 +122,7 @@
                                     cell = 'Не указывать'
                                 }
                                 if (row.match === 1) {
-                                    cell = 'Соответствует'
+                                    cell = 'Соответствует размеру'
                                 }
                                 if (row.match === 2) {
                                     cell = 'Маломерит'
@@ -207,7 +233,7 @@
                     {
                         "render": function (data, type, row) {
 
-                            var edit = '<a href="/admin-edit/reviews/' + row['id'] + '"><i class="bx bx-edit"></i></a>'
+                            var edit = '<a href="/admin-edit/reviews/' + row['id'] + '"><i class="bx bx-edit-alt"></i></a>'
 
                             if (row.status === 1) {
                                 edit +=
@@ -254,6 +280,7 @@
                 },
             });
             document.getElementById('v-modals').innerHTML = v_modals
+            document.getElementById('t-modals').innerHTML = t_modals
         },
         error: function () {
             toastr.error('Ошибка обновления данных. Обновите страницу и повторите попытку')
@@ -416,7 +443,8 @@
                                 <th>Товар</th>
                                 <th>Размер</th>
                                 <th>Текст</th>
-                                <th>Указать размер</th>
+                                <th>Строгий размер</th>
+                                <th>Срочный</th>
                                 <th>Соответствие</th>
                                 <th>Медиа</th>
                                 <th>Статус</th>

@@ -209,8 +209,6 @@ async def update_size_barcode(size_id: int, barcode: str, session: UserSessionMo
 
     await check_access(size.product.org_id, session.user.id, 2)
 
-    if size.barcode:
-        raise HTTPException(status_code=403, detail=string_403)
 
     await Repository.save_records(
         [{'model': ProductSizeModel, 'records': [{'id': size_id, 'barcode': barcode}]}])

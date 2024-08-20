@@ -133,6 +133,10 @@
 
             document.getElementById('org-div').style.display = 'block';
 
+            if (data.level_id == null) {
+                document.getElementById('org-div').classList.remove('blurred')
+            }
+
         },
 
         error: function (data) {
@@ -189,7 +193,7 @@
                     },
                     {
                         render: function (data, type, row) {
-                            return '<b>' + row.level + '</b>'
+                            return '<b>' + decodeRights(row.level) + '</b>'
                         }
                     },
                     {
@@ -215,9 +219,15 @@
                     },
                     {
                         render: function (data, type, row) {
+
+
+
                             var actions = ''
 
                             if (row.status === 1) {
+                                var arg = row.level + ", '" + row.user.name + "', " + row.user.id
+                                actions += '<a href="javascript:" onclick="showMemeber(' + arg + ')" data-bs-toggle="modal" data-bs-target="#modal_edit_member"><i class="bx bx-edit-alt"></i></a>'
+
                                 actions += '<a href="javascript:kickUser(' + row.user.id + ')"><i class="bx bx-x"></i></a>'
                             }
 
@@ -244,6 +254,68 @@
         }
 
     });
+
+    function calculateDecimalNValue() {
+        const checkboxes = document.querySelectorAll('input[name="Erights"]:checked');
+        let result = 0;
+
+        checkboxes.forEach((checkbox) => {
+            result += Math.pow(2, parseInt(checkbox.value));
+        });
+
+        return result;
+    }
+
+    function UpdateMember(user_id) {
+
+        var new_level = calculateDecimalNValue()
+        var modal_href = document.getElementById('modal_href_save');
+
+        modal_href.classList.add('disabled')
+
+        $.ajax({
+            type: "POST",
+            url: '/organizations/updateMember?member_id=' + user_id + '&level=' + new_level + '&org_id=' + id,
+            success: function () {
+                toastr.success('Сохранено')
+
+                var u = '/organizations/readOrganizationMemberships?org_id=' + id;
+                dt_refresh('dt_user_members', u)
+
+            },
+            error: function () {
+                toastr.error('Ошибка выполнения операции')
+                modal_href.classList.remove('disabled')
+            }
+        })
+
+    }
+
+    function showMemeber(level, username, user_id) {
+        var modal_body = document.getElementById('modal_edit_member_body');
+        var modal_title = document.getElementById('modal_edit_member_title');
+        var modal_href = document.getElementById('modal_href_save');
+
+        modal_title.innerHTML = username
+        modal_body.style.display = 'none'
+        modal_href.classList.add('disabled')
+
+        const checkboxes = document.querySelectorAll('input[name="Erights"]');
+
+        checkboxes.forEach(checkbox => {
+            const value = parseInt(checkbox.value);
+            const bitIsSet = (level & (1 << value)) !== 0;
+            checkbox.checked = bitIsSet;
+        });
+
+        modal_body.style.display = 'block'
+        modal_href.classList.remove('disabled')
+        modal_href.href = 'javascript:UpdateMember(' + user_id + ')'
+
+    }
+</script>
+
+
 </script>
 
 <!-- Create Inv -->
@@ -324,6 +396,30 @@
 
 <!-- Get Invs -->
 <script>
+
+    var RTS = {
+        1: 'Товары',
+        2: 'Выкупы',
+        3: 'Отзывы',
+        4: 'Заказы',
+        5: 'Кошелек'
+    }
+
+    function decodeRights(lvl) {
+        var s = ''
+        for (var n in RTS) {
+            if ((lvl & (1 << n)) !== 0) {
+                s += RTS[n] + ', '
+            }
+        }
+
+        if (s.length > 0) {
+            s = s.substring(0, s.length - 2)
+        }
+        return s
+    }
+
+
     $.ajax({
 
         url: '/organizations/readInvitations?org_id=' + id,
@@ -346,7 +442,7 @@
                     },
                     {
                         render: function (data, type, row) {
-                            return row.level
+                            return decodeRights(row.level)
                         }
                     },
                     {
@@ -673,6 +769,13 @@
 {% endblock %}
 
 {% block content %}
+
+<style>
+    .blurred {
+        filter: blur(5px);
+    }
+</style>
+
 <div class="container-xxl flex-grow-1" id="page_container">
     <div class="row">
         <div class="col-lg-4">
@@ -689,7 +792,7 @@
                     <small>Прогноз уровня с понедельника. <a href="javascript:" data-bs-toggle="modal"
                                                              data-bs-target="#modalCenter">Как это работает?</a></small>
                 </div>
-                <div class="card-body" id="org-div" style="display: none;">
+                <div class="card-body blurred" id="org-div" style="display: none">
                     <ul class="list-group list-group-timeline" id="levels_all">
 
                     </ul>
@@ -723,7 +826,7 @@
                         <thead>
                         <tr>
                             <th>Код</th>
-                            <th>Уровень</th>
+                            <th>Права</th>
                             <th>Создано</th>
                             <th>Истекает</th>
                             <th>Использовано</th>
@@ -757,7 +860,7 @@
                         <tr>
                             <th>Имя</th>
                             <th>Telegram</th>
-                            <th>Уровень</th>
+                            <th>Права</th>
                             <th>Статус</th>
                             <th>Действия</th>
                         </tr>
@@ -806,8 +909,12 @@
                     <input class="form-check-input" type="checkbox" value="4" id="R4" name="rights">
                     <label class="form-check-label" for="R4">Доступ к статусам заказов на WB</label>
                 </div>
-                <small id="level-counter">Уровень: 0</small>
-                <div class="mt-5">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="5" id="R5" name="rights">
+                    <label class="form-check-label" for="R5">Доступ к кошельку</label>
+                </div>
+                <small style="display: none;" id="level-counter">Уровень: 0</small>
+                <div class="mt-3">
                     <button type="submit" class="btn btn-primary">Создать</button>
                 </div>
             </form>
@@ -823,19 +930,58 @@
             </div>
             <div class="modal-body">
                 <p>Цена за выкупы динамическая и зависит от объёма ваших выкупов, которые вы заказали на предшествующей
-                неделе.</p>
+                    неделе.</p>
 
                 <p>Если вы только начинаете, то на первую неделю у вас будет стартовый Уровень 1. По итогам этой недели
-                будет происходить подсчёт количества совершённых выкупов и ваш уровень будет повышаться: чем больше
-                выкупов, тем ниже будет цена за 1 выкуп.</p>
+                    будет происходить подсчёт количества совершённых выкупов и ваш уровень будет повышаться: чем больше
+                    выкупов, тем ниже будет цена за 1 выкуп.</p>
 
-                <p><b>Пример:</b> за 1-ю неделю в сделаете 100 выкупов, значит со следующей недели (с понедельника) у вас
-                применится Уровень 2. Если за вторую неделю работы вы сделаете уже 300 выкупов, то на 3-ю неделю ваш
-                Уровень поднимется сразу до Уровня 5 и вы получите минимальную цену на услугу выкупов.</p>
+                <p><b>Пример:</b> за 1-ю неделю в сделаете 100 выкупов, значит со следующей недели (с понедельника) у
+                    вас
+                    применится Уровень 2. Если за вторую неделю работы вы сделаете уже 300 выкупов, то на 3-ю неделю ваш
+                    Уровень поднимется сразу до Уровня 5 и вы получите минимальную цену на услугу выкупов.</p>
             </div>
 
         </div>
     </div>
+</div>
 
 <div id="level_modals"></div>
+
+<div class="modal fade" id="modal_edit_member" style="display: none;" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal_edit_member_title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modal_edit_member_body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="RE1" name="Erights">
+                    <label class="form-check-label" for="RE1">Доступ к товарам</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="2" id="RE2" name="Erights">
+                    <label class="form-check-label" for="RE2">Доступ к задачам на выкуп</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="3" id="RE3" name="Erights">
+                    <label class="form-check-label" for="RE3">Доступ к отзывам</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="4" id="RE4" name="Erights">
+                    <label class="form-check-label" for="RE4">Доступ к статусам заказов на WB</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="5" id="RE5" name="Erights">
+                    <label class="form-check-label" for="RE5">Доступ к кошельку</label>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <a href="" class="btn btn-label-primary" id="modal_href_save">Сохранить</a>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

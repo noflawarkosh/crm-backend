@@ -26,26 +26,106 @@
             }
             data = data[0]
 
+
+            var contacts = []
+
+            var telegram = '—'
+            if (data.owner.telegram != null) {
+                telegram = '<a target="_blank" href="https://t.me/' + data.owner.telegram + '"><i class="bx bxl-telegram"></i>' + data.owner.telegram + '</a>'
+            }
+
+            contacts.push(
+                {
+                    'username': data.owner.username,
+                    'name': data.owner.name,
+                    'level': 'Владелец',
+                    'status': '',
+                    'telegram': telegram,
+                }
+            )
+
+
             $.ajax({
                 url: '/admin/get_managers?org_id=' + org_id,
                 type: 'GET',
-                success: function (m) {
-                    var mng_div = document.getElementById('managers')
-                    var mng = ''
-                    for (var i in m) {
+                success: function (mngrs) {
 
-                        var telegram = ''
-                        if (m[i].user.telegram != null) {
-                            telegram = ' | <a target="_blank" href="https://t.me/' + m[i].user.telegram + '"><i class="bx bxl-telegram"></i>' + m[i].user.telegram + '</a>'
+                    for (var i in mngrs) {
+
+                        var telegram = '—'
+                        if (mngrs[i].user.telegram != null) {
+                            telegram = '<a target="_blank" href="https://t.me/' + mngrs[i].user.telegram + '"><i class="bx bxl-telegram"></i>' + mngrs[i].user.telegram + '</a>'
                         }
 
-                        mng += '<br><a target="_blank" href="/admin-edit/users/' + m[i].user.id + '">' + m[i].user.username + '</a>' + telegram
+                        var statuses = {
+                            1: 'Активен',
+                            2: 'Полкинул',
+                            3: 'Выгнан',
+                            4: 'Заблокирован',
+                            5: 'Разблокирован'
+                        };
+
+                        var colors = {
+                            1: 'success',
+                            2: 'warning',
+                            3: 'warning',
+                            4: 'danger',
+                            5: 'warning'
+                        }
+
+                        var arg = mngrs[i].level + ", '" + mngrs[i].user.username + "', " + mngrs[i].user.id + ", " + org_id + ", " + mngrs[i].status
+
+
+                        contacts.push(
+                            {
+                                'username': mngrs[i].user.username,
+                                'name': mngrs[i].user.name,
+                                'level': '<a href="javascript:" onclick="showMemeber(' + arg + ');" data-bs-toggle="modal" data-bs-target="#modal_edit_member">Менеджер</a>',
+                                'status': '<span class="badge bg-label-' + colors[mngrs[i].status] + '">' + statuses[mngrs[i].status] + '</span>',
+                                'telegram': telegram,
+                            }
+                        )
                     }
 
-                    mng_div.innerHTML = mng
-                },
-                error: function () {
-                    toastr.error('Ошибка получения менеджеров')
+                    $('#dt_contacts').DataTable({
+                        data: contacts,
+                        "paging": true,
+                        "pageLength": 5,
+                        "lengthMenu": [[5, 10, -1], [5, 10, "All"]],
+                        "searching": true,
+                        "ordering": true,
+
+                        columns: [
+                            {
+                                data: 'username', render: function (data, type, row) {
+                                    return '<span class="text-nowrap">' + data + '</span>'
+                                }
+                            },
+                            {
+                                data: 'name', render: function (data, type, row) {
+                                    return '<span class="text-nowrap">' + data + '</span>'
+                                }
+                            },
+                            {
+                                data: 'level', render: function (data, type, row) {
+                                    return '<span class="text-nowrap">' + data + '</span>'
+                                }
+                            },
+                            {
+                                data: 'status', render: function (data, type, row) {
+                                    return '<span class="text-nowrap">' + data + '</span>'
+                                }
+                            },
+                            {
+                                data: 'telegram', render: function (data, type, row) {
+                                    return '<span class="text-nowrap">' + data + '</span>'
+                                }
+                            },
+
+                        ],
+                        "order": [[3, "asc"]]
+                    });
+
                 }
             })
 
@@ -69,6 +149,8 @@
             var level = '<b class="small">зависит от выкупов</b>'
             if (data.level_id !== null) {
                 level = data.level.title
+            } else {
+
             }
 
             document.getElementById('title').innerHTML = data.title + '<span><a href="/admin-edit/organizations/' + data.id + '"><i class="bx bx-edit-alt"></i></a></span>';
@@ -77,11 +159,9 @@
             document.getElementById('balance_limit').innerHTML = data.balance_limit;
             document.getElementById('status').innerHTML = st[data.status];
             document.getElementById('created_at').innerHTML = moment(data.created_at).format('DD.MM.YYYY');
-            document.getElementById('owner_id').innerHTML = '<a target="_blank" href="/admin-edit/users/' + data.owner.id + '">' + data.owner.username + '</a>' + telegram;
             document.getElementById('server_id').innerHTML = server;
             document.getElementById('level_id').innerHTML = level;
         }
-
     })
 
     $.ajax({
@@ -367,7 +447,7 @@
         total_div.innerHTML = ''
         $.ajax({
 
-            url: '/payments/getPaymentsDetails?org_id=' + org_id + '&start=' + start_date_input.value + '&end=' + end_date_input.value,
+            url: '/admin/getPaymentsDetails?org_id=' + org_id + '&start=' + start_date_input.value + '&end=' + end_date_input.value,
             method: 'get',
 
             success: function (data) {
@@ -404,12 +484,176 @@
 
 
 </script>
+
+
+<script>
+
+    $.ajax({
+        url: '/admin/get/users',
+        type: 'GET',
+        success: function (data) {
+            var selectElement = $('#member_id');
+
+            $.each(data, function (j, action) {
+
+                var telegram = ''
+                if (action.telegram != null) {
+                    telegram = ' (TG: @' + action.telegram + ')'
+                }
+
+                var optionText = action.username + telegram
+                var optionValue = action.id
+
+                var option = $('<option>').text(optionText).val(optionValue);
+                selectElement.append(option);
+            });
+            selectElement.selectpicker('refresh');
+
+        }
+    })
+
+    function calculateDecimalValue() {
+        const checkboxes = document.querySelectorAll('input[name="rights"]:checked');
+        let result = 0;
+
+        checkboxes.forEach((checkbox) => {
+            result += Math.pow(2, parseInt(checkbox.value));
+        });
+
+        return result;
+    }
+
+    function calculateDecimalNValue() {
+        const checkboxes = document.querySelectorAll('input[name="Nrights"]:checked');
+        let result = 0;
+
+        checkboxes.forEach((checkbox) => {
+            result += Math.pow(2, parseInt(checkbox.value));
+        });
+
+        return result;
+    }
+
+    function addMember() {
+
+        var btn = document.getElementById('add_member_btn')
+
+
+
+        var b_data = {
+            'org_id': org_id,
+            'user_id': document.getElementById('member_id').value,
+            'level': calculateDecimalNValue(),
+            'status': 1,
+        }
+
+        var payload = {}
+        payload['members'] = [b_data]
+        btn.classList.add('disabled')
+        $.ajax({
+            type: "POST",
+            url: '/admin/save',
+            data: JSON.stringify(payload),
+            contentType: "application/json",
+            success: function () {
+                toastr.success('Сохранено')
+                setTimeout(function () {
+                    location.reload()
+                }, 400);
+
+            },
+            error: function () {
+                toastr.error('Ошибка выполнения операции')
+                btn.classList.remove('disabled')
+            }
+        })
+    }
+
+    function UpdateMember(user_id, org_id) {
+
+        var new_level = calculateDecimalValue()
+        var new_status = document.getElementById('status_number').value
+        var modal_href = document.getElementById('modal_href_save');
+        var b_data = {
+            'org_id': org_id,
+            'user_id': user_id,
+            'level': new_level,
+            'status': new_status,
+        }
+
+        var payload = {}
+        payload['members'] = [b_data]
+        modal_href.classList.add('disabled')
+        $.ajax({
+            type: "POST",
+            url: '/admin/save',
+            data: JSON.stringify(payload),
+            contentType: "application/json",
+            success: function () {
+                toastr.success('Сохранено')
+                setTimeout(function () {
+                    location.reload()
+                }, 400);
+
+            },
+            error: function () {
+                toastr.error('Ошибка выполнения операции')
+                modal_href.classList.remove('disabled')
+            }
+        })
+
+    }
+
+    function showMemeber(level, username, user_id, org_id, st) {
+        var modal_body = document.getElementById('modal_edit_member_body');
+        var modal_title = document.getElementById('modal_edit_member_title');
+        var modal_href = document.getElementById('modal_href_save');
+
+        modal_title.innerHTML = username
+        modal_body.style.display = 'none'
+        modal_href.classList.add('disabled')
+
+        const checkboxes = document.querySelectorAll('input[name="rights"]');
+
+        checkboxes.forEach(checkbox => {
+            const value = parseInt(checkbox.value);
+            const bitIsSet = (level & (1 << value)) !== 0;
+            checkbox.checked = bitIsSet;
+        });
+
+        var statuses = {
+            1: 'Активен',
+            2: 'Полкинул',
+            3: 'Выгнан',
+            4: 'Заблокирован',
+            5: 'Разблокирован'
+        }
+
+        $('#status_number option').each(function () {
+            // Устанавливаем selected в true, если value совпадает со значением st
+            if ($(this).val() == st) {
+                $(this).prop('selected', true);
+            } else {
+                // Удаляем атрибут selected, если он есть
+                $(this).removeAttr('selected');
+            }
+        });
+
+        // Обновляем selectpicker после изменения опций
+        $('#status_number').selectpicker('destroy');
+
+        modal_body.style.display = 'block'
+        modal_href.classList.remove('disabled')
+        modal_href.href = 'javascript:UpdateMember(' + user_id + ', ' + org_id + ')'
+
+    }
+</script>
 {% endblock %}
 
 {% block content %}
 <div class="flex-grow-1">
     <div class="row mb-3">
-        <div class="col-xl-4 col-lg-5 col-md-5 order-1 order-md-0">
+        <div class="col-xl-2 col-lg-2 order-1 order-md-0">
             <div class="card h-100">
                 <div class="card-body pt-12">
                     <div class="info-container">
@@ -437,22 +681,11 @@
                                 <span id="created_at"></span>
                             </li>
                             <li class="mb-2">
-                                <span class="h6 me-1">Владелец:</span>
-                                <span id="owner_id"></span>
-                            </li>
-                            <li class="mb-2">
-                                <span class="h6 me-1">Менеджеры:</span>
-                                <span id="managers"></span>
-                            </li>
-                            <li class="mb-2">
                                 <span class="h6 me-1">Сервер:</span>
                                 <span id="server_id"></span>
                             </li>
 
-                            <li class="mb-2">
-                                <span class="h6 me-1">Уровень:</span>
-                                <span id="level_id"></span>
-                            </li>
+
                         </ul>
 
                     </div>
@@ -460,13 +693,61 @@
             </div>
         </div>
 
-        <div class="col-xl-8 col-lg-7 col-md-7 order-0 order-md-1">
+        <div class="col-xl-5 col-lg-5 order-1 order-md-0">
             <div class="card h-100">
                 <div class="card-body pt-12">
-                    <div class="divider text-start">
+                    <div class="info-container">
+                        <h5 class="pb-4 border-bottom text-capitalize mt-6 mb-4">Участники
+                            <a href="javascript:" data-bs-toggle="offcanvas" data-bs-target="#off-add-member"
+                               aria-controls="off-add-member">
+                                <i class="bx bxs-plus-square"></i>
+                            </a>
+                        </h5>
+                        <div class="table-responsive">
+                            <table id="dt_contacts" class="datatables-ajax table table-bordered dataTable no-footer">
+                                <thead>
+                                <tr>
+                                    <th>Логин</th>
+                                    <th>Имя</th>
+                                    <th>Доступ</th>
+                                    <th>Статус</th>
+                                    <th>Telegram</th>
+                                </tr>
+                                </thead>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-lg-2 order-1 order-md-0">
+            <div class="card h-100">
+                <div class="card-body pt-12">
+                    <div class="info-container">
+                        <h5 class="pb-4 border-bottom text-capitalize mt-6 mb-4">Статистика</h5>
+                        <ul class="list-unstyled mb-6">
+                            <li class="mb-2">
+                                <span class="h6 me-1">Уровень: </span>
+                                <span id="level_id"></span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-3 order-0 order-md-1">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Касса</h5>
+                </div>
+                <div class="card-body">
+                    <div class="divider text-start mt-0">
                         <div class="divider-text">Операция</div>
                     </div>
-                    <div class="col-lg-4">
+                    <div class="col">
                         <select id="action_id" class="selectpicker w-100" data-style="btn-default"
                                 data-show-subtext="true" data-live-search="true">
                         </select>
@@ -474,16 +755,16 @@
                     <div class="divider text-start">
                         <div class="divider-text">Сумма</div>
                     </div>
-                    <div class="col-lg-4">
+                    <div class="col">
                         <input type="number" class="form-control" id="amount">
                     </div>
                     <div class="divider text-start">
                         <div class="divider-text">Описание</div>
                     </div>
-                    <div class="col-lg-4 mb-3">
+                    <div class="col mb-3">
                         <input type="text" class="form-control" id="description">
                     </div>
-                    <div class="col-lg-4">
+                    <div class="col">
                         <a href="javascript:actPay()" class="btn btn-primary disabled"
                            id="act_pay_btn">Выполнить</a>
                     </div>
@@ -530,5 +811,91 @@
     </div>
 </div>
 
+<div class="modal fade" id="modal_edit_member" style="display: none;" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal_edit_member_title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modal_edit_member_body">
+                <select id="status_number" class="form-control selectpicker mb-3" data-style="btn-default"
+                        data-show-subtext="true" data-live-search="true">
+                    <option value="1">Активный</option>
+                    <option value="2">Покинул</option>
+                    <option value="3">Выгнан</option>
+                    <option value="4">Заблокирован</option>
+                    <option value="5">Разблокирован</option>
+
+                </select>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="R1" name="rights">
+                    <label class="form-check-label" for="R1">Доступ к товарам</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="2" id="R2" name="rights">
+                    <label class="form-check-label" for="R2">Доступ к задачам на выкуп</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="3" id="R3" name="rights">
+                    <label class="form-check-label" for="R3">Доступ к отзывам</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="4" id="R4" name="rights">
+                    <label class="form-check-label" for="R4">Доступ к статусам заказов на WB</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="5" id="R5" name="rights">
+                    <label class="form-check-label" for="R5">Доступ к кошельку</label>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <a href="" class="btn btn-label-primary" id="modal_href_save">Сохранить</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3">
+    <div class="offcanvas offcanvas-start" id="off-add-member">
+        <div class="offcanvas-header">
+            <h5 id="off-add-member-label" class="offcanvas-title">Новый участник</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                    aria-label="Закрыть"></button>
+        </div>
+        <div class="offcanvas-body my-auto mx-0 ">
+
+            <select id="member_id" class="form-control selectpicker mb-3" data-style="btn-default"
+                    data-live-search="true"></select>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="1" id="RN1" name="Nrights">
+                <label class="form-check-label" for="RN1">Доступ к товарам</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="2" id="RN2" name="Nrights">
+                <label class="form-check-label" for="RN2">Доступ к задачам на выкуп</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="3" id="RN3" name="Nrights">
+                <label class="form-check-label" for="RN3">Доступ к отзывам</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="4" id="RN4" name="Nrights">
+                <label class="form-check-label" for="RN4">Доступ к статусам заказов на WB</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="5" id="RN5" name="Nrights">
+                <label class="form-check-label" for="RN5">Доступ к кошельку</label>
+            </div>
+            <div class="mt-3">
+                <a href="javascript:addMember()" class="btn btn-primary" id="add_member_btn" >Добавить</a>
+            </div>
+
+        </div>
+    </div>
+</div>
 
 {% endblock %}

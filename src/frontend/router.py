@@ -18,7 +18,7 @@ templates = Jinja2Templates(directory='frontend/templates')
 
 sections = {
     'dashboard': 0,
-    'wallet': 0,
+    'wallet': 32,
     'loyalty': 0,
     'products': 2,
     'tasks': 4,
@@ -46,7 +46,8 @@ pages_levels = {
     'usersessions': 65536,
     'adminsessions': 131072,
     'settings': 262144,
-    'pickerstatuses': 2
+    'pickerstatuses': 2,
+    'address_statuses': 4,
 }
 
 

@@ -228,6 +228,7 @@
     var arr = url.split('/')
     var org_id = arr[arr.length - 1]
 
+    /*
     $.ajax({
         url: '/payments/currentBalance?org_id=' + org_id,
         type: 'GET',
@@ -242,6 +243,7 @@
             document.getElementById('balance_info').style.display = 'block';
         }
     })
+    */
 
     $.ajax({
 
@@ -251,7 +253,6 @@
         success: function (data) {
             var tt = calcTotal(data)
 
-            document.getElementById('ctr-1').innerHTML = '<b>₽ ' + (tt['add'] - tt['spent']).toLocaleString('ru-RU') + '</b>'
             document.getElementById('ctr-2').innerHTML = '<b>₽ ' + (tt['total']).toLocaleString('ru-RU') + '</b>'
             document.getElementById('ctr-3').innerHTML = '<b>₽ ' + (tt['freeze'] - tt['unfreezed']).toLocaleString('ru-RU') + '</b>'
             document.getElementById('ctr-4').innerHTML = '<b>₽ ' + tt['spent'].toLocaleString('ru-RU') + '</b>'
@@ -343,28 +344,14 @@
 {% block content %}
 <div class="flex-grow-1">
     <div class="row mb-4 g-3" id="ctrs" style="display: none">
-        <div class="col-sm-6 col-xl-3">
-            <div class="card">
+
+        <div class="col-xl-4">
+            <div class="card ">
                 <div class="card-body border border-secondary rounded">
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="content-left">
-                            <h3 class="mb-0" id="ctr-1"></h3>
-                            <small>Баланс</small>
-                        </div>
-                        <span class="badge bg-label-primary rounded-circle p-2">
-                            <i class="bx bx-dollar bx-sm"></i>
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="content-left">
                             <h3 class="mb-0" id="ctr-2"></h3>
-                            <small>Баланс с учетом заморозки</small>
+                            <small>Баланс </small>
                         </div>
                         <span class="badge bg-label-success rounded-circle p-2">
                             <i class="bx bx-smile bx-sm"></i>
@@ -373,7 +360,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-xl-4">
             <div class="card">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
@@ -388,7 +375,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-xl-4">
             <div class="card">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">

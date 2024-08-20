@@ -17,5 +17,6 @@ class OrdersOrderReadModel(OrdersOrderCreateModel):
     dt_ordered: Optional[datetime.datetime]
     dt_delivered: Optional[datetime.datetime]
     dt_collected: Optional[datetime.datetime]
+    wb_price: Optional[int] = None
 
     size: 'ProductSizeReadSchema'

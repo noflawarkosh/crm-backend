@@ -280,68 +280,95 @@
 
 {% block content %}
 <div class="flex-grow-1">
-    <div class="row">
+
+
+    <div class="row mb-3">
         <div class="col">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Заказы
-                        <span class="spinner-border spinner-border-sm text-primary" role="status" id="ords_ldr"></span>
+                    <h5 class="card-title mb-0">Фильтрация
+
                     </h5>
-                    <small class="card-subtitle" id="prod-cntr"></small>
+
                 </div>
                 <div class="card-body">
-                    <div class="col-lg-2 mb-2">
-                        <input type="date" class="form-control" id="dts">
-                    </div>
-                    <div class="col-lg-2 mb-2">
-                        <input class="form-control" type="number" value="3000" id="li">
-                    </div>
-                    <div class="col-lg-3 mb-2">
-                        <a href="javascript: T_LIMIT = document.getElementById('li').value; T_DATE = document.getElementById('dts').value; dt_refresh('dt_orders', '/admin/get/orders_full?limit=' + T_LIMIT + '&dt_planed=' + T_DATE)"
-                           class="btn btn-primary">Показать</a>
-                    </div>
-                    <div class="col-lg-3 mb-2">
-                        <a href="javascript: T_LIMIT = 0; T_DATE = document.getElementById('dts').value; dt_refresh('dt_orders', '/admin/get/orders_full?limit=' + T_LIMIT + '&dt_planed=' + T_DATE)"
-                           class="btn btn-label-primary">Показать все за выбранную дату</a>
-                    </div>
-                    <div class="col-lg-3 mb-2">
-                        <a href="javascript:dt_refresh('dt_orders', '/admin/get/orders_full')"
-                           class="btn btn-label-primary">Показать все за все время</a>
-                    </div>
-                    <div class="col-lg-3 mb-2">
-                        <a href="javascript:SD(); T_DATE = document.getElementById('dts').value; dt_refresh('dt_orders', '/admin/get/orders_full?dt_planed=' + T_DATE)"
-                           class="btn btn-label-primary">Показать все за сегодня</a>
-                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-auto mb-3">
+                            <input type="date" class="form-control" id="dts">
+                        </div>
+                        <div class="col-lg-auto mb-3">
+                            <a href="javascript: T_LIMIT = 0; T_DATE = document.getElementById('dts').value; dt_refresh('dt_orders', '/admin/get/orders_full?limit=' + T_LIMIT + '&dt_planed=' + T_DATE)"
+                               class="btn btn-label-primary">Показать все за выбранную дату</a>
+                        </div>
 
 
-                </div>
-                <div class="card-body table-responsive">
-                    <table id="dt_orders" class="datatables-ajax table table-bordered dataTable no-footer">
-                        <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>UUID</th>
-                            <th>Статус</th>
-                            <th>Статус WB</th>
-                            <th>Сумма</th>
-                            <th>Дата планирования</th>
-                            <th>Дата заказа</th>
-                            <th>Дата доставки</th>
-                            <th>Дата получения</th>
-                            <th>Код получения</th>
-                            <th>Описание</th>
-                            <th>Товар</th>
-                            <th>Размер</th>
-                            <th>Аккаунт</th>
-                            <th>Адрес</th>
-                            <th>Организация</th>
-                            <th>Действия</th>
-                        </tr>
-                        </thead>
-                    </table>
+                        <div class="col-lg-auto mb-3">
+                            <a href="javascript:dt_refresh('dt_orders', '/admin/get/orders_full')"
+                               class="btn btn-label-primary">Показать все за все время</a>
+                        </div>
+
+
+                        <div class="col-lg-auto mb-3">
+                            <a href="javascript:SD(); T_DATE = document.getElementById('dts').value; dt_refresh('dt_orders', '/admin/get/orders_full?dt_planed=' + T_DATE)"
+                               class="btn btn-label-primary">Показать все за сегодня</a>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-auto  mb-3">
+                            <input class="form-control" type="number" value="3000" id="li">
+                        </div>
+                        <div class="col-lg-auto">
+                            <a href="javascript: T_LIMIT = document.getElementById('li').value; T_DATE = document.getElementById('dts').value; dt_refresh('dt_orders', '/admin/get/orders_full?limit=' + T_LIMIT + '&dt_planed=' + T_DATE)"
+                               class="btn btn-primary">Показать</a>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
     </div>
+
+    <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Заказы
+                            <span class="spinner-border spinner-border-sm text-primary" role="status"
+                                  id="ords_ldr"></span>
+                        </h5>
+                        <small class="card-subtitle" id="prod-cntr"></small>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table id="dt_orders" class="datatables-ajax table table-bordered dataTable no-footer">
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>UUID</th>
+                                <th>Статус</th>
+                                <th>Статус WB</th>
+                                <th>Сумма</th>
+                                <th>Дата планирования</th>
+                                <th>Дата заказа</th>
+                                <th>Дата доставки</th>
+                                <th>Дата получения</th>
+                                <th>Код получения</th>
+                                <th>Описание</th>
+                                <th>Товар</th>
+                                <th>Размер</th>
+                                <th>Аккаунт</th>
+                                <th>Адрес</th>
+                                <th>Организация</th>
+                                <th>Действия</th>
+                            </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
 </div>
+
 {% endblock %}

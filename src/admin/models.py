@@ -20,6 +20,7 @@ class AdminUserModel(Base):
     post: Mapped[str]
     level: Mapped[int]
     password: Mapped[str]
+    is_active: Mapped[bool] = mapped_column(default=True)
 
 
 class AdminSessionModel(Base):

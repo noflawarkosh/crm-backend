@@ -19,8 +19,9 @@ from picker.models import PickerServerScheduleModel, PickerSettingsModel, Picker
 
 from gutils import Strings
 from database import Repository
-from orders.models import OrdersAddressModel, OrdersOrderModel, OrdersContractorModel, OrdersAccountModel
-from orgs.models import OrganizationModel
+from orders.models import OrdersAddressModel, OrdersOrderModel, OrdersContractorModel, OrdersAccountModel, \
+    OrderAddressStatusModel
+from orgs.models import OrganizationModel, OrganizationMembershipModel
 from payments.models import BalanceBillModel, BalanceSourceModel, BalancePricesModel, BalanceHistoryModel, \
     BalanceTargetModel, BalanceActionModel
 from products.models import ProductModel, ReviewModel, ProductSizeModel
@@ -34,15 +35,20 @@ router = APIRouter(
 tables_access = {
     'users': (UserModel, 4096, {}),
     'organizations': (OrganizationModel, 2048, {}),
-    'organizations_full': (OrganizationModel, 2048, {
-        'select_related': [OrganizationModel.owner, OrganizationModel.level, OrganizationModel.server]}),
+    'organizations_full': (
+        OrganizationModel, 2048,
+        {
+            'select_related': [OrganizationModel.owner, OrganizationModel.level, OrganizationModel.server],
+            'filters': [OrganizationModel.status != 4]
+        }
+    ),
     'sizes': (ProductSizeModel, 64, {}),
     'actions': (BalanceActionModel, 256, {}),
     'orgs': (OrganizationModel, 2048, {}),
     'bills': (BalanceBillModel, 256, {}),
     'balance': (BalanceHistoryModel, 256, {}),
     'orders': (OrdersOrderModel, 16, {}),
-    'addresses': (OrdersAddressModel, 256, {}),
+    'addresses': (OrdersAddressModel, 4, {}),
     'accounts': (OrdersAccountModel, 32, {'select_related': [OrdersAccountModel.address, OrdersAccountModel.server]}),
     'addresses_full': (OrdersAddressModel, 256, {'select_related': [OrdersAddressModel.contractor]}),
     'products': (ProductModel, 64, {}),
@@ -59,6 +65,7 @@ tables_access = {
     'pickersettings': (PickerSettingsModel, 2, {}),
     'pickerhistory': (PickerHistoryModel, 2, {}),
     'levels': (BalancePricesModel, 2048, {}),
+    'members': (OrganizationMembershipModel, 2048, {}),
     'sizes_full': (
         ProductSizeModel, 64,
         {
@@ -116,6 +123,17 @@ tables_access = {
             ]
         }
     ),
+    'address_statuses': (OrderAddressStatusModel, 4, {}),
+    'express_reviews': (
+        ReviewModel, 128,
+        {
+            'filters': [
+                ReviewModel.is_express.is_(True),
+                ReviewModel.status.in_([1, 2])
+            ]
+        }
+    ),
+
 }
 
 
@@ -137,6 +155,9 @@ async def every(request: Request = Request):
     session = sessions[0]
 
     if not session or session.ip != request.client.host or session.user_agent != request.headers.get('user-agent'):
+        return None
+
+    if not session.admin.is_active:
         return None
 
     return session
@@ -169,6 +190,9 @@ async def login(request: Request, response: Response, username: str, password: s
 
     if Strings.hmac(password) != admin_check[0].password:
         raise HTTPException(status_code=403, detail=string_user_wrong_password)
+
+    if not admin_check[0].is_active:
+        raise HTTPException(status_code=403, detail=string_user_inactive_user)
 
     token = Strings.alphanumeric(256)
     await Repository.save_records([
@@ -352,6 +376,7 @@ async def download_xlsx_reviews(session: AdminSessionModel = Depends(authed)):
         filters=[
             ReviewModel.status == 1,
             ReviewModel.strict_match.is_(False),
+            ReviewModel.is_express.is_(False),
         ],
         select_related=[
             ReviewModel.media,
@@ -367,7 +392,7 @@ async def download_xlsx_reviews(session: AdminSessionModel = Depends(authed)):
 
     matches_ids = {
         0: '',
-        1: 'Соответствует',
+        1: 'Соответствует размеру',
         2: 'Маломерит',
         3: 'Большемерит'
     }
@@ -520,6 +545,10 @@ async def update_review_status(review_id: int, session: AdminSessionModel = Depe
         price = level.price_review_request
         target_id = 6
 
+    if review.is_express is True:
+        price = level.price_review_request
+        target_id = 6
+
     await Repository.save_records(
         [
             {
@@ -554,7 +583,7 @@ async def update_review_status(review_id: int, session: AdminSessionModel = Depe
 @router.get('/getPaymentsDetails')
 async def create_organization(org_id: int, start: datetime, end: datetime,
                               session: AdminSessionModel = Depends(authed)):
-    if not 128 & session.admin.level:
+    if not 2048 & session.admin.level:
         raise HTTPException(status_code=403, detail=string_403)
 
     start = start.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -577,14 +606,9 @@ async def create_organization(org_id: int, session: AdminSessionModel = Depends(
     if not 128 & session.admin.level:
         raise HTTPException(status_code=403, detail=string_403)
 
-
     records = await MembershipRepository.read_memberships_of_organization(org_id)
 
     return [record.__dict__ for record in records]
-
-
-
-
 
 
 # Forced saves

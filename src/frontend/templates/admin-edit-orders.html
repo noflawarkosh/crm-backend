@@ -38,7 +38,6 @@
         }
 
 
-
         var payload = {}
         payload['orders'] = [b_data]
 
@@ -48,8 +47,15 @@
             data: JSON.stringify(payload),
             contentType: "application/json",
             success: function () {
-                toastr.success('Изменения сохранены')
-                document.getElementById('save-btn').classList.remove('disabled');
+                toastr.success('Сохранено');
+                if (RETURNS[CURRENT_LOCATION.substring(0, CURRENT_LOCATION.lastIndexOf('/'))] !== undefined) {
+                    setTimeout(function () {
+                        location.replace(RETURNS[CURRENT_LOCATION.substring(0, CURRENT_LOCATION.lastIndexOf('/'))]);
+                    }, 700);
+                } else {
+                    document.getElementById('save-btn').classList.remove('disabled');
+                }
+
             },
             error: function () {
                 toastr.error('Ошибка сохранения. Проверьте правильность введенных данных')

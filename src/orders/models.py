@@ -54,9 +54,18 @@ class OrdersAddressModel(Base):
     contractor_id: Mapped[int | None] = mapped_column(
         ForeignKey('orders_contractor.id', ondelete='CASCADE', onupdate='CASCADE')
     )
+    status_id: Mapped[int | None] = mapped_column(
+        ForeignKey('orders_address_status.id')
+    )
 
     # Relationships
     contractor: Mapped['OrdersContractorModel'] = relationship(lazy='noload')
+
+
+class OrderAddressStatusModel(Base):
+    __tablename__ = 'orders_address_status'
+    id: Mapped[pk]
+    title: Mapped[str]
 
 
 # Order
@@ -85,6 +94,9 @@ class OrdersOrderModel(Base):
     )
     account_id: Mapped[int | None] = mapped_column(
         ForeignKey('orders_account.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+    picker_status_id: Mapped[int | None] = mapped_column(
+        ForeignKey('admin_picker_orders_status.id')
     )
 
     size: Mapped['ProductSizeModel'] = relationship(lazy='noload')

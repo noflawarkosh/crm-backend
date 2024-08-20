@@ -230,7 +230,7 @@ async def update_membership(member_id: int,
     if status == current_membership.status:
         raise HTTPException(status_code=403, detail=string_orgs_member_status_already_set)
 
-    new_status = None
+    new_status = current_membership.status
 
     if status:
         if status == 4:
@@ -250,7 +250,7 @@ async def update_membership(member_id: int,
     if not new_status and status:
         raise HTTPException(status_code=403, detail=string_403)
 
-    await DefaultRepository.save_records([
+    await Repository.save_records([
         {
             'model': OrganizationMembershipModel,
             'records': [{

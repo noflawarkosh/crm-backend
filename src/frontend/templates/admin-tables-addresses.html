@@ -1,7 +1,12 @@
 {% extends "!base-admin.html" %}
 {% block title %}Адреса | {% endblock %}
+{% block head %}
+
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.css') }}"/>
+{% endblock %}
 {% block js %}
-<script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script src="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.js') }}"></script>
 <script>
 
     function updateAddressStatus(id, is_active) {
@@ -34,93 +39,148 @@
         })
     }
 
+    function setNewAddressStatus(selectedValue, rowId) {
+        $.ajax({
+            type: "POST",
+            url: '/admin/save',
+            data: JSON.stringify({'addresses': [{id: rowId, status_id: selectedValue}]}),
+            contentType:  "application/json",
+            success: function () {
+                toastr.success('Статус обновлен')
+            },
+            error: function () {
+                toastr.error('Ошибка сохранения. Обновите страницу и повторите попытку')
+            }
+        })
+
+
+    }
 
     $.ajax({
         type: "GET",
         url: '/admin/get/addresses_full',
         success: function (data) {
-            $('#dt_addresses').DataTable({
 
-                "data": data,
-                "paging": true,
-                "pageLength": 10,
-                "lengthMenu": [[10, 50, 100, 500, -1], [10, 50, 100, 500, "Все"]],
-                "searching": true,
-                "ordering": true,
-                "columns": [
-                    {data: 'id'},
-                    {data: 'address'},
-                    {data: 'district'},
-                    {
-                        data: 'is_active',
-                        "render": function (data, type, row) {
+            $.ajax({
+                type: "GET",
+                url: '/admin/get/address_statuses',
+                success: function (as) {
 
-                            var c = 'warning'
-                            var cm = 'Не указано'
+                    $('#dt_addresses').DataTable({
 
-                            if (data === true) {
-                                c = 'success'
-                                cm = 'Да'
+                        "data": data,
+                        "paging": true,
+                        "pageLength": 10,
+                        "lengthMenu": [[10, 50, 100, 500, -1], [10, 50, 100, 500, "Все"]],
+                        "searching": true,
+                        "ordering": true,
+                        "drawCallback": function () {
+                            $('.selectpicker').selectpicker();
+
+                            $('.selectpicker').change(function () {
+                                var selectedValue = $(this).val();
+                                var rowId = $(this).attr('id').split('_')[2];
+                                setNewAddressStatus(selectedValue, rowId);
+                            });
+                        },
+                        "columns": [
+                            {data: 'id'},
+                            {data: 'address'},
+                            {data: 'district'},
+                            {
+                                data: 'is_active',
+                                "render": function (data, type, row) {
+
+                                    var c = 'warning'
+                                    var cm = 'Не указано'
+
+                                    if (data === true) {
+                                        c = 'success'
+                                        cm = 'Да'
+                                    }
+
+                                    if (data === false) {
+                                        c = 'danger'
+                                        cm = 'Нет'
+                                    }
+
+                                    return '<span class="badge bg-label-' + c + '">' + cm + '</span>'
+                                }
+                            },
+                            {
+                                data: 'status_id',
+                                "render": function (data, type, row) {
+                                    var hidden = 'Не указан'
+                                    var options = '<option value=""> - Не указан - </option>'
+                                    for (var i in as) {
+
+                                        var selected = ''
+
+                                        if (data === as[i].id) {
+                                            selected = 'selected'
+                                            hidden = as[i].title
+                                        }
+
+                                        var option = '<option value="' + as[i].id + '" ' + selected + '>' + as[i].title + '</option>'
+
+                                        options += option
+                                    }
+
+                                    return '<select id="address_status_' + row.id + '" class="form-control selectpicker" data-live-search="true">' + options + '</select>'
+                                }
+                            },
+                            {
+                                data: "contractor",
+                                "render": function (data, type, row) {
+                                    return data ? data.name : ''
+                                }
+                            },
+                            {
+                                "render": function (data, type, row) {
+                                    var edit = '<a href="/admin-edit/addresses/' + row['id'] + '"><i class="bx bx-edit-alt"></i></a>'
+
+                                    if (row.is_active === true) {
+                                        edit += '<a href="javascript:updateAddressStatus(' + row['id'] + ', false)"><i class="bx bx-block"></i></a>'
+                                    }
+
+                                    if (row.is_active === false) {
+                                        edit += '<a href="javascript:updateAddressStatus(' + row['id'] + ', true)"><i class="bx bx-check"></i></a>'
+                                    }
+                                    return edit
+                                }
                             }
+                        ],
+                        "order": [[0, "desc"]],
+                        "initComplete": function () {
 
-                            if (data === false) {
-                                c = 'danger'
-                                cm = 'Нет'
-                            }
+                            var table = this.api().table().header();
+                            var newRow = $('<tr></tr>');
+                            $(table).append(newRow);
 
-                            return '<span class="badge bg-label-' + c + '">' + cm + '</span>'
-                        }
-                    },
-                    {
-                        data: "contractor",
-                        "render": function (data, type, row) {
-                            return data ? data.name : ''
-                        }
-                    },
-                    {
-                        "render": function (data, type, row) {
-                            var edit = '<a href="/admin-edit/addresses/' + row['id'] + '"><i class="bx bx-edit-alt"></i></a>'
+                            var searchColumns = [0, 1, 2, 3, 4];
 
-                            if (row.is_active === true) {
-                                edit += '<a href="javascript:updateAddressStatus(' + row['id'] + ', false)"><i class="bx bx-block"></i></a>'
-                            }
+                            this.api().columns().every(function (i) {
+                                var column = this;
+                                if (searchColumns.includes(i)) {
 
-                            if (row.is_active === false) {
-                                edit += '<a href="javascript:updateAddressStatus(' + row['id'] + ', true)"><i class="bx bx-check"></i></a>'
-                            }
-                            return edit
-                        }
-                    }
-                ],
-                "order": [[0, "desc"]],
-                "initComplete": function () {
+                                    var input = $('<input type="text" class="form-control" placeholder="" />');
+                                    $(newRow).append($('<th></th>').append(input));
 
-                    var table = this.api().table().header();
-                    var newRow = $('<tr></tr>');
-                    $(table).append(newRow);
+                                    input.on('keyup change clear', function () {
+                                        if (column.search() !== this.value) {
+                                            column.search(this.value).draw();
+                                        }
+                                    });
+                                } else {
+                                    $(newRow).append($('<th></th>'))
 
-                    var searchColumns = [0, 1, 2, 3, 4];
-
-                    this.api().columns().every(function (i) {
-                        var column = this;
-                        if (searchColumns.includes(i)) {
-
-                            var input = $('<input type="text" class="form-control" placeholder="" />');
-                            $(newRow).append($('<th></th>').append(input));
-
-                            input.on('keyup change clear', function () {
-                                if (column.search() !== this.value) {
-                                    column.search(this.value).draw();
                                 }
                             });
-                        } else {
-                            $(newRow).append($('<th></th>'))
-
-                        }
+                        },
                     });
-                },
-            });
 
+                }
+            })
 
         },
         error: function () {
@@ -193,6 +253,7 @@
 {% endblock %}
 
 {% block content %}
+
 <div class="flex-grow-1">
     <div class="row">
         <div class="col">
@@ -202,6 +263,7 @@
                         <a href="javascript:dt_refresh('dt_addresses', '/admin/get/addresses_full')" id="rb"><i
                                 class="bx bx-refresh"></i></a>
                         <a href="/admin-create/addresses"><i class="bx bx-plus"></i></a>
+                        <a href="/admin-tables/address_statuses">статусы</a>
                     </h5>
                     <small class="card-subtitle" id="prod-cntr"></small>
                 </div>
@@ -222,6 +284,7 @@
                                 <th>Адрес</th>
                                 <th>Район</th>
                                 <th>Активен</th>
+                                <th>Статус</th>
                                 <th>Подрядчик</th>
                                 <th>Действия</th>
                             </tr>

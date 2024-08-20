@@ -16,6 +16,7 @@ class OrganizationReadSchema(BaseModel):
     title: str
     inn: str
     owner: Optional['UserReadSchema']
+    level_id: int | None
 
 
 # Membership

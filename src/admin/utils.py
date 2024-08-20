@@ -12,6 +12,9 @@ from products.models import ReviewModel, ProductSizeModel, ProductModel
 
 def set_type(value, field_type):
     if field_type == 'INTEGER':
+        if value == 0:
+            return value
+
         return int(value) if value else None
 
     elif field_type == 'VARCHAR':

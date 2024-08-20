@@ -155,11 +155,16 @@
             type: "POST",
             url: '/admin/save',
             data: JSON.stringify(payload),
-            contentType:  "application/json",
+            contentType: "application/json",
             success: function () {
-                toastr.success('Сохранено')
-                location.reload()
-                submitButton.classList.remove('disabled');
+                toastr.success('Сохранено');
+                if (RETURNS[CURRENT_LOCATION] !== undefined) {
+                    setTimeout(function () {
+                        location.replace(RETURNS[CURRENT_LOCATION]);
+                    }, 700);
+                } else {
+                    submitButton.classList.remove('disabled');
+                }
             },
             error: function () {
                 toastr.error('Ошибка сохранения. Проверьте правильность введенных данных')

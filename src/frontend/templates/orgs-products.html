@@ -120,7 +120,7 @@
             method: 'post',
 
             success: function () {
-                document.getElementById('bc_div_' + id).innerText = code.value
+                //document.getElementById('bc_div_' + id).innerText = code.value
                 dt_refresh('dt_user_products', '/products/getOwned?org_id=' + org_id)
                 toastr.success('Штрих-код сохранен')
             },
@@ -204,17 +204,17 @@
                                         p = size.wb_price / 100
                                     }
 
-                                    if (size.barcode === null) {
-                                        var barcode = '' +
-                                            '<div class="input-group input-group-sm" id="bc_div_' + size.id + '">\n' +
-                                            '          <input id="bc_inp_' + size.id + '" class="form-control form-control-sm" type="text" placeholder="Не указан">\n' +
-                                            '          <span class="input-group-text"><a href="javascript:saveBarcode(' + size.id + ')" id="bc_btn_' + size.id + '"><i class="bx bx-save"></i></a></span>\n' +
-                                            '        </div>'
-
-
-                                    } else {
-                                        barcode = size.barcode
+                                    var bc_v = ''
+                                    if (size.barcode !== null) {
+                                        bc_v = size.barcode
                                     }
+
+                                    var barcode = '' +
+                                        '<div class="input-group input-group-sm" id="bc_div_' + size.id + '">\n' +
+                                        '          <input id="bc_inp_' + size.id + '" class="form-control form-control-sm" type="text" placeholder="Не указан" value="' + bc_v + '">\n' +
+                                    '          <span class="input-group-text"><a href="javascript:saveBarcode(' + size.id + ')" id="bc_btn_' + size.id + '"><i class="bx bx-save"></i></a></span>\n' +
+                                    '        </div>'
+
 
                                     var s_n = null
 
@@ -251,10 +251,10 @@
                                     '                        <thead>\n' +
                                     '                        <tr>\n' +
                                     '                            <th>Размер</th>\n' +
-                                    '                            <th>Стоимость</th>\n' +
+                                    '                            <th>Цена</th>\n' +
                                     '                            <th>Штрих-код</th>\n' +
                                     '                            <th>Наличие</th>\n' +
-                                    '                            <th>Отображение (в работе)</th>\n' +
+                                    '                            <th>Использовать в работе</th>\n' +
                                     '                        </tr>\n' +
                                     '                        </thead>\n' +
                                     '                        <tbody class="table-border-bottom-0">\n' + trs +
@@ -265,7 +265,7 @@
                                     '        </div>\n' +
                                     '    </div>'
 
-                                price = '<div><a href="javascript:" data-bs-toggle="modal" data-bs-target="#modalToggle-' + row.id + '">Размеров: ' + row.sizes.length + '</a></div>'
+                                price = '<div><a href="javascript:" data-bs-toggle="modal" data-bs-target="#modalToggle-' + row.id + '">Размеры и штрих-коды: ' + row.sizes.length + '</a></div>'
 
                                 return '<span class="text-nowrap">' + price + '</span>'
 

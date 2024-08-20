@@ -85,7 +85,7 @@
                     <a href="#" data-bs-toggle="offcanvas" data-bs-target="#off-create" aria-controls="off-create">
                         <i class="bx bxs-plus-square" data-bs-toggle="tooltip" data-bs-offset="0,8"
                            data-bs-placement="top" data-bs-custom-class="tooltip-primary"
-                           data-bs-original-title="Добавить">
+                           data-bs-original-title="Создать">
                         </i>
                     </a>
                     <i class="bx bx-cloud-download" id="orgs1_ldr"></i>
@@ -279,7 +279,8 @@
                         aria-label="Закрыть"></button>
             </div>
 
-            <div class="offcanvas-body my-auto mx-0 flex-grow-0">
+            <div class="offcanvas-body mx-0 flex-grow-0">
+                <p>Вы создадите организацию и будете её владельцем. При необходимости сможете приглашать других сотрудников для управления</p>
 
                 <form id="create-org-form">
                     <div class="mb-3">
@@ -290,7 +291,7 @@
                         <label class="form-label" for="org-inn">ИНН</label>
                         <input type="text" class="form-control" id="org-inn" placeholder="000000000000">
                     </div>
-                    <button type="submit" class="btn btn-primary">Добавить</button>
+                    <button type="submit" class="btn btn-primary">Создать</button>
                 </form>
 
             </div>
@@ -307,8 +308,8 @@
                         aria-label="Закрыть"></button>
             </div>
 
-            <div class="offcanvas-body my-auto mx-0 flex-grow-0">
-
+            <div class="offcanvas-body mx-0 flex-grow-0">
+                <p>Попросите владельца организации создать код приглашения и введите его в этом поле. После этого вы получите доступ к разрешённым владельцем разделам</p>
                 <form id="connect-org-form">
                     <div class="mb-3">
                         <label class="form-label" for="org-code">Код приглашения</label>
@@ -490,12 +491,12 @@
         var orgsMine = $('#orgs-mine');
         var orgMenu = [
             {'menuItemTitle': 'Управление', 'menuItemHref': 'dashboard'},
+            {'menuItemTitle': 'Товары', 'menuItemHref': 'products'},
+            {'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': 'tasks'},
+            {'menuItemTitle': 'Отзывы', 'menuItemHref': 'reviews'},
+            {'menuItemTitle': 'Статусы заказов WB', 'menuItemHref': 'orders'},
             {'menuItemTitle': 'Кошелек', 'menuItemHref': 'wallet'},
             //{'menuItemTitle': 'Реферальная программа', 'menuItemHref': 'loyalty'},
-            {'menuItemTitle': 'Товары', 'menuItemHref': 'products'},
-            {'menuItemTitle': 'Отзывы', 'menuItemHref': 'reviews'},
-            {'menuItemTitle': 'Задачи на выкуп', 'menuItemHref': 'tasks'},
-            {'menuItemTitle': 'Статусы заказов WB', 'menuItemHref': 'orders'},
         ]
 
         $.ajax({
@@ -614,10 +615,14 @@
                             orgMenu.push({'menuItemTitle': 'Статусы заказов WB', 'menuItemHref': 'orders'})
                         }
 
+                        if (getBitValue(data.level, 5) === 1) {
+                            orgMenu.push({'menuItemTitle': 'Кошелек', 'menuItemHref': 'wallet'})
+                        }
 
                         orgMenu.forEach(function (orgMenu) {
 
-                            var ItemHREF = orgMenu.menuItemHref + data.organization.id
+                            var ItemHREF = '/organization/' + orgMenu.menuItemHref + '/' +data.organization.id
+
                             var menuSubItemClass = 'menu-item'
 
                             if (ItemHREF === currentPage) {

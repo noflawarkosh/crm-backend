@@ -113,13 +113,13 @@ async def get_current_balance(org_id):
 
 @router.get('/currentBalance')
 async def current_level(org_id: int, session: UserSessionModel = Depends(authed)):
-    organization, membership = await check_access(org_id, session.user.id, 0)
+    organization, membership = await check_access(org_id, session.user.id, 32)
     return [await get_current_balance(org_id), organization.balance_limit]
 
 
 @router.get('/currentLevel')
 async def current_level(org_id: int, session: UserSessionModel = Depends(authed)):
-    organization, membership = await check_access(org_id, session.user.id, 0)
+    organization, membership = await check_access(org_id, session.user.id, 32)
 
     if organization.level_id:
         level = await get_level_by_id(organization.level_id)
@@ -138,7 +138,7 @@ async def current_level(org_id: int, session: UserSessionModel = Depends(authed)
 
 @router.get('/futureLevel')
 async def get_levels(org_id: int, session: UserSessionModel = Depends(authed)):
-    organization, membership = await check_access(org_id, session.user.id, 0)
+    organization, membership = await check_access(org_id, session.user.id, 32)
 
     levels = await Repository.get_records(
         BalancePricesModel,
@@ -165,7 +165,7 @@ async def get_levels(org_id: int, session: UserSessionModel = Depends(authed)):
 @router.post('/createBill')
 async def create_organization(data: Annotated[BalanceBillCreateSchema, Depends()],
                               session: UserSessionModel = Depends(authed)):
-    await check_access(data.org_id, session.user.id, 0)
+    await check_access(data.org_id, session.user.id, 32)
 
     status_id = 3
     if data.source_id == 1:
@@ -193,7 +193,7 @@ async def create_organization(bill_id: int,
     if len(bills) != 1:
         raise HTTPException(status_code=404, detail=string_404) if len(bills) == 0 else None
 
-    await check_access(bills[0].org_id, session.user.id, 0)
+    await check_access(bills[0].org_id, session.user.id, 32)
 
     return BalanceBillReadSchema.model_validate(bills[0], from_attributes=True)
 
@@ -202,7 +202,7 @@ async def create_organization(bill_id: int,
 async def create_organization(org_id: int,
                               session: UserSessionModel = Depends(authed)
                               ) -> list[BalanceBillReadSchema]:
-    await check_access(org_id, session.user.id, 0)
+    await check_access(org_id, session.user.id, 32)
     bills = await Repository.get_records(
         BalanceBillModel,
         filters=[BalanceBillModel.org_id == org_id],
@@ -225,7 +225,7 @@ async def create_organization(bill_id: int, status_id: int,
     if len(bills) != 1:
         raise HTTPException(status_code=404, detail=string_404)
 
-    await check_access(bills[0].org_id, session.user.id, 0)
+    await check_access(bills[0].org_id, session.user.id, 32)
 
     if status_id not in [2, 4]:
         raise HTTPException(status_code=403, detail=string_403)
@@ -254,7 +254,7 @@ async def create_organization(session: UserSessionModel = Depends(authed)) -> li
 async def create_organization(org_id: int,
                               session: UserSessionModel = Depends(authed)
                               ) -> list[BalanceHistoryReadSchema]:
-    await check_access(org_id, session.user.id, 0)
+    await check_access(org_id, session.user.id, 32)
     history = await Repository.get_records(
         BalanceHistoryModel,
         filters=[BalanceHistoryModel.org_id == org_id]
@@ -266,7 +266,7 @@ async def create_organization(org_id: int,
 async def create_organization(org_id: int, start: datetime.datetime, end: datetime.datetime,
                               session: UserSessionModel = Depends(authed)
                               ) -> list[BalanceHistoryReadSchema]:
-    await check_access(org_id, session.user.id, 0)
+    await check_access(org_id, session.user.id, 32)
 
     start = start.replace(hour=0, minute=0, second=0, microsecond=0)
     end = end.replace(hour=23, minute=59, second=59, microsecond=999999)
@@ -285,7 +285,7 @@ async def create_organization(org_id: int, start: datetime.datetime, end: dateti
 
 @router.post('/tasksPay')
 async def create_organization(org_id: int, data: list[int], session: UserSessionModel = Depends(authed)):
-    organization, membership = await check_access(org_id, session.user.id, 0)
+    organization, membership = await check_access(org_id, session.user.id, 32)
 
     orders = await Repository.get_records(
         model=OrdersOrderModel,
@@ -385,7 +385,7 @@ async def create_organization(org_id: int, data: list[int], session: UserSession
         total_to_pay += price_product + price_commission + level.price_collect + level.price_buy
 
     if current_balance - total_to_pay < organization.balance_limit:
-        raise HTTPException(status_code=403, detail=string_payments_not_enough_balance + f'. Пополните кошелек минимум на {abs(current_balance - total_to_pay - organization.balance_limit)} рублей для совершения оплаты')
+        raise HTTPException(status_code=403, detail=string_payments_not_enough_balance + f'. Пополните кошелек минимум на {abs(current_balance - total_to_pay)} рублей для совершения оплаты')
 
     await Repository.save_records(
         [
@@ -400,7 +400,7 @@ async def create_organization(org_id: int, date: datetime.date, session: UserSes
     if date < datetime.date.today():
         raise HTTPException(status_code=403, detail=string_403)
 
-    organization, membership = await check_access(org_id, session.user.id, 4)
+    organization, membership = await check_access(org_id, session.user.id, 32)
 
     orders = await Repository.get_records(
         model=OrdersOrderModel,
@@ -457,7 +457,7 @@ async def create_organization(org_id: int, date: datetime.date, session: UserSes
             'price_commission': price_commission,
             'price_buy': level.price_buy,
             'price_collect': level.price_collect,
-            'price_total': price_product + price_commission + level.price_collect + level.price_collect,
+            'price_total': price_product + price_commission + level.price_buy + level.price_collect,
         })
 
         sum_price_product += price_product
