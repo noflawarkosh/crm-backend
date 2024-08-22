@@ -60,13 +60,14 @@
     var arr = url.split('/')
     var id = arr[arr.length - 1]
 
+
     $(document).ready(function () {
         $.ajax({
             url: '/orders/getPlan?org_id=' + id + '&date=' + formattedDate,
             method: 'get',
             success: function (data) {
 
-                $('#dt_plan').DataTable({
+                var table = $('#dt_plan').DataTable({
                     "data": data,
                     "paging": true,
                     "pageLength": 10,
@@ -76,6 +77,11 @@
                     autoWidth: false,
 
                     "columns": [
+                        {
+                            render: function (data, type, row) {
+                                return '<input class="dt-checkboxes form-check-input" type="checkbox" name="dt_lines" id="' + row.id + '">'
+                            }
+                        },
                         {"data": 'id'},
                         {
                             "data": 'size',
@@ -139,12 +145,12 @@
 
                                 if (row.status === 6) {
                                     status = 4
-                                    title = 'Отменен'
+                                    title = 'Отмена'
                                 }
 
                                 if (row.status === 7) {
                                     status = 4
-                                    title = 'Отменен'
+                                    title = 'Отмена'
                                 }
 
                                 var statuses = {
@@ -182,13 +188,115 @@
                 });
 
                 document.getElementById('add-plan-btn').classList.remove('disabled')
+                document.getElementById('replace_date').value = moment(currentDate).add(1, 'days').format('YYYY-MM-DD');
+
 
                 if (data.length !== 0) {
                     document.getElementById('pay-plan-btn').classList.remove('disabled')
                     document.getElementById('pay-plan-btn').innerText = 'Оплатить задачи на ' + moment(currentDate).format('DD.MM.YYYY')
                 }
 
+                $('#select-all').on('click', function () {
+                    var rows = table.rows({'search': 'applied'}).nodes();
+                    $('input[type="checkbox"]', rows).prop('checked', this.checked);
+                });
+
+                $('#replace-selected').on('click', function () {
+                    var selected = [];
+                    table.$('input[type="checkbox"]:checked').each(function () {
+                        var rowData = table.row($(this).closest('tr')).data();
+                        selected.push(rowData);
+                    });
+
+                    if (selected.length === 0) {
+                        toastr.error('Выберите задачи для переноса')
+                        return
+                    }
+
+                    var selected_ids = []
+
+                    for (var i = 0; i < selected.length; i++) {
+                        selected_ids.push(selected[i].id)
+                    }
+                    document.getElementById('cancel-selected').classList.add('disabled')
+                    document.getElementById('replace-selected').classList.add('disabled')
+                    $.ajax({
+
+                        url: '/orders/replaceTasks',
+                        method: 'post',
+                        data: JSON.stringify({
+                            'id': selected_ids,
+                            'date': document.getElementById('replace_date').value,
+                            'org_id': id,
+                        }),
+                        contentType: 'application/json',
+
+                        success: function (data) {
+                            document.getElementById('cancel-selected').classList.remove('disabled')
+                            document.getElementById('replace-selected').classList.remove('disabled')
+                            drawPlan(dateInput.value)
+                            toastr.success('Задачи успешно перенесены')
+
+                        },
+                        error: function (data) {
+                            document.getElementById('cancel-selected').classList.remove('disabled')
+                            document.getElementById('replace-selected').classList.remove('disabled')
+                            toastr.error('Ошибка переноса задач')
+                            toastr.error(data.responseJSON.detail)
+                        }
+                    })
+
+                });
+
+                $('#cancel-selected').on('click', function () {
+                    var selected = [];
+                    table.$('input[type="checkbox"]:checked').each(function () {
+                        var rowData = table.row($(this).closest('tr')).data();
+                        selected.push(rowData);
+                    });
+
+                    if (selected.length === 0) {
+                        toastr.error('Выберите задачи для отмены')
+                        return
+                    }
+
+                    var selected_ids = []
+
+                    for (var i = 0; i < selected.length; i++) {
+                        selected_ids.push(selected[i].id)
+                    }
+                    document.getElementById('cancel-selected').classList.add('disabled')
+                    document.getElementById('replace-selected').classList.add('disabled')
+                    $.ajax({
+
+                        url: '/orders/cancelTasks',
+                        method: 'post',
+                        data: JSON.stringify({
+                            'id': selected_ids,
+                            'org_id': id,
+                        }),
+                        contentType: 'application/json',
+
+                        success: function (data) {
+                            drawPlan(dateInput.value)
+                            document.getElementById('cancel-selected').classList.remove('disabled')
+                            document.getElementById('replace-selected').classList.remove('disabled')
+                            toastr.success('Задачи успешно отменены')
+
+                        },
+                        error: function (data) {
+                            document.getElementById('cancel-selected').classList.remove('disabled')
+                            document.getElementById('replace-selected').classList.remove('disabled')
+                            toastr.error('Ошибка переноса задач')
+                            toastr.error(data.responseJSON.detail)
+                        }
+                    })
+
+
+                });
+
             },
+
 
             error: function () {
                 toastr.error('Ошибка загрузки плана')
@@ -298,7 +406,7 @@
                     "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
                     "searching": true,
                     "ordering": true,
-                    autoWidth:  false,
+                    autoWidth: false,
 
                     "columns": [
                         {"data": "order_id"},
@@ -368,6 +476,7 @@
             method: 'get',
 
             success: function (data) {
+
                 document.getElementById('add-plan-btn').classList.add('disabled')
                 document.getElementById('pay-plan-btn').classList.add('disabled')
                 document.getElementById('pay-plan-btn').innerText = 'Оплатить'
@@ -481,7 +590,6 @@
                         }
 
 
-
                         var optionText = product.wb_article
                         var optionValue = size.id
                         var optionDataSubtext = prod_title
@@ -506,6 +614,7 @@
 
 
 <script>
+
     function cancelTask(task_id) {
         if (confirm('Отменить задачу?')) {
             $.ajax({
@@ -523,7 +632,30 @@
             })
         }
     }
+
+
+    function setCalDate(n) {
+        if (n === 1) {
+            // set yesterday
+            dateInput.value = moment().subtract(1, 'days').format('YYYY-MM-DD')
+            drawPlan(dateInput.value)
+        }
+
+        if (n === 2) {
+            // set today
+            dateInput.value = moment().format('YYYY-MM-DD')
+            drawPlan(dateInput.value)
+        }
+
+        if (n === 3) {
+            // set tomorrow
+            dateInput.value = moment().add(1, 'days').format('YYYY-MM-DD')
+            drawPlan(dateInput.value)
+        }
+    }
 </script>
+
+
 {% endblock %}
 
 {% block content %}
@@ -545,7 +677,18 @@
                         <div class="col-lg-auto col-sm">
                             <input type="date" class="form-control" id="plan-date">
                         </div>
+                        <div class="col-auto">
+                            <a href="javascript:setCalDate(1)" class="btn btn-label-primary" id="dt_1">Вчера</i></a>
+                        </div>
+                        <div class="col-auto">
+                            <a href="javascript:setCalDate(2)" class="btn btn-label-primary" id="dt_2">Сегодня</i></a>
+                        </div>
+                        <div class="col-auto">
+                            <a href="javascript:setCalDate(3)" class="btn btn-label-primary" id="dt_3">Завтра</i></a>
+                        </div>
+
                     </div>
+
 
                     <div class="divider text-start">
                         <div class="divider-text">Добавить задачу в выбранный день</div>
@@ -597,9 +740,29 @@
                         <div class="divider-text" id="divider-text"></div>
                     </div>
                     <div class="card-body table-responsive mt-0 pt-0">
+
+                        <div class="row">
+                            <div class="col-auto">
+                                <input type="date" class="form-control" id="replace_date">
+                            </div>
+                            <div class="col-auto">
+                                <button id="replace-selected" class="btn btn-label-info mb-2">Перенести
+                                    выбранные
+                                </button>
+                            </div>
+
+                            <div class="col-auto">
+                                <button id="cancel-selected" class="btn btn-label-danger mb-2">Отменить
+                                    выбранные </button>
+                            </div>
+
+                        </div>
+
+
                         <table id="dt_plan" class="datatables-ajax table table-bordered dataTable no-footer">
                             <thead>
                             <tr>
+                                <th><input class="dt-checkboxes form-check-input" type="checkbox" id="select-all"></th>
                                 <th>№</th>
                                 <th>Артикул</th>
                                 <th>Товар</th>

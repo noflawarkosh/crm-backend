@@ -46,6 +46,9 @@
 
                             error: function (data) {
                                 toastr.error(data.responseJSON.detail);
+                                dt_refresh('dt_payments', '/admin/get/bills_full', function (newdata) {
+                                    set_watchers(newdata)
+                                });
                                 d.style.display = 'block'
                                 l.style.display = 'none'
                             }

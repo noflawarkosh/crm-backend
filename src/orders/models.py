@@ -101,3 +101,4 @@ class OrdersOrderModel(Base):
 
     size: Mapped['ProductSizeModel'] = relationship(lazy='noload')
     account: Mapped['OrdersAccountModel'] = relationship(lazy='noload')
+    picker_status: Mapped['PickerOrderStatus'] = relationship(lazy='noload')

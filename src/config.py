@@ -26,4 +26,7 @@ ACCEPTABLE_FILE_TYPES = {
     'mov': 1048576 * 50,
     'pdf': 1048576 * 10,
     'xlsx': 1048576 * 30,
+    'docx': 1048576 * 15,
 }
+
+DEFAULT_MAX_FILE_SIZE = 1048576 * 25

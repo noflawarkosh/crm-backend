@@ -179,7 +179,10 @@ async def page(request: Request, org_id: int, dates: str = None, session: UserSe
     organization = organizations[0]
 
     if organization.owner_id != session.user.id:
-        return RedirectResponse('/403')
+        membership = await MembershipRepository.read_current(session.user.id, org_id)
+        if not membership or membership.status != 1 or not (membership.level & 32):
+            return RedirectResponse('/403')
+
 
     return templates.TemplateResponse(f'payments-details.html', {'request': request})
 
@@ -245,7 +248,9 @@ async def page(request: Request,
         return RedirectResponse('/403')
 
     if organization.owner_id != session.user.id:
-        return RedirectResponse('/403')
+        membership = await MembershipRepository.read_current(session.user.id, organization.id)
+        if not membership or membership.status != 1 or not (membership.level & 32):
+            return RedirectResponse('/403')
 
     return templates.TemplateResponse('payments-bill.html', {'request': request})
 

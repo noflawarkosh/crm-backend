@@ -79,3 +79,5 @@ class ReviewMediaModel(Base):
     review_id: Mapped[int] = mapped_column(
         ForeignKey('products_review.id', ondelete='CASCADE', onupdate='CASCADE')
     )
+
+    review: Mapped['ReviewModel'] = relationship(lazy='noload')

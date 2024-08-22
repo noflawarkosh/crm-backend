@@ -1,6 +1,6 @@
 import datetime
 from typing import Annotated, List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy import func
 
 from auth.models import UserSessionModel
@@ -9,7 +9,7 @@ from database import Repository
 from gutils import Strings
 
 from orgs.router import check_access
-from products.models import ProductModel, ReviewModel, ProductSizeModel
+from products.models import ProductModel, ReviewModel, ProductSizeModel, ReviewMediaModel
 from products.repository import ProductsRepository, ReviewsRepository
 from products.schemas import ProductPOSTSchema, ProductReadSchema, ProductCreateSchema, ReviewCreateSchema, \
     ReviewReadSchema, ReviewUpdateSchema
@@ -209,7 +209,6 @@ async def update_size_barcode(size_id: int, barcode: str, session: UserSessionMo
 
     await check_access(size.product.org_id, session.user.id, 2)
 
-
     await Repository.save_records(
         [{'model': ProductSizeModel, 'records': [{'id': size_id, 'barcode': barcode}]}])
 
@@ -284,7 +283,6 @@ async def create_review(data: Annotated[ReviewCreateSchema, Depends()], files: L
 @router_reviews.post('/xlsxUpload')
 async def get_reviews_of_organization(org_id: int, file: UploadFile = File(...),
                                       session: UserSessionModel = Depends(authed)):
-
     await check_access(org_id, session.user.id, 8)
 
     try:
@@ -297,7 +295,6 @@ async def get_reviews_of_organization(org_id: int, file: UploadFile = File(...),
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")
-
 
 
 @router_reviews.get('/getOwned')
@@ -342,6 +339,9 @@ async def disable_review(review_id: int, session: UserSessionModel = Depends(aut
 
     await check_access(reviews[0].size.product.org_id, session.user.id, 8)
 
+    if reviews[0].status != 1:
+        raise HTTPException(status_code=403, detail=string_403)
+
     await Repository.save_records([{'model': ReviewModel, 'records': [{'id': review_id, 'status': 4}]}])
 
 
@@ -365,3 +365,77 @@ async def update_review(data: Annotated[ReviewUpdateSchema, Depends()], session:
         raise HTTPException(status_code=403, detail=string_403)
 
     await Repository.save_records([{'model': ReviewModel, 'records': [data.model_dump()]}])
+
+
+@router_reviews.post('/delMedia')
+async def update_review(media_id: int, session: UserSessionModel = Depends(authed)):
+    media = await Repository.get_records(
+        ReviewMediaModel,
+        filters=[ReviewMediaModel.id == media_id],
+        select_related=[ReviewMediaModel.review],
+        deep_related=[
+            [ReviewMediaModel.review, ReviewModel.size],
+            [ReviewMediaModel.review, ReviewModel.size, ProductSizeModel.product]
+        ]
+    )
+
+    if len(media) != 1:
+        raise HTTPException(status_code=404, detail=string_404)
+
+    review = media[0].review
+
+    await check_access(review.size.product.org_id, session.user.id, 8)
+
+    if review.status != 1:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    await Repository.delete_record(ReviewMediaModel, media_id)
+
+
+
+@router_reviews.post('/addMedia')
+async def update_review(review_id: int = Form(), files: List[UploadFile] = File(...),
+                        session: UserSessionModel = Depends(authed)):
+
+
+    reviews = await Repository.get_records(
+        ReviewModel,
+        filters=[ReviewModel.id == review_id],
+        select_related=[ReviewModel.size],
+        deep_related=[[ReviewModel.size, ProductSizeModel.product]]
+    )
+
+    if len(reviews) != 1:
+        raise HTTPException(status_code=404, detail=string_404)
+
+    await check_access(reviews[0].size.product.org_id, session.user.id, 8)
+
+    if reviews[0].status != 1:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    if files[0].size != 0 or files[0].filename != '':
+        for file in files:
+            try:
+                await Repository.verify_file(file, ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov'])
+
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")
+
+    filenames = []
+    if files[0].size != 0 or files[0].filename != '':
+        for file in files:
+            content = await file.read()
+            n, t = await Repository.s3_autosave(content,
+                                                f"{Strings.alphanumeric(32)}.{file.filename.rsplit('.', maxsplit=1)[1]}")
+            filenames.append(f"{n}.{t}")
+
+    if not filenames:
+        raise HTTPException(status_code=400, detail='Файлы не выбраны')
+
+
+    await Repository.save_records([
+        {
+            'model': ReviewMediaModel,
+            'records': [{'media': filename, 'review_id': review_id} for filename in filenames]
+        }
+    ])

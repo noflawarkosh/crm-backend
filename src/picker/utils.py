@@ -48,7 +48,7 @@ async def refresh_active_and_collected(data, servers, is_test=True):
     db_statuses = await Repository.get_records(PickerOrderStatus)
     db_orders = await Repository.get_records(
         OrdersOrderModel,
-        select_related=[OrdersOrderModel.size, OrdersOrderModel.account],
+        select_related=[OrdersOrderModel.size, OrdersOrderModel.account, OrdersOrderModel.picker_status],
         deep_related=[
             [OrdersOrderModel.size, ProductSizeModel.product],
         ],
@@ -64,7 +64,8 @@ async def refresh_active_and_collected(data, servers, is_test=True):
             'size_id': x.size_id,
             'org_id': x.size.product.org_id,
             'wb_uuid': x.wb_uuid,
-            'dt_collected': x.dt_collected
+            'dt_collected': x.dt_collected,
+            'is_success': x.picker_status.is_success if x.picker_status else None
         }
         for x in db_orders
     ])
@@ -307,6 +308,8 @@ async def refresh_active_and_collected(data, servers, is_test=True):
                 # Refreshing order
                 query = df_orders.query(f"id == {order_id}")
 
+                current_is_success = query['is_success'].iloc[0] if len(query.values) != 0 else None
+
                 db_order_id = query['id'].iloc[0] if len(query.values) != 0 else None
                 db_wb_status = line['status']
                 db_uuid = line['uuid']
@@ -404,72 +407,17 @@ async def refresh_active_and_collected(data, servers, is_test=True):
                     )
                     continue
 
-                # Making payment with status
-                if status_model.pay_product:
-                    data_payments_to_db.append(
-                        {
-                            'amount': int(line['price']),
-                            'org_id': org_id,
-                            'action_id': 3,
-                            'target_id': 1,
-                            'record_id': db_order_id,
-                        }
-                    )
+                if current_is_success != status_model.is_success:
 
-                    logs_payments.append(
-                        {
-                            'target': db_uuid,
-                            'success': True,
-                            'detail': 'Оплата стоимости продукта',
-                            'value': int(line['price']),
-                            'line': line['line_number'],
-                            'orders_type': orders_type,
-                            'server': server.name,
-                        }
-                    )
-
-                if status_model.refund_product:
-                    data_payments_to_db.append(
-                        {
-                            'amount': int(wb_price),
-                            'org_id': org_id,
-                            'action_id': 4,
-                            'target_id': 1,
-                            'record_id': db_order_id,
-                        }
-                    )
-
-                    logs_payments.append(
-                        {
-                            'target': db_uuid,
-                            'success': True,
-                            'detail': 'Разморозка стоимости продукта',
-                            'value': int(wb_price),
-                            'line': line['line_number'],
-                            'orders_type': orders_type,
-                            'server': server.name,
-                        }
-                    )
-
-                if status_model.refund_services:
-
-                    service_payments = await Repository.get_records(
-                        BalanceHistoryModel,
-                        filters=[
-                            BalanceHistoryModel.target_id.in_([2, 3, 4]),
-                            BalanceHistoryModel.record_id == db_order_id,
-                            BalanceHistoryModel.action_id.in_([2, 3])
-                        ]
-                    )
-
-                    for service_payment in service_payments:
+                    # Making payment with status
+                    if status_model.pay_product:
                         data_payments_to_db.append(
                             {
-                                'amount': service_payment.amount,
-                                'org_id': service_payment.org_id,
-                                'action_id': 4 if service_payment.action_id == 2 else 1,
-                                'target_id': service_payment.target_id,
-                                'record_id': service_payment.record_id,
+                                'amount': int(line['price']),
+                                'org_id': org_id,
+                                'action_id': 3,
+                                'target_id': 1,
+                                'record_id': db_order_id,
                             }
                         )
 
@@ -477,13 +425,70 @@ async def refresh_active_and_collected(data, servers, is_test=True):
                             {
                                 'target': db_uuid,
                                 'success': True,
-                                'detail': f'Возврат стоимости услуги (возврат платежа #{service_payment.id})',
-                                'value': service_payment.amount,
+                                'detail': 'Оплата стоимости продукта',
+                                'value': int(line['price']),
                                 'line': line['line_number'],
                                 'orders_type': orders_type,
                                 'server': server.name,
                             }
                         )
+
+                    if status_model.refund_product:
+                        data_payments_to_db.append(
+                            {
+                                'amount': int(wb_price),
+                                'org_id': org_id,
+                                'action_id': 4,
+                                'target_id': 1,
+                                'record_id': db_order_id,
+                            }
+                        )
+
+                        logs_payments.append(
+                            {
+                                'target': db_uuid,
+                                'success': True,
+                                'detail': 'Разморозка стоимости продукта',
+                                'value': int(wb_price),
+                                'line': line['line_number'],
+                                'orders_type': orders_type,
+                                'server': server.name,
+                            }
+                        )
+
+                    if status_model.refund_services:
+
+                        service_payments = await Repository.get_records(
+                            BalanceHistoryModel,
+                            filters=[
+                                BalanceHistoryModel.target_id.in_([2, 3, 4]),
+                                BalanceHistoryModel.record_id == db_order_id,
+                                BalanceHistoryModel.action_id.in_([2, 3])
+                            ]
+                        )
+
+                        for service_payment in service_payments:
+                            data_payments_to_db.append(
+                                {
+                                    'amount': service_payment.amount,
+                                    'org_id': service_payment.org_id,
+                                    'action_id': 4 if service_payment.action_id == 2 else 1,
+                                    'target_id': service_payment.target_id,
+                                    'record_id': service_payment.record_id,
+                                }
+                            )
+
+                            logs_payments.append(
+                                {
+                                    'target': db_uuid,
+                                    'success': True,
+                                    'detail': f'Возврат стоимости услуги (возврат платежа #{service_payment.id})',
+                                    'value': service_payment.amount,
+                                    'line': line['line_number'],
+                                    'orders_type': orders_type,
+                                    'server': server.name,
+                                }
+                            )
 
                 # data insert/update
                 data_orders_to_db.append(
@@ -674,7 +679,6 @@ async def refresh_active_and_collected(data, servers, is_test=True):
 
 
 async def generate_plan_xlsx_2(servers, date):
-
     for server in servers:
         db_tasks = await Repository.get_records(
             model=OrdersOrderModel,

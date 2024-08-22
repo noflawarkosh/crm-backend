@@ -372,7 +372,7 @@
                             var newRow = $('<tr></tr>');
                             $(table).append(newRow);
 
-                            var searchColumns = [1, 2, 3, 4, 5, 7];
+                            var searchColumns = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
                             this.api().columns().every(function (i) {
                                 var column = this;
@@ -494,6 +494,7 @@
 
 <script>
     function editReview(id) {
+        var RID = id
         var m_title = document.getElementById('modal_edit_review_title')
         var m_body = document.getElementById('modal_edit_review_body')
         var re_prod = document.getElementById('review_edit_product')
@@ -507,6 +508,7 @@
         var re_esmr_4 = document.getElementById('esmr-4')
         var re_match_size_edit = document.getElementById('match_size_edit')
         var re_rev_edit_media = document.getElementById('rev_edit_media')
+        var media_table = document.getElementById('media_table')
 
 
         m_body.style.display = 'none'
@@ -570,7 +572,59 @@
                 }
 
 
+                media_table.innerHTML = '<table id="dt_review_media" class="datatables-ajax table table-bordered dataTable no-footer">\n' +
+                    '                            <thead>\n' +
+                    '                            <tr>\n' +
+                    '                                <th>Медиа</th>\n' +
+                    '                                <th></th>\n' +
+                    '                            </tr>\n' +
+                    '                            </thead>\n' +
+                    '                        </table>'
+
+                $('#dt_review_media').DataTable({
+                    "data": data.media,
+                    "paging": true,
+                    "pageLength": 3,
+                    "lengthMenu": [[3], [3]],
+                    "searching": true,
+                    "ordering": true,
+                    autoWidth: false,
+
+                    "columns": [
+                        {
+                            render: function (data, type, row) {
+                                var ftype = row.media.split('.')[1].toLowerCase()
+
+                                if (ftype === 'mov' || ftype === 'mp4') {
+                                    return '<a href="##" data-bs-toggle="modal" data-bs-target="#modalToggle-' + row.id + '">' +
+                                        '<div class="avatar-wrapper">' +
+                                        '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
+                                        '<i class="bx bx-play"></i>' +
+                                        '</div></div></a>'
+
+                                } else {
+
+                                    var mu = 'https://storage.yandexcloud.net/greedybear/' + row.media.split('.')[0] + '.webp'
+                                    return '' +
+                                        '<div class="avatar-wrapper">' +
+                                        '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
+                                        '<a href="' + mu + '" target="_blank"><img src="' + mu + '" class="rounded-2"></a>' +
+                                        '</div>\<' +
+                                        '/div>'
+                                }
+                            }
+                        },
+                        {
+                            "render": function (data, type, row) {
+                                return '<a href="javascript:delMedia(' + row.id + ', ' + RID + ')">удалить</a>'
+                            }
+                        },
+                    ],
+                    "order": [[0, "desc"]],
+                })
+
                 m_title.innerText = 'Редактирование отзыва #' + data.id
+                document.getElementById('edit_review_id').value = data.id
                 m_body.style.display = 'block'
             },
 
@@ -579,6 +633,95 @@
                 toastr.error(data.responseJSON.detail)
             }
         });
+    }
+
+
+    document.getElementById('review_add_media').addEventListener('submit', function (event) {
+
+        event.preventDefault();
+
+        var formData = new FormData(this);
+        var submitButton = document.getElementById('re_m_se');
+        submitButton.classList.add('disabled');
+        submitButton.innerText = 'Загрузка...'
+
+        $.ajax({
+            url: '/reviews/addMedia',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+
+            success: function () {
+                document.getElementById('review_add_media').reset()
+                submitButton.innerText = 'Загрузить'
+                var table = $('#dt_review_media').DataTable()
+
+                document.getElementById('page_ldr').style.display = 'block'
+                $.ajax({
+                    type: "GET",
+                    url: '/reviews/get?review_id=' + formData.get('review_id'),
+                    dataType: "json",
+                    success: function (data) {
+                        table.clear()
+                        table.draw()
+                        table.rows.add(data.media).draw();
+                        document.getElementById('page_ldr').style.display = 'none'
+                    },
+                    error: function () {
+                        toastr.error('Ошибка обновления данных. Обновите страницу')
+                    }
+                })
+
+                toastr.success('Сохранено')
+                dt_refresh('dt_user_reviews', '/reviews/getOwned?org_id=' + org_id)
+
+                submitButton.classList.remove('disabled');
+            },
+
+            error: function (data) {
+                submitButton.classList.remove('disabled');
+                submitButton.innerText = 'Загрузить'
+                toastr.error('Ошибка выполнения операции')
+                toastr.error(data.responseJSON.detail)
+            }
+        });
+
+    });
+
+
+    function delMedia(id, rid) {
+        if (confirm('Удалить медиа?')) {
+            $.ajax({
+                type: "POST",
+                url: '/reviews/delMedia?media_id=' + id,
+                dataType: "json",
+                success: function (data) {
+                    var table = $('#dt_review_media').DataTable()
+                    document.getElementById('page_ldr').style.display = 'block'
+                    $.ajax({
+                        type: "GET",
+                        url: '/reviews/get?review_id=' + rid,
+                        dataType: "json",
+                        success: function (data) {
+                            table.clear()
+                            table.draw()
+                            table.rows.add(data.media).draw();
+                            document.getElementById('page_ldr').style.display = 'none'
+                        },
+                        error: function () {
+                            toastr.error('Ошибка обновления данных. Обновите страницу')
+                        }
+                    })
+                    toastr.success('Удалено')
+                    dt_refresh('dt_user_reviews', '/reviews/getOwned?org_id=' + org_id)
+                },
+                error: function () {
+                    toastr.error('Ошибка удаления. Обновите страницу')
+                }
+            })
+        }
+
     }
 
 
@@ -639,7 +782,6 @@
     function uploadXLSXReviews() {
 
         var b = document.getElementById('mass_btn')
-
 
         var f = new FormData();
         f.append('file', document.getElementById('mass_reviews').files[0]);
@@ -887,6 +1029,29 @@
                             <input name="default-radio-1" class="form-check-input" type="radio" value="3" id="esmr-4">
                             <label class="form-check-label" for="esmr-4">Большемерит</label>
                         </div>
+                    </div>
+                </div>
+                <form id="review_add_media" enctype="multipart/form-data">
+                    <div class="row">
+
+                        <input type="hidden" name="review_id" id="edit_review_id" value="">
+
+                        <div class="col-auto">
+                            <input type="file" accept=".jpeg, .png, .mov, .jpg, .webp, .mp4" class="form-control"
+                                   name="files"
+                                   multiple>
+                        </div>
+
+                        <div class="col-auto">
+                            <button class="btn btn-label-primary mb-3" id="re_m_se" type="submit">Загрузить</button>
+                        </div>
+
+                    </div>
+
+                </form>
+                <div class="mb-4 row">
+                    <div id="media_table">
+
                     </div>
                 </div>
 

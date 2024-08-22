@@ -280,7 +280,8 @@
             </div>
 
             <div class="offcanvas-body mx-0 flex-grow-0">
-                <p>Вы создадите организацию и будете её владельцем. При необходимости сможете приглашать других сотрудников для управления</p>
+                <p>Вы создадите организацию и будете её владельцем. При необходимости сможете приглашать других
+                    сотрудников для управления</p>
 
                 <form id="create-org-form">
                     <div class="mb-3">
@@ -309,7 +310,8 @@
             </div>
 
             <div class="offcanvas-body mx-0 flex-grow-0">
-                <p>Попросите владельца организации создать код приглашения и введите его в этом поле. После этого вы получите доступ к разрешённым владельцем разделам</p>
+                <p>Попросите владельца организации создать код приглашения и введите его в этом поле. После этого вы
+                    получите доступ к разрешённым владельцем разделам</p>
                 <form id="connect-org-form">
                     <div class="mb-3">
                         <label class="form-label" for="org-code">Код приглашения</label>
@@ -508,48 +510,52 @@
 
                 data.forEach(function (data) {
 
-                    var menuItem = $('<li>').addClass('menu-item');
-                    var menuItemA = $('<a>').attr({
-                        href: 'javascript:;',
-                        class: 'menu-link menu-toggle'
-                    })
-                    var menuIcon = $('<i>').addClass('menu-icon tf-icons bx bx-group');
-                    var menuTitle = $('<div>').addClass('text-truncate').attr('data-i18n', data).text(data.title);
-                    menuItemA.append(menuIcon, menuTitle);
+                    if (data.status == 1 || data.status == 2 || data.status == 3) {
+                        var menuItem = $('<li>').addClass('menu-item');
+                        var menuItemA = $('<a>').attr({
+                            href: 'javascript:;',
+                            class: 'menu-link menu-toggle'
+                        })
+                        var menuIcon = $('<i>').addClass('menu-icon tf-icons bx bx-group');
+                        var menuTitle = $('<div>').addClass('text-truncate').attr('data-i18n', data).text(data.title);
+                        menuItemA.append(menuIcon, menuTitle);
 
 
-                    var menuSub = $('<ul>').addClass('menu-sub');
+                        var menuSub = $('<ul>').addClass('menu-sub');
 
-                    orgMenu.forEach(function (orgMenu) {
+                        orgMenu.forEach(function (orgMenu) {
 
-                        var ItemHREF = '/organization/' + orgMenu.menuItemHref + '/' + data.id
-                        var menuSubItemClass = 'menu-item'
+                            var ItemHREF = '/organization/' + orgMenu.menuItemHref + '/' + data.id
+                            var menuSubItemClass = 'menu-item'
 
-                        if (ItemHREF === currentPage) {
-                            menuItem.addClass('open active')
-                            menuSubItemClass = 'menu-item active'
-                        }
+                            if (ItemHREF === currentPage) {
+                                menuItem.addClass('open active')
+                                menuSubItemClass = 'menu-item active'
+                            }
 
-                        var menuSubItem = $('<li>').addClass(menuSubItemClass);
+                            var menuSubItem = $('<li>').addClass(menuSubItemClass);
 
-                        var menuSubA = $('<a>').attr({
-                            href: ItemHREF,
-                            class: 'menu-link'
-                        });
+                            var menuSubA = $('<a>').attr({
+                                href: ItemHREF,
+                                class: 'menu-link'
+                            });
 
-                        var menuSubDiv = $('<div>').addClass('text-truncate').text(orgMenu.menuItemTitle);
+                            var menuSubDiv = $('<div>').addClass('text-truncate').text(orgMenu.menuItemTitle);
 
-                        menuSubA.append(menuSubDiv);
-                        menuSubItem.append(menuSubA);
-                        menuSub.append(menuSubItem)
+                            menuSubA.append(menuSubDiv);
+                            menuSubItem.append(menuSubA);
+                            menuSub.append(menuSubItem)
 
-                    })
+                        })
 
-                    menuItem.append(menuItemA, menuSub);
-                    orgsMine.after(menuItem);
+                        menuItem.append(menuItemA, menuSub);
+                        orgsMine.after(menuItem);
+
+                    }
+
+                })
 
 
-                });
                 document.getElementById('orgs1_ldr').style.display = 'none';
             },
 
@@ -583,7 +589,7 @@
 
                 data.forEach(function (data) {
 
-                    if (data.status === 1) {
+                    if ((data.status === 1) && (data.organization.status === 1 || data.organization.status === 2 || data.organization.status === 3)) {
 
                         var menuItem = $('<li>').addClass('menu-item');
                         var menuItemA = $('<a>').attr({
@@ -621,7 +627,7 @@
 
                         orgMenu.forEach(function (orgMenu) {
 
-                            var ItemHREF = '/organization/' + orgMenu.menuItemHref + '/' +data.organization.id
+                            var ItemHREF = '/organization/' + orgMenu.menuItemHref + '/' + data.organization.id
 
                             var menuSubItemClass = 'menu-item'
 

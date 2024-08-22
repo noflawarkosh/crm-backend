@@ -14,6 +14,7 @@ class OrdersOrderReadModel(OrdersOrderCreateModel):
     id: int
     description: Optional[str]
     status: int
+    dt_planed: datetime.datetime
     dt_ordered: Optional[datetime.datetime]
     dt_delivered: Optional[datetime.datetime]
     dt_collected: Optional[datetime.datetime]

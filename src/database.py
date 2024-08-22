@@ -9,7 +9,7 @@ from strings import *
 from config import (
     DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER,
     S3KID, S3KEY, S3BUCKET,
-    ACCEPTABLE_IMAGE_TYPES, ACCEPTABLE_FILE_TYPES
+    ACCEPTABLE_IMAGE_TYPES, ACCEPTABLE_FILE_TYPES, DEFAULT_MAX_FILE_SIZE
 )
 
 # PostgreSQL
@@ -48,13 +48,15 @@ class Repository:
         if len(file_name) == 0:
             raise Exception(string_storage_empty_filename)
 
-        if file_type not in ACCEPTABLE_FILE_TYPES.keys() \
-                and file_type not in ACCEPTABLE_IMAGE_TYPES.keys() \
-                or file_type not in acceptable_types:
+        if file_type not in acceptable_types:
             raise Exception(string_storage_wrong_filetype + f'. Только: {acceptable_types}')
 
-        if file.size > {**ACCEPTABLE_FILE_TYPES, **ACCEPTABLE_IMAGE_TYPES}[file_type]:
-            raise Exception(string_storage_max_size)
+        if file_type in {**ACCEPTABLE_FILE_TYPES, **ACCEPTABLE_IMAGE_TYPES}.keys():
+            if file.size > {**ACCEPTABLE_FILE_TYPES, **ACCEPTABLE_IMAGE_TYPES}[file_type]:
+                raise Exception(string_storage_max_size)
+        else:
+            if file.size > DEFAULT_MAX_FILE_SIZE:
+                raise Exception(string_storage_max_size)
 
         return file_name, file_type
 

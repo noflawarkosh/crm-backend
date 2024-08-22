@@ -280,6 +280,7 @@
             }
 
             var res = []
+
             for (var i in dayss) {
                 res.push({
                     'date': i,
@@ -301,6 +302,30 @@
                         data: 'date',
                         "render": function (data, type, row) {
                             return data
+                        }
+                    },
+                    {
+                        data: 'amount',
+                        "render": function (data, type, row) {
+
+                            var color = 'text-danger'
+                            if (data >= 0) {
+                                color = 'text-success'
+                            }
+
+                            return '<b class="text-nowrap ' + color + '">' + data.toLocaleString('ru-RU') + ' ₽</b>'
+                        }
+                    },
+                    {
+                        data: 'amount',
+                        "render": function (data, type, row) {
+
+                            var color = 'text-danger'
+                            if (data >= 0) {
+                                color = 'text-success'
+                            }
+
+                            return '<b class="text-nowrap ' + color + '">' + data.toLocaleString('ru-RU') + ' ₽</b>'
                         }
                     },
                     {
@@ -407,7 +432,9 @@
                         <thead>
                         <tr>
                             <th>Дата</th>
-                            <th>Расходы за день</th>
+                            <th>Расходы на товары</th>
+                            <th>Расходы на услуги</th>
+                            <th>Общие расходы</th>
                             <th>Действия</th>
                         </tr>
                         </thead>
