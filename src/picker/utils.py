@@ -41,7 +41,7 @@ async def parse_excel_lines(excel_lines, columns):
     ]
 
 
-async def refresh_active_and_collected(data, servers, is_test=True):
+async def refresh_active_and_collected(data, servers):
     # Caching data from db
     db_accounts = await Repository.get_records(OrdersAccountModel)
     db_addresses = await Repository.get_records(OrdersAddressModel)
@@ -503,6 +503,7 @@ async def refresh_active_and_collected(data, servers, is_test=True):
                         'dt_delivered': db_dt_delivered,
                         'dt_collected': db_dt_collected,
                         'account_id': db_account_id,
+                        'picker_status_id': status_model.id
                     }
                 )
 
@@ -669,11 +670,12 @@ async def refresh_active_and_collected(data, servers, is_test=True):
         if not item['success']:
             return {'accounts': logs_accounts, 'orders': logs_orders, 'payments': logs_payments}
 
-    records_to_db = [{'model': OrdersOrderModel, 'records': data_orders_to_db}]
+    records_to_db = [
+        {'model': OrdersOrderModel, 'records': data_orders_to_db},
+        {'model': BalanceHistoryModel,'records': data_payments_to_db},
+    ]
 
-    if not is_test:
-        pass
-        # await Repository.save_records(records_to_db)
+    await Repository.save_records(records_to_db)
 
     return {'accounts': logs_accounts, 'orders': logs_orders, 'payments': logs_payments}
 

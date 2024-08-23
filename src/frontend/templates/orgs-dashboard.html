@@ -221,7 +221,6 @@
                         render: function (data, type, row) {
 
 
-
                             var actions = ''
 
                             if (row.status === 1) {
@@ -592,7 +591,7 @@
 
                         level_modals += '<div class="modal fade" id="level_' + future.all[0].id + '" aria-labelledby="modalToggleLabel-' + future.all[0].id + '" tabindex="-1" style="display: none;"\n' +
                             '         aria-hidden="true">\n' +
-                            '        <div class="modal-dialog modal-dialog-centered modal">\n' +
+                            '        <div class="modal-dialog modal-dialog-centered">\n' +
                             '            <div class="modal-content">\n' +
                             '                <div class="modal-header">\n' +
                             '                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
@@ -706,7 +705,7 @@
 
                         level_modals += '<div class="modal fade" id="level_' + future.all[i].id + '" aria-labelledby="modalToggleLabelLevel-' + future.all[i].id + '"  style="display: none;"\n' +
                             '         aria-hidden="true">\n' +
-                            '        <div class="modal-dialog modal-dialog-centered modal">\n' +
+                            '        <div class="modal-dialog modal-dialog-centered ">\n' +
                             '            <div class="modal-content">\n' +
                             '                <div class="modal-header">\n' +
                             '                    <h5 class="modal-title" id="modalToggleLabelLevel-' + future.all[i].id + '"></h5>\n' +
@@ -946,7 +945,6 @@
     </div>
 </div>
 
-<div id="level_modals"></div>
 
 <div class="modal fade" id="modal_edit_member" style="display: none;" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
@@ -984,4 +982,7 @@
         </div>
     </div>
 </div>
+
+
+<div id="level_modals"></div>
 {% endblock %}

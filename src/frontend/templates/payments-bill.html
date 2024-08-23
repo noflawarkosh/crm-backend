@@ -3,6 +3,10 @@
 {% block js %}
 <script>
     function cancelBill() {
+        if (!confirm("Вы действительно хотите отменить пополнение?")) {
+            return
+        }
+
         const url = window.location.href;
 
         var arr = url.split('/')
@@ -107,6 +111,7 @@
                         '</span>\n' +
                         '</button>'
 
+
                     bill_buttons = bill_buttons + '' +
                         '<button class="btn btn-label-danger d-grid w-100 mb-3" onclick="cancelBill()" id="btn_cancel"' +
                         '<span class="d-flex align-items-center justify-content-center text-nowrap">' +
@@ -119,6 +124,20 @@
                 if (bill_buttons.length !== 0) {
                     document.getElementById('bill-buttons').innerHTML = bill_buttons
                     document.getElementById('div-buttons').style.display = 'block';
+
+                    if (data.source.id != 1 && data.status.id == 3) {
+                        document.getElementById('checkbox_confirm_div').style.display = 'block'
+                        document.getElementById('btn_approve').classList.add('disabled')
+
+                        $('#checkbox_confirm_div').on('change', function () {
+                            if (document.getElementById('checkbox_confirm').checked === true) {
+                                document.getElementById('btn_approve').classList.remove('disabled')
+                            } else {
+                                document.getElementById('btn_approve').classList.add('disabled')
+                            }
+
+                        })
+                    }
                 }
 
 
@@ -163,7 +182,9 @@
 
                 document.getElementById('bill-src-descr').innerText = data.source.description
 
-                document.getElementById('bill-total').innerText = data.amount + ' ₽'
+                document.getElementById('bill-total-1').innerText = data.amount.toLocaleString('ru-RU') + ' ₽'
+                document.getElementById('bill-total-2').innerText = data.penalty.toLocaleString('ru-RU') + ' ₽'
+                document.getElementById('bill-total-3').innerText = (data.amount + data.penalty).toLocaleString('ru-RU') + ' ₽'
                 document.getElementById('bill-status-bottom').innerHTML = bill_status
 
                 document.getElementById('div-full-card').style.display = 'flex';
@@ -198,7 +219,14 @@
                             <div class="d-flex svg-illustration mb-3 gap-2">
                                 <span class="app-brand-text demo text-body fw-bold">greedybear</span>
                             </div>
-                            <p class="mb-1">Payments service</p>
+                            <p class="mb-1">Выполните перевод по указанным реквизитам, а затем нажмите кнопку
+                                «Подтвердить перевод». Средства зачислятся на баланс после подтверждения получения
+                                администратором сервиса.</p>
+
+                            <p class="mt-3 mb-1">Осуществляйте перевод <b>строго</b> с банка физического лица. При
+                                переводе денежных
+                                средств напрямую с расчётного счёта ИП на баланс будет зачислена сумма на 13% меньше.
+                                Подтверждая перевод, вы принимаете эти условия.</p>
                         </div>
                         <div>
                             <h4 id="bill-id"></h4>
@@ -227,7 +255,7 @@
                             <p class="mb-1" id="bill-src-recipient"></p>
 
                             <b><p class="mb-1 mt-3" id="bill-src-number"></p>
-                            <p class="mb-1" id="bill-src-bill"></p></b>
+                                <p class="mb-1" id="bill-src-bill"></p></b>
 
                             <small class="mb-1 mt-3" id="bill-src-descr"></small>
 
@@ -239,11 +267,24 @@
                 <div class="card-body">
                     <div class="row p-sm-3 p-0">
                         <div class="col-xl-6 col-md-12 col-sm-5 col-12 mb-xl-0 mb-md-4 mb-sm-0 mb-4">
-                            <h6 class="pb-2">Сумма пополнения:</h6>
-
+                            <h6 class="pb-2">Поступит на кошелек:</h6>
                         </div>
                         <div class="col-xl-6 col-md-12 col-sm-7 col-12">
-                            <h6 class="pb-2" id="bill-total"></h6>
+                            <h6 class="pb-2" id="bill-total-1"></h6>
+
+                        </div>
+                        <div class="col-xl-6 col-md-12 col-sm-5 col-12 mb-xl-0 mb-md-4 mb-sm-0 mb-4">
+                            <h6 class="pb-2">Комиссия:</h6>
+                        </div>
+                        <div class="col-xl-6 col-md-12 col-sm-7 col-12">
+                            <h6 class="pb-2" id="bill-total-2"></h6>
+
+                        </div>
+                        <div class="col-xl-6 col-md-12 col-sm-5 col-12 mb-xl-0 mb-md-4 mb-sm-0 mb-4">
+                            <h6 class="pb-2">Необходимо перевести:</h6>
+                        </div>
+                        <div class="col-xl-6 col-md-12 col-sm-7 col-12">
+                            <h6 class="pb-2" id="bill-total-3"></h6>
                             <p class="mb-1" id="bill-status-bottom"></p>
 
                         </div>
@@ -256,7 +297,7 @@
                     <div class="row">
                         <div class="col-12">
                             <span class="fw-medium">Подсказка:</span>
-                            <span>выполните перевод по указанным реквизитам, а затем нажмите кнопку "Подтвердить перевод". Средства поступят на кошелек после подтверждения поулчения средств администратором сервиса. При выборе получателя <b>расчетный счет ИП/ЮЛ</b>, ожидайте прикрепления вложения с реквизитами счета. Вложение отобразится справа в виде кнопки "Скачать вложение"</span>
+                            <span>при выборе получателя <b>расчетный счет ИП/ЮЛ</b>, ожидайте прикрепления вложения с реквизитами счета. Вложение отобразится справа в виде кнопки "Скачать вложение"</span>
                         </div>
                     </div>
                 </div>
@@ -268,7 +309,17 @@
         <!-- Invoice Actions -->
         <div class="col-xl-3 col-md-4 col-12 invoice-actions" style="display: none" id="div-buttons">
             <div class="card">
-                <div class="card-body" id="bill-buttons"></div>
+                <div class="card-body">
+                    <div id="bill-buttons">
+
+                    </div>
+                    <div id="checkbox_confirm_div" class="form-check" style="display: none">
+                        <input class="form-check-input" type="checkbox" value="" id="checkbox_confirm">
+                        <label class="form-check-label" for="checkbox_confirm">
+                            <b>Я подтверждаю, что перевод был сделан с банковского счёта физического лица</b>
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -20,7 +20,7 @@ router = APIRouter(
 
 
 @router.post('/refreshOrders')
-async def refresh_orders(request: Request, session: AdminSessionModel = Depends(authed), is_test: bool = True):
+async def refresh_orders(request: Request, session: AdminSessionModel = Depends(authed)):
     data = dict(await request.form())
 
     servers = await Repository.get_records(
@@ -40,7 +40,7 @@ async def refresh_orders(request: Request, session: AdminSessionModel = Depends(
             raise HTTPException(status_code=400, detail=f'Отсутствует файл плана для {server.name}')
 
 
-    return await refresh_active_and_collected(data, servers, is_test)
+    return await refresh_active_and_collected(data, servers)
 
 
 

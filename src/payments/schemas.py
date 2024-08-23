@@ -58,6 +58,7 @@ class BalanceBillReadSchema(BalanceBillCreateSchema):
     status_id: int
     date: datetime.datetime
     media: Optional[str] = None
+    penalty: Optional[int] = None
 
     organization: Optional['OrganizationReadSchema']
     source: Optional['BalanceSourceSchema']

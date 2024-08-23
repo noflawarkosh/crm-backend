@@ -1,4 +1,5 @@
 import datetime
+import math
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -165,14 +166,21 @@ async def get_levels(org_id: int, session: UserSessionModel = Depends(authed)):
 @router.post('/createBill')
 async def create_organization(data: Annotated[BalanceBillCreateSchema, Depends()],
                               session: UserSessionModel = Depends(authed)):
-    await check_access(data.org_id, session.user.id, 32)
+    organization, membership = await check_access(data.org_id, session.user.id, 32)
 
+    if data.amount <= 0:
+        raise HTTPException(status_code=400, detail=string_400)
+
+    level, purchases = await current_prices(organization)
+    
     status_id = 3
+    penalty = 0
+
     if data.source_id == 1:
+        penalty = math.ceil(data.amount * level.price_percent_penalty / 100)
         status_id = 6
 
-
-    bill_id = await PaymentsRepository.create_bill({**data.model_dump(), 'status_id': status_id})
+    bill_id = await PaymentsRepository.create_bill({**data.model_dump(), 'status_id': status_id, 'penalty': penalty})
     return bill_id
 
 
@@ -397,8 +405,9 @@ async def create_organization(org_id: int, data: list[int], session: UserSession
 
 @router.get('/tasksCheckout')
 async def create_organization(org_id: int, date: datetime.date, session: UserSessionModel = Depends(authed)):
+
     if date < datetime.date.today():
-        raise HTTPException(status_code=403, detail=string_403)
+        raise HTTPException(status_code=403, detail=string_payments_wrong_date)
 
     organization, membership = await check_access(org_id, session.user.id, 32)
 

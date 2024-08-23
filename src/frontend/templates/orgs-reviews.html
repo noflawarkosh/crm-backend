@@ -122,6 +122,7 @@
                 method: 'get',
 
                 success: function (data) {
+                    var t_modals = ''
                     $('#dt_user_reviews').DataTable({
                         "data": data,
                         "paging": true,
@@ -172,16 +173,34 @@
                                 }
                             },
                             {
-                                "data": 'text',
-                                "render": function (data, type, row) {
-                                    if (data) {
-                                        return '<span >' + data + '</span>'
-                                    }
+                        "data": 'text',
+                        "render": function (data, type, row) {
+                            if (data) {
 
-                                    return '—'
-                                },
+                                var style = 'display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; text-overflow: ellipsis; line-height: 1.2em; max-height: 3.6em;'
 
-                            },
+                                t_modals += '<div class="modal fade" id="textExpand-' + row.id + '" aria-labelledby="textExpandLabel-' + row.id + '" tabindex="-1" style="display: none;"\n' +
+                                    '         aria-hidden="true">\n' +
+                                    '        <div class="modal-dialog modal-dialog-centered">\n' +
+                                    '            <div class="modal-content">\n' +
+                                    '                <div class="modal-header">\n' +
+                                    '                    <h5 class="modal-title" id="textExpandLabel-' + row.id + '">' + 'Текст отзыва' + '</h5>\n' +
+                                    '                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
+                                    '                </div>\n' +
+                                    '                <div class="modal-body"><p>' + data + '</p></div></div>' +
+                                    '\n' +
+                                    '            </div>\n' +
+                                    '        </div>\n' +
+                                    '    </div>'
+
+
+                                return '<span style="' + style + '">' + '<a href="##" data-bs-toggle="modal" data-bs-target="#textExpand-' + row.id + '"><i class="bx bx-window"></i></a> ' + data + '</span>'
+                            }
+
+                            return '—'
+                        },
+
+                    },
                             {
                                 "data": 'strict_match',
                                 "render": function (data, type, row) {
@@ -394,7 +413,7 @@
                         },
                         "order": [[0, "desc"]],
                     });
-
+                    document.getElementById('t-modals').innerHTML = t_modals
                     document.getElementById('prod-cntr').innerText = 'Всего: ' + data.length
                     document.getElementById('rvs-ldr').style.display = 'none';
                     document.getElementById('rvs-div').style.display = 'block';
@@ -414,7 +433,6 @@
             toastr.error('Ошибка загрузки списка')
         }
     })
-
 
 </script>
 
@@ -1061,4 +1079,5 @@
         </div>
     </div>
 </div>
+<div id="t-modals"></div>
 {% endblock %}

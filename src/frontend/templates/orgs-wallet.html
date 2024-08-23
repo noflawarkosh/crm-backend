@@ -25,7 +25,12 @@
 <script src="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.js') }}"></script>
 
 <!-- Create Bill -->
+
 <script>
+    var currentPage = window.location.pathname;
+    var parts = currentPage.split('/');
+    var Gorg_id = parts[parts.length - 1];
+
     document.getElementById('create-bill-form').addEventListener('submit', function (event) {
 
         event.preventDefault();
@@ -74,6 +79,8 @@
 
 <!-- Get Sources -->
 <script>
+    var CP = null
+
     $.ajax({
 
         url: '/payments/getActiveSources',
@@ -99,6 +106,52 @@
             toastr.error('Ошибка получения реквизитов')
         }
     });
+
+    $.ajax({
+        url: '/payments/currentLevel?org_id=' + Gorg_id,
+        type: 'GET',
+        success: function (data) {
+            CP = data.level.price_percent_penalty
+        }
+    })
+
+    function calcCheckout() {
+        var bs = document.getElementById('bill-source');
+        var am = document.getElementById('bill-amount');
+        var pr_1 = document.getElementById('pr_1');
+        var pr_2 = document.getElementById('pr_2');
+        var pr_3 = document.getElementById('pr_3');
+        var p = document.getElementById('precheck');
+
+        var ami = parseInt(am.value)
+
+        if (ami > 0) {
+            pr_1.innerText = ami + ' ₽'
+            if (bs.value == 1) {
+                var op = Math.ceil(am.value * CP / 100)
+
+                pr_2.innerText = op + ' ₽ (+' + CP + '%)'
+                pr_3.innerText = op + ami + ' ₽'
+            } else {
+                pr_2.innerText = 0 + ' ₽'
+                pr_3.innerText = am.value + ' ₽'
+            }
+
+            p.style.display = 'block'
+        } else {
+            p.style.display = 'none'
+        }
+
+    }
+
+    $('#bill-source').on('change', function () {
+        calcCheckout()
+    })
+
+    $('#bill-amount').on('keyup', function () {
+        calcCheckout()
+    })
+
 </script>
 
 <!-- Get Bills -->
@@ -135,7 +188,15 @@
                     {
                         data: 'amount',
                         "render": function (data, type, row) {
-                            return '<b>' + data.toLocaleString('ru-RU') + ' ₽</b>'
+
+                            var penalty = ''
+                            var tpa = data
+                            if (row.penalty > 0) {
+                                tpa = data + row.penalty
+                                penalty = '<small><b class="text-danger my-auto">' + row.penalty.toLocaleString('ru-RU') + ' ₽</b></small>'
+                            }
+
+                            return '<b>' + tpa.toLocaleString('ru-RU') + ' ₽ </b>' + penalty
                         }
                     },
                     {
@@ -261,8 +322,12 @@
                 document.getElementById('balance_alert').style.display = 'block';
                 document.getElementById('balance_alert').innerHTML = 'Необходимо пополнить баланс на сумму <b>' + (tt['total']).toLocaleString('ru-RU').toString().replace('-', '') + ' ₽</b> во избежание возникновения задолженности'
             }
-
+            console.log(data)
             var dayss = {}
+            var prods_2 = {}
+            var prods_3 = {}
+            var servs_2 = {}
+            var servs_3 = {}
 
             for (var i in data) {
 
@@ -270,10 +335,56 @@
 
                 if (!dayss[d]) {
                     dayss[d] = 0
+
+                }
+
+                if (!prods_2[d]) {
+                    prods_2[d] = 0
+
+                }
+
+                if (!prods_3[d]) {
+                    prods_3[d] = 0
+                }
+
+                if (!servs_2[d]) {
+                    servs_2[d] = 0
+                }
+
+                if (!servs_3[d]) {
+                    servs_3[d] = 0
                 }
 
                 if (data[i].action_id === 3) {
                     dayss[d] -= data[i]['amount']
+
+                    if (data[i].target !== null) {
+                        if (data[i].target.id === 1) {
+                            prods_3[d] -= data[i]['amount']
+                        }
+
+                        if (data[i].target.id === 2 || data[i].target.id === 3 || data[i].target.id === 4 ||data[i].target.id === 5 ||data[i].target.id === 6 ||data[i].target.id === 7) {
+                            servs_3[d] -= data[i]['amount']
+                        }
+
+                    }
+
+
+                }
+
+                if (data[i].action_id === 2) {
+                    dayss[d] -= data[i]['amount']
+
+                    if (data[i].target !== null) {
+                        if (data[i].target.id === 1) {
+                            prods_2[d] -= data[i]['amount']
+                        }
+
+                        if (data[i].target.id === 2 || data[i].target.id === 3 || data[i].target.id === 4 ||data[i].target.id === 5 ||data[i].target.id === 6 ||data[i].target.id === 7) {
+                            servs_2[d] -= data[i]['amount']
+                        }
+
+                    }
                 }
 
 
@@ -284,9 +395,19 @@
             for (var i in dayss) {
                 res.push({
                     'date': i,
-                    'amount': dayss[i]
+                    'amount': dayss[i],
+                    'prods_2': prods_2[i],
+                    'prods_3': prods_3[i],
+                    'servs_2': servs_2[i],
+                    'servs_3': servs_3[i],
                 })
             }
+
+
+
+
+
+
 
             $('#dt_user_history').DataTable({
                 "data": res,
@@ -305,27 +426,20 @@
                         }
                     },
                     {
-                        data: 'amount',
+                        data: 'prods',
                         "render": function (data, type, row) {
 
-                            var color = 'text-danger'
-                            if (data >= 0) {
-                                color = 'text-success'
-                            }
 
-                            return '<b class="text-nowrap ' + color + '">' + data.toLocaleString('ru-RU') + ' ₽</b>'
+                            return '<b class="text-nowrap text-danger">' + row.prods_3.toLocaleString('ru-RU') + ' ₽</b>' + '<b> / </b>' + '<b class="text-nowrap text-info">' + row.prods_2.toLocaleString('ru-RU') + ' ₽</b>'
                         }
                     },
                     {
-                        data: 'amount',
+                        data: 'servs',
                         "render": function (data, type, row) {
 
-                            var color = 'text-danger'
-                            if (data >= 0) {
-                                color = 'text-success'
-                            }
 
-                            return '<b class="text-nowrap ' + color + '">' + data.toLocaleString('ru-RU') + ' ₽</b>'
+
+                            return '<b class="text-nowrap text-danger">' + row.servs_3.toLocaleString('ru-RU') + ' ₽</b>' + '<b> / </b>' + '<b class="text-nowrap text-info">' + row.servs_2.toLocaleString('ru-RU') + ' ₽</b>'
                         }
                     },
                     {
@@ -348,7 +462,7 @@
 
                 ],
 
-                "order": [[0, "asc"]]
+                "order": [[0, "desc"]]
             });
 
             document.getElementById('hst-div').style.display = 'block';
@@ -511,6 +625,24 @@
                     </div>
                 </div>
 
+                <div class="mb-4" id="precheck" style="display: none">
+                    <ul class="list-unstyled mb-6">
+                        <li class="mb-2">
+                            <span class="h6 me-1">Поступит на кошелек:</span>
+                            <span id="pr_1"></span>
+                        </li>
+                        <li class="mb-2">
+                            <span class="h6 me-1">Комиссия:</span>
+                            <span id="pr_2"></span>
+                        </li>
+                        <li class="mb-2">
+                            <span class="h6 me-1">Итого к оплате:</span>
+                            <span id="pr_3"></span>
+                        </li>
+
+
+                    </ul>
+                </div>
                 <button type="submit" class="btn btn-primary">Создать</button>
             </form>
 

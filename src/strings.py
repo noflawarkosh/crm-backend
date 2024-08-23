@@ -72,3 +72,4 @@ string_products_max_tasks_per_day = 'Максимальное кол-во зад
 
 string_payments_no_levels = 'Схема расчета платежей не найдена'
 string_payments_not_enough_balance = 'Недостаточно средств на кошельке'
+string_payments_wrong_date = 'Нельзя оплачивать задачи на дни, раньше текущего'

@@ -83,6 +83,7 @@ class BalanceBillModel(Base):
     id: Mapped[pk]
     date: Mapped[dt]
     amount: Mapped[int]
+    penalty: Mapped[int | None]
     media: Mapped[str | None]
 
     # FK
