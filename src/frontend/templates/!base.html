@@ -738,6 +738,7 @@
                 $('#rb1').show()
                 $('#rb2').show()
                 $('#rb3').show()
+                $('[data-bs-toggle="tooltip"]').tooltip();
             },
             error: function () {
                 toastr.error('Ошибка обновления данных. Обновите страницу')

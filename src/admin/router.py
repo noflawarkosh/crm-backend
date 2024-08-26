@@ -111,6 +111,7 @@ tables_access = {
                 PickerServerModel.schedule,
                 PickerServerModel.contractors,
             ],
+            'order_by': [PickerServerModel.id.asc()]
         }
     ),
     'bills_full': (

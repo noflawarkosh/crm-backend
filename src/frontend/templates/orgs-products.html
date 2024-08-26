@@ -212,7 +212,9 @@
                                     var barcode = '' +
                                         '<div class="input-group input-group-sm" id="bc_div_' + size.id + '">\n' +
                                         '          <input id="bc_inp_' + size.id + '" class="form-control form-control-sm" type="text" placeholder="Не указан" value="' + bc_v + '">\n' +
-                                    '          <span class="input-group-text"><a href="javascript:saveBarcode(' + size.id + ')" id="bc_btn_' + size.id + '"><i class="bx bx-save"></i></a></span>\n' +
+                                    '          <span class="input-group-text"><a href="javascript:saveBarcode(' + size.id + ')" id="bc_btn_' + size.id + '"><i class="bx bx-save" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                        '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                        '                           data-bs-original-title="Сохранить"></i></a></span>\n' +
                                     '        </div>'
 
 
@@ -280,8 +282,12 @@
                             render: function (data, type, row) {
                                 var actions = ''
 
-                                actions += '<a href="javascript:disableProduct(' + row.id + ')"><i class="bx bx-x"></i></a>'
-                                actions += '<a href="javascript:refreshProduct(' + row.id + ')"><i class="bx bx-refresh"></i></a>'
+                                actions += '<a href="javascript:disableProduct(' + row.id + ')"><i class="bx bx-x" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                    '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                    '                           data-bs-original-title="Удалить"></i></a>'
+                                actions += '<a href="javascript:refreshProduct(' + row.id + ')"><i class="bx bx-refresh" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                    '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                    '                           data-bs-original-title="Обновить данные с WB"></i></a>'
 
                                 return actions
                             }
@@ -292,6 +298,7 @@
                 document.getElementById('size_modals').innerHTML = modal;
                 document.getElementById('prd-ldr').style.display = 'none';
                 document.getElementById('prd-div').style.display = 'block';
+                $('[data-bs-toggle="tooltip"]').tooltip();;
             },
 
             error: function (data) {
@@ -362,11 +369,15 @@
                            data-bs-toggle="offcanvas"
                            data-bs-target="#off-create-prod"
                            aria-controls="off-create-prod">
-                            <i class="bx bxs-plus-square"></i>
+                            <i class="bx bxs-plus-square" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                           data-bs-original-title="Добавить"></i>
                         </a>
                         <a href="javascript:var u = '/products/getOwned?org_id=' + org_id; dt_refresh('dt_user_products', u)"
                            id="rb">
-                            <i class="bx bx-refresh"></i>
+                            <i class="bx bx-refresh" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                           data-bs-original-title="Обновить"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="prd-ldr"></span>
                     </h5>

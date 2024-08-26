@@ -88,7 +88,10 @@ async def create_invitation(data: Annotated[OrganizationInvitationCreateSchema, 
 
     invitations = await Repository.get_records(
         OrganizationInvitationModel,
-        filters=[OrganizationInvitationModel.org_id == data.org_id]
+        filters=[
+            OrganizationInvitationModel.org_id == data.org_id,
+            OrganizationInvitationModel.expires > func.now(),
+        ]
     )
 
     if len(invitations) >= 5:

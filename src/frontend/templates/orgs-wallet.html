@@ -235,7 +235,9 @@
                     },
                     {
                         "render": function (data, type, row) {
-                            return '<a target="_blank" href="/bill/' + row.id + '"><i class="bx bx-show"></i></a>'
+                            return '<a target="_blank" href="/bill/' + row.id + '"><i class="bx bx-show" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                '                           data-bs-original-title="Подробнее"></i></a>'
                         }
                     }
 
@@ -245,6 +247,7 @@
             });
             document.getElementById('bls-div').style.display = 'block';
             document.getElementById('bls-ldr').style.display = 'none';
+            $('[data-bs-toggle="tooltip"]').tooltip();
         },
         error: function (data) {
             toastr.error('Ошибка загрузки счетов: ' + data.responseJSON.detail)
@@ -492,8 +495,8 @@
                             <h3 class="mb-0" id="ctr-2"></h3>
                             <small>Баланс </small>
                         </div>
-                        <span class="badge bg-label-success rounded-circle p-2">
-                            <i class="bx bx-smile bx-sm"></i>
+                        <span class="badge bg-label-secondary rounded-circle p-2">
+                            <i class="bx bx-credit-card-front bx-sm" ></i>
                         </span>
                     </div>
                 </div>
@@ -566,11 +569,15 @@
                            data-bs-toggle="offcanvas"
                            data-bs-target="#off-create-bill"
                            aria-controls="off-create-bill">
-                            <i class="bx bxs-plus-square"></i>
+                            <i class="bx bxs-plus-square" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                           data-bs-original-title="Создать"></i>
                         </a>
                         <a href="javascript:var u = '/payments/getOwnedBills?org_id=' + id; dt_refresh('dt_user_bills', u)"
                            id="rb1">
-                            <i class="bx bx-refresh"></i>
+                            <i class="bx bx-refresh" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                           data-bs-original-title="Обновить"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="bls-ldr"></span>
                     </h5>

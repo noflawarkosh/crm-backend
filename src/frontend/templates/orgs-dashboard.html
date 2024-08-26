@@ -188,7 +188,7 @@
                     },
                     {
                         render: function (data, type, row) {
-                            return '<a href="http://t.me/' + row.user.telegram + '">@' + row.user.telegram + '</a>'
+                            return '<a href="http://t.me/' + row.user.telegram + '">@' + row.user.telegram + ' <i class="bx bx-link-external"></i></a>'
                         }
                     },
                     {
@@ -225,15 +225,23 @@
 
                             if (row.status === 1) {
                                 var arg = row.level + ", '" + row.user.name + "', " + row.user.id
-                                actions += '<a href="javascript:" onclick="showMemeber(' + arg + ')" data-bs-toggle="modal" data-bs-target="#modal_edit_member"><i class="bx bx-edit-alt"></i></a>'
+                                actions += '<a href="javascript:" onclick="showMemeber(' + arg + ')" data-bs-toggle="modal" data-bs-target="#modal_edit_member"><i class="bx bx-edit-alt" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                    '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                    '                           data-bs-original-title="Изменить"></i></a>'
 
-                                actions += '<a href="javascript:kickUser(' + row.user.id + ')"><i class="bx bx-x"></i></a>'
+                                actions += '<a href="javascript:kickUser(' + row.user.id + ')"><i class="bx bx-x" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                    '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                    '                           data-bs-original-title="Выгнать"></i></a>'
                             }
 
                             if (row.status === 4) {
-                                actions += '<a href="javascript:unblockUser(' + row.user.id + ')"><i class="bx bx-check"></i></a>'
+                                actions += '<a href="javascript:unblockUser(' + row.user.id + ')"><i class="bx bx-check" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                    '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                    '                           data-bs-original-title="Разблокировать"></i></a>'
                             } else {
-                                actions += '<a href="javascript:blockUser(' + row.user.id + ')"><i class="bx bx-block"></i></a>'
+                                actions += '<a href="javascript:blockUser(' + row.user.id + ')"><i class="bx bx-block" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                    '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                    '                           data-bs-original-title="Заблокировать"></i></a>'
                             }
 
                             return actions
@@ -246,6 +254,7 @@
 
             document.getElementById('mem-ldr').style.display = 'none';
             document.getElementById('mem-div').style.display = 'block';
+            $('[data-bs-toggle="tooltip"]').tooltip();
         },
         error: function (data) {
             toastr.error('Ошибка загрузки участников: ' + data.responseJSON.detail)
@@ -428,8 +437,8 @@
             $('#dt_user_invitations').DataTable({
                 "data": data,
                 "paging": true,
-                "pageLength": 10,
-                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                "pageLength": 3,
+                "lengthMenu": [[3], [3]],
                 "searching": true,
                 "ordering": true,
 
@@ -467,7 +476,9 @@
                     {
                         render: function (data, type, row) {
                             var actions = ''
-                            actions += '<a href="javascript:disableInv(' + row.id + ')"><i class="bx bx-x"></i></a>'
+                            actions += '<a href="javascript:disableInv(' + row.id + ')"><i class="bx bx-x" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                '                           data-bs-original-title="Удалить"></i></a>'
                             return actions
                         }
                     },
@@ -476,7 +487,7 @@
                 "order": [[0, "desc"]]
             });
 
-
+            $('[data-bs-toggle="tooltip"]').tooltip();
             document.getElementById('inv-ldr').style.display = 'none';
             document.getElementById('inv-div').style.display = 'block';
         },
@@ -775,14 +786,14 @@
     }
 </style>
 
-<div class="container-xxl flex-grow-1" id="page_container">
+<div class="flex-grow-1" id="page_container">
     <div class="row">
-        <div class="col-lg-4">
+        <div class="col-lg-2">
             <div class="col-lg mb-md-0 mb-4" id="current_level">
 
             </div>
         </div>
-        <div class="col">
+        <div class="col-lg-3">
             <div class="card h-100">
                 <div class="card-header">
                     <h5 class="card-title mb-1" id="org-name">Организация
@@ -798,19 +809,21 @@
                 </div>
             </div>
         </div>
-    </div>
-    <div class="row mt-4">
         <div class="col">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-header">
                     <h5 class="card-title mb-1">Активные приглашения в организацию
                         <a href="javascript:" data-bs-toggle="offcanvas" data-bs-target="#off-create-invitation"
                            aria-controls="off-create-invitation">
-                            <i class="bx bxs-plus-square"></i>
+                            <i class="bx bxs-plus-square" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                               data-bs-original-title="Создать"></i>
                         </a>
                         <a href="javascript:var u = '/organizations/readInvitations?org_id=' + id; dt_refresh('dt_user_invitations', u)"
                            id="rb2">
-                            <i class="bx bx-refresh"></i>
+                            <i class="bx bx-refresh" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                               data-bs-original-title="Обновить"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="inv-ldr"></span>
                     </h5>
@@ -838,6 +851,7 @@
             </div>
         </div>
     </div>
+
     <div class="row mt-4">
         <div class="col">
             <div class="card">
@@ -845,7 +859,9 @@
                     <h5 class="card-title mb-1">Участники вашей организации
                         <a href="javascript:var u = '/organizations/readOrganizationMemberships?org_id=' + id; dt_refresh('dt_user_members', u)"
                            id="rb1">
-                            <i class="bx bx-refresh"></i>
+                            <i class="bx bx-refresh" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                               data-bs-original-title="Обновить"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="mem-ldr"></span>
                     </h5>

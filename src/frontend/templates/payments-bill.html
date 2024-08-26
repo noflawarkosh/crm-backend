@@ -182,9 +182,13 @@
 
                 document.getElementById('bill-src-descr').innerText = data.source.description
 
+                var pp = data.penalty
+                if (!data.penalty) {
+                    pp = 0
+                }
                 document.getElementById('bill-total-1').innerText = data.amount.toLocaleString('ru-RU') + ' ₽'
-                document.getElementById('bill-total-2').innerText = data.penalty.toLocaleString('ru-RU') + ' ₽'
-                document.getElementById('bill-total-3').innerText = (data.amount + data.penalty).toLocaleString('ru-RU') + ' ₽'
+                document.getElementById('bill-total-2').innerText = pp.toLocaleString('ru-RU') + ' ₽'
+                document.getElementById('bill-total-3').innerText = (data.amount + pp).toLocaleString('ru-RU') + ' ₽'
                 document.getElementById('bill-status-bottom').innerHTML = bill_status
 
                 document.getElementById('div-full-card').style.display = 'flex';
@@ -207,7 +211,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-xxl flex-grow-1 ">
+<div class="container-xxl ps-0 ms-0 flex-grow-1 ">
 
     <div class="row invoice-preview" id="div-full-card" style="display:none">
         <!-- Invoice -->

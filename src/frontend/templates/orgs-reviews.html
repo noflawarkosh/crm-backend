@@ -55,9 +55,9 @@
                             prod_title = prod_title.slice(0, 25) + '...'
                         }
 
-                        var optionText = prod_title
+                        var optionText = product.wb_article
                         var optionValue = size.id
-                        var optionDataSubtext = product.wb_article
+                        var optionDataSubtext = prod_title
 
                         var option = $('<option>').text(optionText).attr('data-subtext', optionDataSubtext).val(optionValue);
                         selectElement.append(option);
@@ -194,7 +194,9 @@
                                     '    </div>'
 
 
-                                return '<span style="' + style + '">' + '<a href="##" data-bs-toggle="modal" data-bs-target="#textExpand-' + row.id + '"><i class="bx bx-window"></i></a> ' + data + '</span>'
+                                return '<span style="' + style + '">' + '<a href="##" data-bs-toggle="modal" data-bs-target="#textExpand-' + row.id + '"><i class="bx bx-window" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                    '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                    '                           data-bs-original-title="Полный текст"></i></a> ' + data + '</span>'
                             }
 
                             return '—'
@@ -374,11 +376,15 @@
                                     var edit = ''
 
                                     if (row.status === 1) {
-                                        edit += '<a href="javascript:cancelReview(' + row['id'] + ', 5)"><i class="bx bx-x"></i></a>'
+                                        edit += '<a href="javascript:cancelReview(' + row['id'] + ', 5)"><i class="bx bx-x" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                            '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                            '                           data-bs-original-title="Отменить задачу"></i></a>'
                                         edit += '<a href="javascript:" onclick="editReview(' + row['id'] + ')"' +
                                             '                           data-bs-toggle="modal"' +
                                             '                           data-bs-target="#modal_edit_review">' +
-                                            '<i class="bx bx-edit-alt"></i>' +
+                                            '<i class="bx bx-edit-alt" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                            '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                            '                           data-bs-original-title="Изменить"></i>' +
                                             '</a>'
                                     }
                                     return edit
@@ -418,6 +424,7 @@
                     document.getElementById('rvs-ldr').style.display = 'none';
                     document.getElementById('rvs-div').style.display = 'block';
                     document.getElementById('v-modals').innerHTML = v_modals
+                    $('[data-bs-toggle="tooltip"]').tooltip();
                 },
                 error: function () {
 
@@ -845,17 +852,23 @@
                            data-bs-toggle="offcanvas"
                            data-bs-target="#off-create-prod"
                            aria-controls="off-create-prod">
-                            <i class="bx bxs-plus-square"></i>
+                            <i class="bx bxs-plus-square" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                           data-bs-original-title="Создать"></i>
                         </a>
                         <a href="javascript:"
                            data-bs-toggle="offcanvas"
                            data-bs-target="#off-mass-upload"
                            aria-controls="off-mass-upload">
-                            <i class="bx bx-list-plus"></i>
+                            <i class="bx bx-list-plus" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                           data-bs-original-title="Массовая загрузка"></i>
                         </a>
                         <a href="javascript:var u = '/reviews/getOwned?org_id=' + org_id; dt_refresh('dt_user_reviews', u)"
                            id="rb">
-                            <i class="bx bx-refresh"></i>
+                            <i class="bx bx-refresh" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                           data-bs-original-title="Обновить"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="rvs-ldr"></span>
                     </h5>
