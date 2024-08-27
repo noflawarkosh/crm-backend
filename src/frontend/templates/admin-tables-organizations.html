@@ -8,19 +8,27 @@
 <script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script>
 
-    function updateOrgStatus(org_id, status_id) {
+    function updateOrgStatus(org_id, status_id, server_id) {
         var texts = {
             1: 'Ожидает подтверждения',
             2: 'Активна',
             3: 'Приостановлена',
             4: 'Закрыта. Данная организация больше не будет отображаться в текущем списке'
         }
+
         if (confirm('Подвердите новый статус организации #ID = ' + org_id + ': ' + texts[status_id])) {
+
+            var pl = {id: org_id, status: status_id}
+
+
+            if (server_id !== null) {
+                pl.server_id = server_id
+            }
 
             $.ajax({
                 type: "POST",
                 url: '/admin/save',
-                data: JSON.stringify({organizations: [{id: org_id, status: status_id}]}),
+                data: JSON.stringify({organizations: [pl]}),
                 dataType: "json",
                 contentType: "application/json",
                 success: function () {
@@ -167,7 +175,10 @@
         success: function (data) {
 
             for (var i in data) {
-                INNS.push(data[i].inn)
+                if (!data[i].is_competitor) {
+                    INNS.push(data[i].inn)
+                }
+
             }
 
             $('#dt_orgs').DataTable({
@@ -180,7 +191,18 @@
 
                 columns: [
                     {data: 'id'},
-                    {data: 'title'},
+                    {
+                        data: 'title',
+                        render: function (data, type, row) {
+                            var color = ''
+
+                            if (row.is_competitor) {
+                                color = 'text-dark'
+                            }
+
+                            return '<span class="text-nowrap ' + color + '">' + data + '</span>'
+                        }
+                    },
                     {
                         data: 'inn',
                         render: function (data, type, row) {
@@ -188,6 +210,12 @@
                                 return '<span class="text-warning">' + data + ' <i class="bx bx-error"></i></span>'
                             }
                             return data
+                        }
+                    },
+                    {
+                        data: 'is_competitor',
+                        render: function (data, type, row) {
+                            return data? 'Да' : 'Нет'
                         }
                     },
                     {
@@ -247,7 +275,12 @@
                                 sp_confilct = '<span class="badge bg-label-warning">Конфликт ИНН</span>'
                             }
 
-                            return '<span class="me-2 badge bg-label-' + color + '">' + txt + '</span>' + sp_confilct
+                            var sp_comp = ''
+                            if (row.is_competitor) {
+                                sp_comp = '<span class="badge bg-label-secondary">Конкурент</span>'
+                            }
+
+                            return '<span class="me-2 badge bg-label-' + color + '">' + txt + '</span>' + sp_confilct + sp_comp
                         }
                     },
 
@@ -258,24 +291,24 @@
                             var edit = '<a target="_blank" href="/admin-tables/balances?org_id=' + row.id + '"><i class="bx bx-detail me-2"></i></a><a href="/admin-edit/organizations/' + row.id + '"><i class="bx bx-edit-alt"></i></a>'
 
                             if (data === 1) {
-                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>' +
-                                    '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ')"><i class="bx bx-block"></i></a>' +
-                                    '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 4 + ')"><i class="bx bx-x"></i></a>'
+                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ', 11)"><i class="bx bx-check"></i></a>' +
+                                    '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ', null)"><i class="bx bx-block"></i></a>' +
+                                    '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 4 + ', null)"><i class="bx bx-x"></i></a>'
 
                             }
 
                             if (data === 2) {
-                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ')"><i class="bx bx-block"></i></a>'
-                                    + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 4 + ')"><i class="bx bx-x"></i></a>'
+                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ', null)"><i class="bx bx-block"></i></a>'
+                                    + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 4 + ', null)"><i class="bx bx-x"></i></a>'
                             }
 
                             if (data === 3) {
-                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>'
-                                    + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 4 + ')"><i class="bx bx-x"></i></a>'
+                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ', null)"><i class="bx bx-check"></i></a>'
+                                    + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 4 + ', null)"><i class="bx bx-x"></i></a>'
                             }
 
                             if (data === 4) {
-                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ')"><i class="bx bx-check"></i></a>'
+                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ', null)"><i class="bx bx-check"></i></a>'
                             }
 
                         }
@@ -341,6 +374,7 @@
                             <th>#ID</th>
                             <th>Название</th>
                             <th>ИНН</th>
+                            <th>Конкурент</th>
                             <th>Контакты</th>
                             <th>Лимит баланса</th>
                             <th>Уровень</th>

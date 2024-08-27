@@ -56,8 +56,12 @@ async def check_access(org_id: int, user_id: int, level: int):
 @router.post('/createOrganization')
 async def create_organization(data: Annotated[OrganizationCreateSchema, Depends()],
                               session: UserSessionModel = Depends(authed)):
+    level_id = None
+    if data.is_competitor:
+        level_id = 1
+
     await Repository.save_records(
-        [{'model': OrganizationModel, 'records': [{**data.model_dump(), 'owner_id': session.user.id, 'status': 1, 'level_id': None}]}]
+        [{'model': OrganizationModel, 'records': [{**data.model_dump(), 'owner_id': session.user.id, 'status': 1, 'level_id': level_id}]}]
     )
 
 

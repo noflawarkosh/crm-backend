@@ -9,6 +9,7 @@ from auth.schemas import UserReadSchema
 class OrganizationCreateSchema(BaseModel):
     title: constr(max_length=200)
     inn: constr(min_length=10, max_length=12)
+    is_competitor: bool
 
 
 class OrganizationReadSchema(BaseModel):
@@ -18,6 +19,7 @@ class OrganizationReadSchema(BaseModel):
     owner: Optional['UserReadSchema']
     level_id: int | None
     status: int
+    is_competitor: bool
 
 
 # Membership

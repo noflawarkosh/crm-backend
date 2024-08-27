@@ -54,7 +54,7 @@
 </head>
 
 
-<body>
+<body id="page_body">
 <div class="layout-wrapper layout-content-navbar">
     <div class="layout-container">
 
@@ -101,6 +101,18 @@
                     </a>
                     <i class="bx bx-cloud-download" id="orgs2_ldr"></i>
                 </li>
+
+                <li class="menu-header small text-uppercase" id="orgs-competitors">
+                    <span class="menu-header-text" data-i18n="Конкуренты"></span>
+                    <a href="#" data-bs-toggle="offcanvas" data-bs-target="#off-competitors"
+                       aria-controls="off-competitors">
+                        <i class="bx bxs-plus-square" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                           data-bs-original-title="Добавить">
+                        </i>
+                    </a>
+                    <i class="bx bx-cloud-download" id="orgs3_ldr"></i>
+                </li>
             </ul>
         </aside>
 
@@ -117,7 +129,7 @@
                 </div>
 
                 <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
-
+                    <div id="topnavicons"></div>
                     <div class="navbar-nav align-items-center">
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="page_ldr"
                               style="display: none;"></span>
@@ -190,6 +202,7 @@
                         -->
                         <!-- User -->
                         <li class="nav-item navbar-dropdown dropdown-user dropdown">
+
 
                             <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);"
                                data-bs-toggle="dropdown">
@@ -324,6 +337,43 @@
         </div>
     </div>
 
+    <div class="mt-3">
+        <div class="offcanvas offcanvas-start" id="off-competitors">
+
+            <div class="offcanvas-header">
+                <h5 id="off-competitors-label" class="offcanvas-title">Добавление организации конкурента</h5>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                        aria-label="Закрыть"></button>
+            </div>
+
+            <div class="offcanvas-body mx-0 flex-grow-0"><p> Здесь вы можете добавить организацию в специальный раздел
+                по работе с конкурентами. </p>
+                <p>Обратите внимание, что применение такого метода манипулирования рейтингами конкурентов является
+                    недобросовестной практикой и может быть расценено как неправомерное действие и привести к правовым
+                    последствиям согласно действующему законодательству РФ</p>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" value="" id="terms_flag">
+                    <label class="form-check-label" for="terms_flag">
+                        Я ознакомлен (а) с законодательством РФ о защите деловой репутации и осознаю все связанные с
+                        этим риски
+                    </label>
+                </div>
+                <form id="competitors-org-form">
+                    <div class="mb-3">
+                        <label class="form-label" for="org-title">Название организации</label>
+                        <input type="text" class="form-control" id="competitors-org-title" placeholder="ИП Иванов">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="org-inn">ИНН</label>
+                        <input type="text" class="form-control" id="competitors-org-inn" placeholder="000000000000">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
 
     <!-- Overlay -->
     <div class="layout-overlay layout-menu-toggle"></div>
@@ -377,6 +427,7 @@
         };
 
         $('#org-inn').inputmask(innOptions);
+        $('#competitors-org-inn').inputmask(innOptions);
         $('#org-code').inputmask(codeOptions);
 
     });
@@ -410,6 +461,58 @@
         const url = new URL('/organizations/createOrganization', currentDomain);
         url.searchParams.append('title', titleInput.value);
         url.searchParams.append('inn', innInput.value);
+        url.searchParams.append('is_competitor', 'False');
+
+        $.ajax({
+            url: url,
+            method: 'post',
+            success: function () {
+                location.reload()
+            },
+            error: function (data) {
+
+                toastr.error(data.responseJSON.detail)
+                submitButton.classList.remove('disabled');
+            }
+        });
+
+    });
+</script>
+
+<script>
+    document.getElementById('competitors-org-form').addEventListener('submit', function (event) {
+
+        event.preventDefault();
+
+        var submitButton = document.querySelector('button[type="submit"]');
+        var tts = document.getElementById('terms_flag');
+        if (!tts.checked) {
+            toastr.error('Вы не ознакомлены с законодательством РФ о защите деловой репутации и осознаю все связанные с этим риски')
+            return
+        }
+
+        submitButton.classList.add('disabled');
+
+        const titleInput = document.getElementById('competitors-org-title');
+        const innInput = document.getElementById('competitors-org-inn');
+
+        if ((titleInput.value.length === 0)) {
+            toastr.error('Введите название организации')
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        if ((innInput.value.length === 0) || (innInput.value.length < 10) || (innInput.value.length > 12)) {
+            toastr.error('Длина ИНН составляет 10-12 символов. Текущая: ' + innInput.value.length)
+            submitButton.classList.remove('disabled');
+            return
+        }
+
+        const currentDomain = window.location.origin;
+        const url = new URL('/organizations/createOrganization', currentDomain);
+        url.searchParams.append('title', titleInput.value);
+        url.searchParams.append('inn', innInput.value);
+        url.searchParams.append('is_competitor', 'True');
 
         $.ajax({
             url: url,
@@ -491,6 +594,7 @@
     $(document).ready(function () {
 
         var orgsMine = $('#orgs-mine');
+        var orgsC = $('#orgs-competitors');
         var orgMenu = [
             {'menuItemTitle': 'Управление', 'menuItemHref': 'dashboard'},
             {'menuItemTitle': 'Товары', 'menuItemHref': 'products'},
@@ -510,53 +614,109 @@
 
                 data.forEach(function (data) {
 
-                    if (data.status == 1 || data.status == 2 || data.status == 3) {
-                        var menuItem = $('<li>').addClass('menu-item');
-                        var menuItemA = $('<a>').attr({
-                            href: 'javascript:;',
-                            class: 'menu-link menu-toggle'
-                        })
-                        var menuIcon = $('<i>').addClass('menu-icon tf-icons bx bx-group');
-                        var menuTitle = $('<div>').addClass('text-truncate').attr('data-i18n', data).text(data.title);
-                        menuItemA.append(menuIcon, menuTitle);
+                    if (data.is_competitor === false) {
 
 
-                        var menuSub = $('<ul>').addClass('menu-sub');
+                        if (data.status == 1 || data.status == 2 || data.status == 3) {
+                            var menuItem = $('<li>').addClass('menu-item');
+                            var menuItemA = $('<a>').attr({
+                                href: 'javascript:;',
+                                class: 'menu-link menu-toggle'
+                            })
+                            var menuIcon = $('<i>').addClass('menu-icon tf-icons bx bx-group');
+                            var menuTitle = $('<div>').addClass('text-truncate').attr('data-i18n', data).text(data.title);
+                            menuItemA.append(menuIcon, menuTitle);
 
-                        orgMenu.forEach(function (orgMenu) {
 
-                            var ItemHREF = '/organization/' + orgMenu.menuItemHref + '/' + data.id
-                            var menuSubItemClass = 'menu-item'
+                            var menuSub = $('<ul>').addClass('menu-sub');
 
-                            if (ItemHREF === currentPage) {
-                                menuItem.addClass('open active')
-                                menuSubItemClass = 'menu-item active'
-                            }
+                            orgMenu.forEach(function (orgMenu) {
 
-                            var menuSubItem = $('<li>').addClass(menuSubItemClass);
+                                var ItemHREF = '/organization/' + orgMenu.menuItemHref + '/' + data.id
+                                var menuSubItemClass = 'menu-item'
 
-                            var menuSubA = $('<a>').attr({
-                                href: ItemHREF,
-                                class: 'menu-link'
-                            });
+                                if (ItemHREF === currentPage) {
+                                    menuItem.addClass('open active')
+                                    menuSubItemClass = 'menu-item active'
+                                }
 
-                            var menuSubDiv = $('<div>').addClass('text-truncate').text(orgMenu.menuItemTitle);
+                                var menuSubItem = $('<li>').addClass(menuSubItemClass);
 
-                            menuSubA.append(menuSubDiv);
-                            menuSubItem.append(menuSubA);
-                            menuSub.append(menuSubItem)
+                                var menuSubA = $('<a>').attr({
+                                    href: ItemHREF,
+                                    class: 'menu-link'
+                                });
 
-                        })
+                                var menuSubDiv = $('<div>').addClass('text-truncate').text(orgMenu.menuItemTitle);
 
-                        menuItem.append(menuItemA, menuSub);
-                        orgsMine.after(menuItem);
+                                menuSubA.append(menuSubDiv);
+                                menuSubItem.append(menuSubA);
+                                menuSub.append(menuSubItem)
 
+                            })
+
+                            menuItem.append(menuItemA, menuSub);
+                            orgsMine.after(menuItem);
+
+                        }
+                    }
+
+                })
+
+
+                data.forEach(function (data) {
+
+                    if (data.is_competitor === true) {
+
+                        if (data.status == 1 || data.status == 2 || data.status == 3) {
+                            var menuItem = $('<li>').addClass('menu-item');
+                            var menuItemA = $('<a>').attr({
+                                href: 'javascript:;',
+                                class: 'menu-link menu-toggle'
+                            })
+                            var menuIcon = $('<i>').addClass('menu-icon tf-icons bx bx-trending-down');
+                            var menuTitle = $('<div>').addClass('text-truncate').attr('data-i18n', data).text(data.title);
+                            menuItemA.append(menuIcon, menuTitle);
+
+
+                            var menuSub = $('<ul>').addClass('menu-sub');
+
+                            orgMenu.forEach(function (orgMenu) {
+
+                                var ItemHREF = '/organization/' + orgMenu.menuItemHref + '/' + data.id
+                                var menuSubItemClass = 'menu-item'
+
+                                if (ItemHREF === currentPage) {
+                                    menuItem.addClass('open active')
+                                    menuSubItemClass = 'menu-item active'
+                                }
+
+                                var menuSubItem = $('<li>').addClass(menuSubItemClass);
+
+                                var menuSubA = $('<a>').attr({
+                                    href: ItemHREF,
+                                    class: 'menu-link'
+                                });
+
+                                var menuSubDiv = $('<div>').addClass('text-truncate').text(orgMenu.menuItemTitle);
+
+                                menuSubA.append(menuSubDiv);
+                                menuSubItem.append(menuSubA);
+                                menuSub.append(menuSubItem)
+
+                            })
+
+                            menuItem.append(menuItemA, menuSub);
+                            orgsC.after(menuItem);
+
+                        }
                     }
 
                 })
 
 
                 document.getElementById('orgs1_ldr').style.display = 'none';
+                document.getElementById('orgs3_ldr').style.display = 'none';
             },
 
             error: function (data) {
@@ -670,6 +830,34 @@
         });
 
     });
+
+</script>
+
+<!-- Get Current Org -->
+<script>
+    $(document).ready(function () {
+        var pname = window.location.pathname;
+        var currentPage = window.location.pathname;
+        var OrgID = pname.split('/')[3];
+
+        if (pname.includes('/organization')) {
+            $.ajax({
+                url: '/organizations/readOrganization?org_id=' + OrgID,
+                type: 'GET',
+                success: function (data) {
+                    if (data.is_competitor) {
+                        document.getElementById('page_body').style.background = 'rgb(239,239,239)'
+                        var tni = document.getElementById('topnavicons')
+                        tni.innerHTML = '<span class="badge bg-label-secondary me-2">COMPETITOR</span>'
+
+                         if (pname.includes('reviews')) {
+                             document.getElementById('rating').style.display = 'block'
+                         }
+                    }
+                }
+            })
+        }
+    })
 
 </script>
 

@@ -145,10 +145,17 @@
                             }
                         },
                         {
-                            render: function (data, type, row) {
-                                return '<span class="text-nowrap">' + row.organization.title + ' (' + row.organization.inn + ')' + '</span>'
+                        render: function (data, type, row) {
+
+                            var color = ''
+
+                            if (row.organization.is_competitor) {
+                                color = 'text-dark'
                             }
-                        },
+
+                            return '<span class="text-nowrap ' + color+ '">' + row.organization.title + ' (' + row.organization.inn + ')' + '</span>'
+                        }
+                    },
 
                     ],
                     "order": [[0, "desc"]],

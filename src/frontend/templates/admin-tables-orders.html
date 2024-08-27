@@ -212,9 +212,15 @@
                     },
 
                     {
-                        data: 'size',
                         render: function (data, type, row) {
-                            return '<span class="text-nowrap">' + data.product.organization.title + ' (' + data.product.organization.inn + ')' + '</span>'
+
+                            var color = ''
+
+                            if (row.size.product.organization.is_competitor) {
+                                color = 'text-dark'
+                            }
+
+                            return '<span class="text-nowrap ' + color+ '">' + row.size.product.organization.title + ' (' + row.size.product.organization.inn + ')' + '</span>'
                         }
                     },
 

@@ -18,6 +18,7 @@ class OrganizationModel(Base):
     inn: Mapped[str]
     status: Mapped[int]
     created_at: Mapped[dt]
+    is_competitor: Mapped[bool] = mapped_column(default=False)
     balance_limit: Mapped[int | None] = mapped_column(default=-1000)
 
     server_id: Mapped[int | None] = mapped_column(

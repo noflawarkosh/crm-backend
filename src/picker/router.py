@@ -2,7 +2,6 @@ import datetime
 
 from fastapi import APIRouter, Depends, Response, Request, HTTPException, UploadFile, File
 
-
 from admin.models import AdminSessionModel
 from admin.router import authed
 
@@ -39,9 +38,11 @@ async def refresh_orders(request: Request, session: AdminSessionModel = Depends(
         if not data.get(f'plan-{server.id}', None) or data.get(f'plan-{server.id}') == 'undefined':
             raise HTTPException(status_code=400, detail=f'Отсутствует файл плана для {server.name}')
 
+    try:
+        return await refresh_active_and_collected(data, servers)
 
-    return await refresh_active_and_collected(data, servers)
-
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'{str(e)}')
 
 
 @router.post('/generatePlan')
@@ -63,7 +64,6 @@ async def generate_plan(request: Request, session: AdminSessionModel = Depends(a
 
 @router.post('/generatePlan2')
 async def generate_plan(date: datetime.date, request: Request, session: AdminSessionModel = Depends(authed), ):
-
     servers = await Repository.get_records(
         PickerServerModel,
         filters=[PickerServerModel.is_active],
@@ -71,5 +71,3 @@ async def generate_plan(date: datetime.date, request: Request, session: AdminSes
     )
 
     await generate_plan_xlsx_2(servers, date)
-
-

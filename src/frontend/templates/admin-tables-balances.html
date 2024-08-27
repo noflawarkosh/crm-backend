@@ -18,9 +18,10 @@
     const org_id = params.get('org_id')
 
     $.ajax({
-        url: '/admin/get/organizations_full?id=' + org_id,
+        url: '/admin/get/organizations_full_forced?id=' + org_id,
         type: 'GET',
         success: function (data) {
+
             if (data.length !== 1) {
                 toastr.error('Организация не нейдена')
             }
@@ -133,7 +134,8 @@
             var st = {
                 1: 'Ожидает подтверждение',
                 2: 'Активна',
-                3: 'Приостановлена'
+                3: 'Приостановлена',
+                4: 'Удалена'
             }
 
             var telegram = ''
@@ -160,6 +162,7 @@
             document.getElementById('status').innerHTML = st[data.status];
             document.getElementById('created_at').innerHTML = moment(data.created_at).format('DD.MM.YYYY');
             document.getElementById('server_id').innerHTML = server;
+            document.getElementById('is_competitor').innerHTML = data.is_competitor ? 'Да' : 'Нет';
             document.getElementById('level_id').innerHTML = level;
         }
     })
@@ -683,6 +686,10 @@
                             <li class="mb-2">
                                 <span class="h6 me-1">Сервер:</span>
                                 <span id="server_id"></span>
+                            </li>
+                            <li class="mb-2">
+                                <span class="h6 me-1">Конкурент:</span>
+                                <span id="is_competitor"></span>
                             </li>
 
 

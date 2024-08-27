@@ -538,6 +538,20 @@ async def refresh_active_and_collected(data, servers):
                 )
                 continue
 
+            if not line['status']:
+                logs_orders.append(
+                    {
+                        'target': line['sid'],
+                        'success': False,
+                        'detail': 'Не указан статус заказа',
+                        'value': line['status'],
+                        'line': line['line_number'],
+                        'orders_type': 'plan',
+                        'server': server.name,
+                    }
+                )
+                continue
+
             if 'Все артикулы заказаны' not in line['status'] and line['sid'] not in processed_orders:
 
                 query = df_orders.query(f"id == {line['sid']}")

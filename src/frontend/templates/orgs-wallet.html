@@ -325,12 +325,13 @@
                 document.getElementById('balance_alert').style.display = 'block';
                 document.getElementById('balance_alert').innerHTML = 'Необходимо пополнить баланс на сумму <b>' + (tt['total']).toLocaleString('ru-RU').toString().replace('-', '') + ' ₽</b> во избежание возникновения задолженности'
             }
-            console.log(data)
+
             var dayss = {}
             var prods_2 = {}
             var prods_3 = {}
             var servs_2 = {}
             var servs_3 = {}
+            var dayssF = {}
 
             for (var i in data) {
 
@@ -338,7 +339,10 @@
 
                 if (!dayss[d]) {
                     dayss[d] = 0
+                }
 
+                if (!dayssF[d]) {
+                    dayssF[d] = 0
                 }
 
                 if (!prods_2[d]) {
@@ -376,7 +380,7 @@
                 }
 
                 if (data[i].action_id === 2) {
-                    dayss[d] -= data[i]['amount']
+                    dayssF[d] += data[i]['amount']
 
                     if (data[i].target !== null) {
                         if (data[i].target.id === 1) {
@@ -399,6 +403,7 @@
                 res.push({
                     'date': i,
                     'amount': dayss[i],
+                    'freezed': dayssF[i],
                     'prods_2': prods_2[i],
                     'prods_3': prods_3[i],
                     'servs_2': servs_2[i],
@@ -449,12 +454,7 @@
                         data: 'amount',
                         "render": function (data, type, row) {
 
-                            var color = 'text-danger'
-                            if (data >= 0) {
-                                color = 'text-success'
-                            }
-
-                            return '<b class="text-nowrap ' + color + '">' + data.toLocaleString('ru-RU') + ' ₽</b>'
+                            return '<b class="text-nowrap text-danger">' + row.amount.toLocaleString('ru-RU') + ' ₽</b>' + '<b> / </b>' + '<b class="text-nowrap text-info">' + row.freezed.toLocaleString('ru-RU') + ' ₽</b>'
                         }
                     },
                     {

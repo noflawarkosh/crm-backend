@@ -173,36 +173,36 @@
                                 }
                             },
                             {
-                        "data": 'text',
-                        "render": function (data, type, row) {
-                            if (data) {
+                                "data": 'text',
+                                "render": function (data, type, row) {
+                                    if (data) {
 
-                                var style = 'display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; text-overflow: ellipsis; line-height: 1.2em; max-height: 3.6em;'
+                                        var style = 'display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; text-overflow: ellipsis; line-height: 1.2em; max-height: 3.6em;'
 
-                                t_modals += '<div class="modal fade" id="textExpand-' + row.id + '" aria-labelledby="textExpandLabel-' + row.id + '" tabindex="-1" style="display: none;"\n' +
-                                    '         aria-hidden="true">\n' +
-                                    '        <div class="modal-dialog modal-dialog-centered">\n' +
-                                    '            <div class="modal-content">\n' +
-                                    '                <div class="modal-header">\n' +
-                                    '                    <h5 class="modal-title" id="textExpandLabel-' + row.id + '">' + 'Текст отзыва' + '</h5>\n' +
-                                    '                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
-                                    '                </div>\n' +
-                                    '                <div class="modal-body"><p>' + data + '</p></div></div>' +
-                                    '\n' +
-                                    '            </div>\n' +
-                                    '        </div>\n' +
-                                    '    </div>'
+                                        t_modals += '<div class="modal fade" id="textExpand-' + row.id + '" aria-labelledby="textExpandLabel-' + row.id + '" tabindex="-1" style="display: none;"\n' +
+                                            '         aria-hidden="true">\n' +
+                                            '        <div class="modal-dialog modal-dialog-centered">\n' +
+                                            '            <div class="modal-content">\n' +
+                                            '                <div class="modal-header">\n' +
+                                            '                    <h5 class="modal-title" id="textExpandLabel-' + row.id + '">' + 'Текст отзыва' + '</h5>\n' +
+                                            '                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
+                                            '                </div>\n' +
+                                            '                <div class="modal-body"><p>' + data + '</p></div></div>' +
+                                            '\n' +
+                                            '            </div>\n' +
+                                            '        </div>\n' +
+                                            '    </div>'
 
 
-                                return '<span style="' + style + '">' + '<a href="##" data-bs-toggle="modal" data-bs-target="#textExpand-' + row.id + '"><i class="bx bx-window" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
-                                    '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
-                                    '                           data-bs-original-title="Полный текст"></i></a> ' + data + '</span>'
-                            }
+                                        return '<span style="' + style + '">' + '<a href="##" data-bs-toggle="modal" data-bs-target="#textExpand-' + row.id + '"><i class="bx bx-window" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                            '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                            '                           data-bs-original-title="Полный текст"></i></a> ' + data + '</span>'
+                                    }
 
-                            return '—'
-                        },
+                                    return '—'
+                                },
 
-                    },
+                            },
                             {
                                 "data": 'strict_match',
                                 "render": function (data, type, row) {
@@ -236,6 +236,16 @@
                                         }
                                     }
                                     return '<span class="text-nowrap">' + cell + '</span>'
+                                }
+                            },
+                            {
+                                "data": 'stars',
+                                "render": function (data, type, row) {
+                                    var cell = '—'
+                                    if (data != null) {
+                                        return '<span class="text-nowrap">' + data + '</span>'
+                                    }
+                                    return cell
                                 }
                             },
                             {
@@ -466,8 +476,18 @@
         var ws_r = !!ws.checked;
         var ws2 = document.getElementById('is_express')
         var ws_ex = !!ws2.checked;
+
+        var radioButtons2 = document.querySelectorAll('input[name="default-radio-2"]');
+        for (var i = 0; i < radioButtons2.length; i++) {
+            if (radioButtons2[i].checked) {
+                var rate = radioButtons2[i].value;
+                break;
+            }
+        }
+
+
         var radioButtons = document.querySelectorAll('input[name="default-radio-1"]');
-        for (var i = 0; i < radioButtons.length; i++) {
+        for (i = 0; i < radioButtons.length; i++) {
             if (radioButtons[i].checked) {
                 var mtchid = radioButtons[i].value;
                 break;
@@ -488,6 +508,7 @@
         url.searchParams.append('match', mtchid);
         url.searchParams.append('strict_match', ws_r);
         url.searchParams.append('is_express', ws_ex);
+        url.searchParams.append('stars', rate);
 
 
         if (txt != '') {
@@ -531,6 +552,12 @@
         var re_esmr_2 = document.getElementById('esmr-2')
         var re_esmr_3 = document.getElementById('esmr-3')
         var re_esmr_4 = document.getElementById('esmr-4')
+
+        var re_stars1 = document.getElementById('Estars-1')
+        var re_stars5 = document.getElementById('Estars-5')
+
+        var re_div_stars = document.getElementById('Erating')
+
         var re_match_size_edit = document.getElementById('match_size_edit')
         var re_rev_edit_media = document.getElementById('rev_edit_media')
         var media_table = document.getElementById('media_table')
@@ -539,125 +566,148 @@
         m_body.style.display = 'none'
         m_title.innerText = 'Получение данных отзыва ...'
 
-
         $.ajax({
-            url: '/reviews/get?review_id=' + id,
+            url: '/organizations/readOrganization?org_id=' + org_id,
             type: 'GET',
+            success: function (o) {
 
-            success: function (data) {
-
-                // default values
-                var re_media_list = ''
-                re_review_id.value = ''
-                re_prod.innerText = ''
-                re_text.value = ''
-                re_m_flag.checked = false
-                re_e_flag.checked = false
-                re_esmr_1.checked = false
-                re_esmr_2.checked = false
-                re_esmr_3.checked = false
-                re_esmr_4.checked = false
-                re_match_size_edit.style.display = 'none'
-
-                // setting data values
-                re_review_id.value = data.id
-
-                var re_avatar_src = "{{ url_for('static', path='assets/img/avatars/def-product.jpg') }}"
-                if (data.size.product.media !== null) {
-                    re_avatar_src = 'https://storage.yandexcloud.net/greedybear/' + data.size.product.media
-                }
-                var re_size_name = ''
-                if (data.size.wb_size_name !== null) {
-                    re_size_name = ' — ' + data.size.wb_size_name
-                }
-                if (data.size.wb_size_origName !== null) {
-                    re_size_name = ' — ' + data.size.wb_size_origName
-                }
-                re_prod.innerHTML = '<div class="avatar-wrapper">\n' +
-                    '                            <div class="avatar avatar me-2 rounded-2 bg-label-secondary">\n' +
-                    '                                <img src="' + re_avatar_src + '">\n' +
-                    '                            </div>\n' +
-                    '                        </div>\n' +
-                    '                        <div class="d-flex flex-column">\n' +
-                    '                            <h6 class="text-body text-nowrap mb-0">\n' + data.size.product.wb_title + re_size_name +
-                    '                            </h6>\n' +
-                    '                            <small class="text-muted text-truncate d-none d-sm-block">' + data.size.product.wb_article + '</small>\n' +
-                    '                        </div>'
-
-                re_text.value = data.text
-
-                re_m_flag.checked = data.strict_match == true;
-                re_e_flag.checked = data.is_express == true;
-                if (data.match !== null) {
-                    re_match_size_edit.style.display = 'block'
-                    re_esmr_1.checked = data.match === 0;
-                    re_esmr_2.checked = data.match === 1;
-                    re_esmr_3.checked = data.match === 2;
-                    re_esmr_4.checked = data.match === 3;
+                var is_c = false
+                re_div_stars.style.display = 'none'
+                if (o.is_competitor) {
+                    is_c = true
+                    re_div_stars.style.display = 'block'
                 }
 
+                $.ajax({
+                    url: '/reviews/get?review_id=' + id,
+                    type: 'GET',
 
-                media_table.innerHTML = '<table id="dt_review_media" class="datatables-ajax table table-bordered dataTable no-footer">\n' +
-                    '                            <thead>\n' +
-                    '                            <tr>\n' +
-                    '                                <th>Медиа</th>\n' +
-                    '                                <th></th>\n' +
-                    '                            </tr>\n' +
-                    '                            </thead>\n' +
-                    '                        </table>'
+                    success: function (data) {
 
-                $('#dt_review_media').DataTable({
-                    "data": data.media,
-                    "paging": true,
-                    "pageLength": 3,
-                    "lengthMenu": [[3], [3]],
-                    "searching": true,
-                    "ordering": true,
-                    autoWidth: false,
+                        // default values
+                        var re_media_list = ''
+                        re_review_id.value = ''
+                        re_prod.innerText = ''
+                        re_text.value = ''
+                        re_m_flag.checked = false
+                        re_e_flag.checked = false
+                        re_esmr_1.checked = false
+                        re_esmr_2.checked = false
+                        re_esmr_3.checked = false
+                        re_esmr_4.checked = false
+                        re_stars5.checked = false
+                        re_stars1.checked = false
+                        re_match_size_edit.style.display = 'none'
 
-                    "columns": [
-                        {
-                            render: function (data, type, row) {
-                                var ftype = row.media.split('.')[1].toLowerCase()
+                        // setting data values
+                        re_review_id.value = data.id
 
-                                if (ftype === 'mov' || ftype === 'mp4') {
-                                    return '<a href="##" data-bs-toggle="modal" data-bs-target="#modalToggle-' + row.id + '">' +
-                                        '<div class="avatar-wrapper">' +
-                                        '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
-                                        '<i class="bx bx-play"></i>' +
-                                        '</div></div></a>'
+                        var re_avatar_src = "{{ url_for('static', path='assets/img/avatars/def-product.jpg') }}"
+                        if (data.size.product.media !== null) {
+                            re_avatar_src = 'https://storage.yandexcloud.net/greedybear/' + data.size.product.media
+                        }
+                        var re_size_name = ''
+                        if (data.size.wb_size_name !== null) {
+                            re_size_name = ' — ' + data.size.wb_size_name
+                        }
+                        if (data.size.wb_size_origName !== null) {
+                            re_size_name = ' — ' + data.size.wb_size_origName
+                        }
 
-                                } else {
+                        re_prod.innerHTML = '<div class="avatar-wrapper">\n' +
+                            '                            <div class="avatar avatar me-2 rounded-2 bg-label-secondary">\n' +
+                            '                                <img src="' + re_avatar_src + '">\n' +
+                            '                            </div>\n' +
+                            '                        </div>\n' +
+                            '                        <div class="d-flex flex-column">\n' +
+                            '                            <h6 class="text-body text-nowrap mb-0">\n' + data.size.product.wb_title + re_size_name +
+                            '                            </h6>\n' +
+                            '                            <small class="text-muted text-truncate d-none d-sm-block">' + data.size.product.wb_article + '</small>\n' +
+                            '                        </div>'
 
-                                    var mu = 'https://storage.yandexcloud.net/greedybear/' + row.media.split('.')[0] + '.webp'
-                                    return '' +
-                                        '<div class="avatar-wrapper">' +
-                                        '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
-                                        '<a href="' + mu + '" target="_blank"><img src="' + mu + '" class="rounded-2"></a>' +
-                                        '</div>\<' +
-                                        '/div>'
-                                }
-                            }
-                        },
-                        {
-                            "render": function (data, type, row) {
-                                return '<a href="javascript:delMedia(' + row.id + ', ' + RID + ')">удалить</a>'
-                            }
-                        },
-                    ],
-                    "order": [[0, "desc"]],
-                })
+                        re_text.value = data.text
 
-                m_title.innerText = 'Редактирование отзыва #' + data.id
-                document.getElementById('edit_review_id').value = data.id
-                m_body.style.display = 'block'
-            },
+                        re_m_flag.checked = data.strict_match == true;
+                        re_e_flag.checked = data.is_express == true;
 
-            error: function (data) {
-                toastr.error('Ошибка загрузки данных отзыва. Обновите страницу и повторите попытку')
-                toastr.error(data.responseJSON.detail)
+                        if (data.match !== null) {
+                            re_match_size_edit.style.display = 'block'
+                            re_esmr_1.checked = data.match === 0;
+                            re_esmr_2.checked = data.match === 1;
+                            re_esmr_3.checked = data.match === 2;
+                            re_esmr_4.checked = data.match === 3;
+                        }
+
+                        re_stars5.checked = data.stars === 5;
+                        re_stars1.checked = data.stars === 1;
+
+                        media_table.innerHTML = '<table id="dt_review_media" class="datatables-ajax table table-bordered dataTable no-footer">\n' +
+                            '                            <thead>\n' +
+                            '                            <tr>\n' +
+                            '                                <th>Медиа</th>\n' +
+                            '                                <th></th>\n' +
+                            '                            </tr>\n' +
+                            '                            </thead>\n' +
+                            '                        </table>'
+
+                        $('#dt_review_media').DataTable({
+                            "data": data.media,
+                            "paging": true,
+                            "pageLength": 3,
+                            "lengthMenu": [[3], [3]],
+                            "searching": true,
+                            "ordering": true,
+                            autoWidth: false,
+
+                            "columns": [
+                                {
+                                    render: function (data, type, row) {
+                                        var ftype = row.media.split('.')[1].toLowerCase()
+
+                                        if (ftype === 'mov' || ftype === 'mp4') {
+                                            return '<a href="##" data-bs-toggle="modal" data-bs-target="#modalToggle-' + row.id + '">' +
+                                                '<div class="avatar-wrapper">' +
+                                                '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
+                                                '<i class="bx bx-play"></i>' +
+                                                '</div></div></a>'
+
+                                        } else {
+
+                                            var mu = 'https://storage.yandexcloud.net/greedybear/' + row.media.split('.')[0] + '.webp'
+                                            return '' +
+                                                '<div class="avatar-wrapper">' +
+                                                '<div class="avatar me-2 rounded-2 bg-label-secondary">' +
+                                                '<a href="' + mu + '" target="_blank"><img src="' + mu + '" class="rounded-2"></a>' +
+                                                '</div>\<' +
+                                                '/div>'
+                                        }
+                                    }
+                                },
+                                {
+                                    "render": function (data, type, row) {
+                                        return '<a href="javascript:delMedia(' + row.id + ', ' + RID + ')">удалить</a>'
+                                    }
+                                },
+                            ],
+                            "order": [[0, "desc"]],
+                        })
+
+                        m_title.innerText = 'Редактирование отзыва #' + data.id
+                        document.getElementById('edit_review_id').value = data.id
+                        m_body.style.display = 'block'
+                    },
+
+                    error: function (data) {
+                        toastr.error('Ошибка загрузки данных отзыва. Обновите страницу и повторите попытку')
+                        toastr.error(data.responseJSON.detail)
+                    }
+                });
+
+
             }
-        });
+        })
+
+
     }
 
 
@@ -762,6 +812,10 @@
         var re_esmr_2 = document.getElementById('esmr-2')
         var re_esmr_3 = document.getElementById('esmr-3')
         var re_esmr_4 = document.getElementById('esmr-4')
+
+        var re_stars1 = document.getElementById('Estars-1')
+        var re_stars5 = document.getElementById('Estars-5')
+
         var re_match_size_edit = document.getElementById('match_size_edit')
         var re_rev_edit_media = document.getElementById('rev_edit_media')
         var re_sb = document.getElementById('re_sb')
@@ -770,8 +824,11 @@
         re_sb.classList.add('disabled')
 
         var XV = null;
+        var XR = null;
+
         var re_m_flag_v = !!re_m_flag.checked;
         var re_e_flag_v = !!re_e_flag.checked;
+
         if (re_esmr_1.checked) {
             XV = 0;
         } else if (re_esmr_2.checked) {
@@ -782,12 +839,24 @@
             XV = 3;
         }
 
-        if (XV == null) {
+        if (re_stars1.checked) {
+            XR = 1;
+        } else if (re_stars5.checked) {
+            XR = 5;
+        }
+
+        if (XV === null) {
             toastr.error('Выберите соответствие')
+            return
+        }
+
+        if (XR === null) {
+            toastr.error('Выберите соответствие')
+            return
         }
 
         $.ajax({
-            url: '/reviews/update?id=' + re_review_id.value + '&strict_match=' + re_m_flag_v + '&match=' + XV + '&text=' + re_text.value + '&is_express=' + re_e_flag_v,
+            url: '/reviews/update?id=' + re_review_id.value + '&strict_match=' + re_m_flag_v + '&match=' + XV + '&text=' + re_text.value + '&is_express=' + re_e_flag_v + '&stars=' + XR,
             type: 'POST',
             success: function () {
                 toastr.success('Изменения сохранены')
@@ -853,22 +922,22 @@
                            data-bs-target="#off-create-prod"
                            aria-controls="off-create-prod">
                             <i class="bx bxs-plus-square" data-bs-toggle="tooltip" data-bs-offset="0,8"
-                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
-                           data-bs-original-title="Создать"></i>
+                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                               data-bs-original-title="Создать"></i>
                         </a>
                         <a href="javascript:"
                            data-bs-toggle="offcanvas"
                            data-bs-target="#off-mass-upload"
                            aria-controls="off-mass-upload">
                             <i class="bx bx-list-plus" data-bs-toggle="tooltip" data-bs-offset="0,8"
-                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
-                           data-bs-original-title="Массовая загрузка"></i>
+                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                               data-bs-original-title="Массовая загрузка"></i>
                         </a>
                         <a href="javascript:var u = '/reviews/getOwned?org_id=' + org_id; dt_refresh('dt_user_reviews', u)"
                            id="rb">
                             <i class="bx bx-refresh" data-bs-toggle="tooltip" data-bs-offset="0,8"
-                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
-                           data-bs-original-title="Обновить"></i>
+                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                               data-bs-original-title="Обновить"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="rvs-ldr"></span>
                     </h5>
@@ -885,6 +954,7 @@
                             <th>Строгий размер</th>
                             <th>Срочный</th>
                             <th>Соответствие</th>
+                            <th>Рейтинг</th>
                             <th>Медиа</th>
                             <th>Статус</th>
                             <th>Цена</th>
@@ -954,6 +1024,23 @@
                         <textarea class="form-control" id="rev-text" rows="3"></textarea>
                     </div>
                 </div>
+
+                <div class="row mb-4" id="rating" style="display: none">
+                    <div class="col">
+                        <label class="form-label">Рейтинг</label>
+                        <div class="form-check mt-1">
+                            <input name="default-radio-2" class="form-check-input" type="radio" value="5" id="stars-2"
+                                   checked="">
+                            <label class="form-check-label" for="stars-2">5 звезд</label>
+                        </div>
+                        <div class="form-check ">
+                            <input name="default-radio-2" class="form-check-input" type="radio" value="1" id="stars-1">
+                            <label class="form-check-label" for="stars-1">1 звезда</label>
+                        </div>
+
+                    </div>
+                </div>
+
                 <div class="mb-4 row">
                     <label class="form-label">МЕДИА (< 50MB)</label>
                     <div class="col">
@@ -1044,24 +1131,42 @@
                     <div class="col">
                         <label class="form-label">Соответствие размеру</label>
                         <div class="form-check ">
-                            <input name="default-radio-1" class="form-check-input" type="radio" value="0" id="esmr-1"
+                            <input name="Edefault-radio-1" class="form-check-input" type="radio" value="0" id="esmr-1"
                                    checked="">
                             <label class="form-check-label" for="esmr-1">Не указывать</label>
                         </div>
                         <div class="form-check mt-1">
-                            <input name="default-radio-1" class="form-check-input" type="radio" value="1" id="esmr-2">
+                            <input name="Edefault-radio-1" class="form-check-input" type="radio" value="1" id="esmr-2">
                             <label class="form-check-label" for="esmr-2">Соответствует размеру</label>
                         </div>
                         <div class="form-check mt-1">
-                            <input name="default-radio-1" class="form-check-input" type="radio" value="2" id="esmr-3">
+                            <input name="Edefault-radio-1" class="form-check-input" type="radio" value="2" id="esmr-3">
                             <label class="form-check-label" for="esmr-3">Маломерит</label>
                         </div>
                         <div class="form-check mt-1">
-                            <input name="default-radio-1" class="form-check-input" type="radio" value="3" id="esmr-4">
+                            <input name="Edefault-radio-1" class="form-check-input" type="radio" value="3" id="esmr-4">
                             <label class="form-check-label" for="esmr-4">Большемерит</label>
                         </div>
                     </div>
                 </div>
+
+                <div class="row mb-4" id="Erating" style="display: none">
+                    <div class="col">
+                        <label class="form-label">Рейтинг</label>
+                        <div class="form-check mt-1">
+                            <input name="Edefault-radio-2" class="form-check-input" type="radio" value="5" id="Estars-5"
+                                   checked="">
+                            <label class="form-check-label" for="Estars-5">5 звезд</label>
+                        </div>
+                        <div class="form-check ">
+                            <input name="Edefault-radio-2" class="form-check-input" type="radio" value="1"
+                                   id="Estars-1">
+                            <label class="form-check-label" for="Estars-1">1 звезда</label>
+                        </div>
+
+                    </div>
+                </div>
+
                 <form id="review_add_media" enctype="multipart/form-data">
                     <div class="row">
 

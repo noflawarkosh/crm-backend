@@ -29,7 +29,14 @@
                     {data: 'id'},
                     {
                         render: function (data, type, row) {
-                            return '<span class="text-nowrap">' + row.size.product.organization.title + ' (' + row.size.product.organization.inn + ')' + '</span>'
+
+                            var color = ''
+
+                            if (row.size.product.organization.is_competitor) {
+                                color = 'text-dark'
+                            }
+
+                            return '<span class="text-nowrap ' + color + '">' + row.size.product.organization.title + ' (' + row.size.product.organization.inn + ')' + '</span>'
                         }
                     },
 
@@ -132,6 +139,16 @@
                                 }
                             }
                             return '<span class="text-nowrap">' + cell + '</span>'
+                        }
+                    },
+                    {
+                        "data": 'stars',
+                        "render": function (data, type, row) {
+                            var cell = '—'
+                            if (data != null) {
+                                return '<span class="text-nowrap">' + data + '</span>'
+                            }
+                            return cell
                         }
                     },
                     {
@@ -329,9 +346,9 @@
     }
 
 
-    function xlsx_new_reviews() {
+    function xlsx_new_reviews(flag) {
         $.ajax({
-            url: '/admin/xlsxReviewsTasks',
+            url: '/admin/xlsxReviewsTasks?type=' + flag,
             type: 'GET',
             xhrFields: {
                 responseType: 'blob'
@@ -349,7 +366,12 @@
                 dt_refresh('dt_addresses', '/admin/get/reviews_full')
             },
             error: function (xhr, status, error) {
-                console.error('Error downloading file:', error);
+
+                if (xhr.status === 410) {
+                    toastr.info('Задач нет');
+                } else {
+                    toastr.info('Ошибка выполнения операции');
+                }
             }
         });
     }
@@ -407,8 +429,16 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <button type="button" id="xlsx_btn" onclick="xlsx_new_reviews()" class="btn btn-primary me-1">
-                        Выгрузить новые задачи в XLSX
+                    <button type="button" id="xlsx_btn" onclick="xlsx_new_reviews(1)" class="btn btn-primary me-1">
+                        Выгрузить новые задачи
+                    </button>
+                    <button type="button" id="xlsx_btn2" onclick="xlsx_new_reviews(2)"
+                            class="btn btn-label-primary me-1">
+                        Выгрузить новые задачи конкурентов
+                    </button>
+                    <button type="button" id="xlsx_btn3" onclick="xlsx_new_reviews(3)"
+                            class="btn btn-label-primary me-1">
+                        Выгрузить негатив конкурентов
                     </button>
                     <a href="javascript:" id="pay_xlsx_btn">
                         <label class="btn btn-label-primary">
@@ -446,6 +476,7 @@
                                 <th>Строгий размер</th>
                                 <th>Срочный</th>
                                 <th>Соответствие</th>
+                                <th>Рейтинг</th>
                                 <th>Медиа</th>
                                 <th>Статус</th>
                                 <th>Описание</th>

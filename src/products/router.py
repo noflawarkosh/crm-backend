@@ -39,9 +39,13 @@ async def create_product(data: Annotated[ProductPOSTSchema, Depends()], session:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    product_check = await Repository.get_records(ProductModel, filters=[ProductModel.wb_article == article])
+    product_check = await Repository.get_records(
+        ProductModel,
+        filters=[ProductModel.wb_article == article],
+        select_related=[ProductModel.organization],
+    )
 
-    if product_check:
+    if product_check and not product_check[0].organization.is_competitor and not organization.is_competitor:
         raise HTTPException(status_code=400, detail=string_products_product_already_exists)
 
     filename = Strings.alphanumeric(32) if picture_data else None
@@ -234,6 +238,9 @@ async def create_review(data: Annotated[ReviewCreateSchema, Depends()], files: L
     if len(files) > 5:
         raise HTTPException(status_code=400, detail=string_product_too_many_files)
 
+    if data.stars not in [1, 5]:
+        raise HTTPException(status_code=400, detail='Рейтинг должен быть 1 или 5')
+
     sizes = await Repository.get_records(
         ProductSizeModel,
         filters=[ProductSizeModel.id == data.size_id],
@@ -359,7 +366,10 @@ async def update_review(data: Annotated[ReviewUpdateSchema, Depends()], session:
 
     review = reviews[0]
 
-    await check_access(review.size.product.org_id, session.user.id, 8)
+    organization, membership = await check_access(review.size.product.org_id, session.user.id, 8)
+
+    if not organization.is_competitor and data.stars != 5:
+        raise HTTPException(status_code=403, detail=string_403)
 
     if review.status != 1:
         raise HTTPException(status_code=403, detail=string_403)

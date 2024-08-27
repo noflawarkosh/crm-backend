@@ -42,6 +42,12 @@ tables_access = {
             'filters': [OrganizationModel.status != 4]
         }
     ),
+    'organizations_full_forced': (
+        OrganizationModel, 2048,
+        {
+            'select_related': [OrganizationModel.owner, OrganizationModel.level, OrganizationModel.server],
+        }
+    ),
     'sizes': (ProductSizeModel, 64, {}),
     'actions': (BalanceActionModel, 256, {}),
     'orgs': (OrganizationModel, 2048, {}),
@@ -368,28 +374,100 @@ async def uploading_bill_media(bill_id: int, file: UploadFile = File(), session:
 
 
 @router.get("/xlsxReviewsTasks")
-async def download_xlsx_reviews(session: AdminSessionModel = Depends(authed)):
+async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(authed)):
     if not 128 & session.admin.level:
         raise HTTPException(status_code=403, detail=string_403)
 
-    reviews = await Repository.get_records(
-        ReviewModel,
-        filters=[
-            ReviewModel.status == 1,
-            ReviewModel.strict_match.is_(False),
-            ReviewModel.is_express.is_(False),
-        ],
-        select_related=[
-            ReviewModel.media,
-            ReviewModel.size
-        ],
-        filtration=[
-            ReviewModel.media == None
-        ],
-        deep_related=[
-            [ReviewModel.size, ProductSizeModel.product]
-        ]
-    )
+
+    if type == 1:
+        reviews = await Repository.get_records(
+            ReviewModel,
+            filters=[
+                ReviewModel.status == 1,
+                ReviewModel.strict_match.is_(False),
+                ReviewModel.is_express.is_(False),
+                ReviewModel.stars == 5
+            ],
+            select_related=[
+                ReviewModel.media,
+                ReviewModel.size
+            ],
+            filtration=[
+                ReviewModel.media == None,
+                OrganizationModel.is_competitor == False,
+            ],
+            joins=[
+                ProductSizeModel,
+                ProductModel,
+                OrganizationModel
+            ],
+            deep_related=[
+                [ReviewModel.size, ProductSizeModel.product],
+                [ReviewModel.size, ProductSizeModel.product, ProductModel.organization]
+            ]
+        )
+
+    elif type == 2:
+        reviews = await Repository.get_records(
+            ReviewModel,
+            filters=[
+                ReviewModel.status == 1,
+                ReviewModel.strict_match.is_(False),
+                ReviewModel.is_express.is_(False),
+                ReviewModel.stars == 5
+            ],
+            select_related=[
+                ReviewModel.media,
+                ReviewModel.size
+            ],
+            filtration=[
+                ReviewModel.media == None,
+                OrganizationModel.is_competitor == True,
+            ],
+            joins=[
+                ProductSizeModel,
+                ProductModel,
+                OrganizationModel
+            ],
+            deep_related=[
+                [ReviewModel.size, ProductSizeModel.product],
+                [ReviewModel.size, ProductSizeModel.product, ProductModel.organization]
+            ]
+        )
+
+    elif type == 3:
+        reviews = await Repository.get_records(
+            ReviewModel,
+            filters=[
+                ReviewModel.status == 1,
+                ReviewModel.strict_match.is_(False),
+                ReviewModel.is_express.is_(False),
+                ReviewModel.stars == 1
+            ],
+            select_related=[
+                ReviewModel.media,
+                ReviewModel.size
+            ],
+            filtration=[
+                ReviewModel.media == None,
+                OrganizationModel.is_competitor == True,
+            ],
+            joins=[
+                ProductSizeModel,
+                ProductModel,
+                OrganizationModel
+            ],
+            deep_related=[
+                [ReviewModel.size, ProductSizeModel.product],
+                [ReviewModel.size, ProductSizeModel.product, ProductModel.organization]
+            ]
+        )
+
+    else:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    if len(reviews) == 0:
+        raise HTTPException(status_code=410, detail=string_404)
 
     matches_ids = {
         0: '',
@@ -412,8 +490,9 @@ async def download_xlsx_reviews(session: AdminSessionModel = Depends(authed)):
             texts = []
             matches = []
             ids = []
+
             for review in reviews:
-                texts.append(review.text)
+                texts.append(review.text if review.text else 'Без текста')
                 matches.append(matches_ids[review.match])
                 ids.append(review.id)
 

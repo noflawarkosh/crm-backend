@@ -148,7 +148,14 @@
                         data: 'organization',
                         render: function (data, type, row) {
                             d_bills[row.id] = row
-                            return data.title + ' (' + data.inn + ')'
+
+                            var color = ''
+
+                            if (data.is_competitor) {
+                                color = 'text-dark'
+                            }
+
+                            return '<span class="text-nowrap ' + color+ '">' + row.organization.title + ' (' + row.organization.inn + ')' + '</span>'
                         }
                     },
                     {
@@ -240,7 +247,7 @@
                     var newRow = $('<tr></tr>');
                     $(table).append(newRow);
 
-                    var searchColumns = [0, 1, 2, 3, 4, 5, 6,];
+                    var searchColumns = [0, 1, 2, 3, 4, 5, 6, 7];
 
                     this.api().columns().every(function (i) {
                         var column = this;
