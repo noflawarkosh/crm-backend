@@ -123,6 +123,11 @@ async def refresh_active_and_collected(data, servers):
         plan_orders = await parse_excel_lines(
             pd.read_excel(BytesIO(plan_orders_content), dtype=str).values.tolist(), p_excel_columns)
 
+        for plan_line in plan_orders:
+            if plan_line['uuid'] and ',' in plan_line['uuid']:
+                plan_line['uuid'] = plan_line['uuid'].split(',')[-1].strip()
+
+
         # Process accounts
         for orders_type, lines in orders.items():
 
@@ -256,11 +261,13 @@ async def refresh_active_and_collected(data, servers):
                     found_order_in_plan_orders = None
 
                     for plan_line in plan_orders:
+                        print(plan_line['uuid'], line['uuid'])
                         if plan_line['uuid'] == line['uuid']:
                             found_order_in_plan_orders = plan_line
                             break
 
                     if not found_order_in_plan_orders:
+
                         logs_orders.append(
                             {
                                 'target': line['uuid'],
