@@ -1,5 +1,5 @@
 from typing import Annotated
-from sqlalchemy import text, ForeignKey
+from sqlalchemy import text, ForeignKey, JSON, Column
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import datetime
 
@@ -38,4 +38,5 @@ class AdminSessionModel(Base):
     )
 
     admin: Mapped[AdminUserModel] = relationship(lazy=False)
+
 

@@ -120,7 +120,7 @@ async def current_level(org_id: int, session: UserSessionModel = Depends(authed)
 
 @router.get('/currentLevel')
 async def current_level(org_id: int, session: UserSessionModel = Depends(authed)):
-    organization, membership = await check_access(org_id, session.user.id, 32)
+    organization, membership = await check_access(org_id, session.user.id, 62)
 
     if organization.level_id:
         level = await get_level_by_id(organization.level_id)

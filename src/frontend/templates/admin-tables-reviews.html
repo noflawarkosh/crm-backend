@@ -367,7 +367,7 @@
             },
             error: function (xhr, status, error) {
 
-                if (xhr.status === 410) {
+                if (xhr.status === 415  ) {
                     toastr.info('Задач нет');
                 } else {
                     toastr.info('Ошибка выполнения операции');
@@ -436,10 +436,7 @@
                             class="btn btn-label-primary me-1">
                         Выгрузить новые задачи конкурентов
                     </button>
-                    <button type="button" id="xlsx_btn3" onclick="xlsx_new_reviews(3)"
-                            class="btn btn-label-primary me-1">
-                        Выгрузить негатив конкурентов
-                    </button>
+
                     <a href="javascript:" id="pay_xlsx_btn">
                         <label class="btn btn-label-primary">
                             Обновить статусы отзывов из XLSX

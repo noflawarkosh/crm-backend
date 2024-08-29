@@ -1,9 +1,12 @@
+import datetime
 import io
+from typing import Annotated
+
 import boto3
 from PIL import Image
-from sqlalchemy import update, select, delete
+from sqlalchemy import update, select, delete, Column, JSON, text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
-from sqlalchemy.orm import DeclarativeBase, selectinload, joinedload
+from sqlalchemy.orm import DeclarativeBase, selectinload, joinedload, Mapped, mapped_column
 
 from strings import *
 from config import (
@@ -24,9 +27,27 @@ s3 = boto3.session.Session().client(
     aws_secret_access_key=S3KEY
 )
 
+pk = Annotated[int, mapped_column(primary_key=True)]
+dt = Annotated[datetime.datetime, mapped_column(server_default=text('NOW()'))]
+
 
 class Base(DeclarativeBase):
     pass
+
+
+class AdminAuditLog(Base):
+    __tablename__ = 'admin_audit_log'
+
+    # action 1: create, 2: update, 3: delete
+    id: Mapped[pk]
+    date: Mapped[dt]
+    session_id: Mapped[int]
+    is_admin: Mapped[bool]
+    table: Mapped[str]
+    record_id: Mapped[int]
+    action: Mapped[int]
+    old_data = Column(JSON, nullable=False)
+    new_data = Column(JSON, nullable=False)
 
 
 class Repository:
@@ -74,7 +95,6 @@ class Repository:
             await cls.s3_save(file_bytes, file_full_name)
             return file_name, file_type
 
-
     @classmethod
     async def s3_save_image(cls, file_bytes, file_full_name):
         file_info = file_full_name.rsplit('.', maxsplit=1)
@@ -93,26 +113,63 @@ class Repository:
         s3.upload_fileobj(io.BytesIO(file_bytes), S3BUCKET, file_full_name)
 
     @classmethod
-    async def save_records(cls, models):
+    async def save_records(cls, models, session_id=None, is_admin=False):
         """
+        :param is_admin: bool
+        :param session_id: int
         :param models: [{'model': ,'records': [{}]}]
         :return: None
         """
+
+        async def to_dict(r):
+            return {column.name: getattr(r, column.name) for column in r.__table__.columns}
+
         try:
             async with async_session_factory() as session:
+
                 records_to_insert = []
+                audit_log_records = []
+
                 for model in models:
                     for record in model['records']:
                         if record.get('id'):
-                            await session.merge(model['model'](**record))
+
+                            if session_id:
+                                old_data_model = await session.get(model['model'], record['id'])
+                                old_data_dict = await to_dict(old_data_model)
+
+                            new_data_model = await session.merge(model['model'](**record))
+
+                            if session_id:
+                                new_data_dict = await to_dict(new_data_model)
+
+                                audit_log_records.append(
+                                    AdminAuditLog(
+                                        session_id=session_id,
+                                        is_admin=is_admin,
+                                        table=model['model'].__tablename__,
+                                        record_id=record['id'],
+                                        action=2,
+                                        old_data=old_data_dict,
+                                        new_data=new_data_dict,
+                                    )
+                                )
+
                         else:
+
                             records_to_insert.append(model['model'](**record))
+
                 session.add_all(records_to_insert)
+                if session_id:
+                    session.add_all(audit_log_records)
+
                 await session.flush()
                 await session.commit()
+
         except Exception as e:
             await session.rollback()
             raise e
+
         finally:
             await session.close()
 

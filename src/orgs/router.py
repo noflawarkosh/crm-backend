@@ -77,7 +77,7 @@ async def read_user_organizations(session: UserSessionModel = Depends(authed)) -
 @router.get('/readOrganization')
 async def read_user_organization(org_id: int, session: UserSessionModel = Depends(authed)
                                  ) -> OrganizationReadSchema:
-    organization, membership = await check_access(org_id, session.user.id, 0)
+    organization, membership = await check_access(org_id, session.user.id, 62)
     return OrganizationReadSchema.model_validate(organization, from_attributes=True)
 
 

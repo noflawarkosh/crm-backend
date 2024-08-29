@@ -487,7 +487,7 @@
         var submitButton = document.querySelector('button[type="submit"]');
         var tts = document.getElementById('terms_flag');
         if (!tts.checked) {
-            toastr.error('Вы не ознакомлены с законодательством РФ о защите деловой репутации и осознаю все связанные с этим риски')
+            toastr.error('Вы не поставили отметку, что понимаете возможные риски')
             return
         }
 
@@ -848,10 +848,10 @@
                     if (data.is_competitor) {
                         document.getElementById('page_body').style.background = 'rgb(239,239,239)'
                         var tni = document.getElementById('topnavicons')
-                        tni.innerHTML = '<span class="badge bg-label-secondary me-2">COMPETITOR</span>'
+                        tni.innerHTML = '<span class="badge bg-label-secondary me-2">КОНКУРЕНТ</span>'
 
                          if (pname.includes('reviews')) {
-                             document.getElementById('rating').style.display = 'block'
+                             document.getElementById('rate_create').value = '1'
                          }
                     }
                 }

@@ -48,6 +48,7 @@ pages_levels = {
     'settings': 262144,
     'pickerstatuses': 2,
     'address_statuses': 4,
+    'logs': 1048576
 }
 
 

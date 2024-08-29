@@ -18,7 +18,7 @@ from picker.models import PickerServerScheduleModel, PickerSettingsModel, Picker
     PickerHistoryModel, PickerServerModel, PickerOrderStatus
 
 from gutils import Strings
-from database import Repository
+from database import Repository, AdminAuditLog
 from orders.models import OrdersAddressModel, OrdersOrderModel, OrdersContractorModel, OrdersAccountModel, \
     OrderAddressStatusModel
 from orgs.models import OrganizationModel, OrganizationMembershipModel
@@ -34,6 +34,7 @@ router = APIRouter(
 
 tables_access = {
     'users': (UserModel, 4096, {}),
+    'logs': (AdminAuditLog, 1048576, {}),
     'organizations': (OrganizationModel, 2048, {}),
     'organizations_full': (
         OrganizationModel, 2048,
@@ -378,7 +379,6 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
     if not 128 & session.admin.level:
         raise HTTPException(status_code=403, detail=string_403)
 
-
     if type == 1:
         reviews = await Repository.get_records(
             ReviewModel,
@@ -414,34 +414,6 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
                 ReviewModel.status == 1,
                 ReviewModel.strict_match.is_(False),
                 ReviewModel.is_express.is_(False),
-                ReviewModel.stars == 5
-            ],
-            select_related=[
-                ReviewModel.media,
-                ReviewModel.size
-            ],
-            filtration=[
-                ReviewModel.media == None,
-                OrganizationModel.is_competitor == True,
-            ],
-            joins=[
-                ProductSizeModel,
-                ProductModel,
-                OrganizationModel
-            ],
-            deep_related=[
-                [ReviewModel.size, ProductSizeModel.product],
-                [ReviewModel.size, ProductSizeModel.product, ProductModel.organization]
-            ]
-        )
-
-    elif type == 3:
-        reviews = await Repository.get_records(
-            ReviewModel,
-            filters=[
-                ReviewModel.status == 1,
-                ReviewModel.strict_match.is_(False),
-                ReviewModel.is_express.is_(False),
                 ReviewModel.stars == 1
             ],
             select_related=[
@@ -466,8 +438,9 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
     else:
         raise HTTPException(status_code=403, detail=string_403)
 
+
     if len(reviews) == 0:
-        raise HTTPException(status_code=410, detail=string_404)
+        raise HTTPException(status_code=415, detail=string_404)
 
     matches_ids = {
         0: '',

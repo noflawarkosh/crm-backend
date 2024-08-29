@@ -465,74 +465,84 @@
         var submitButton = document.querySelector('button[type="submit"]');
         submitButton.classList.add('disabled');
 
-
-        // TEXT
-        const text = document.getElementById('rev-text');
-        var txt = text.value
-
-
-        // MATCH
-        var ws = document.getElementById('match_flag')
-        var ws_r = !!ws.checked;
-        var ws2 = document.getElementById('is_express')
-        var ws_ex = !!ws2.checked;
-
-        var radioButtons2 = document.querySelectorAll('input[name="default-radio-2"]');
-        for (var i = 0; i < radioButtons2.length; i++) {
-            if (radioButtons2[i].checked) {
-                var rate = radioButtons2[i].value;
-                break;
-            }
-        }
-
-
-        var radioButtons = document.querySelectorAll('input[name="default-radio-1"]');
-        for (i = 0; i < radioButtons.length; i++) {
-            if (radioButtons[i].checked) {
-                var mtchid = radioButtons[i].value;
-                break;
-            }
-        }
-
-
-        // SIZE
-        var sizeselect = document.getElementById('size_id')
-        var sizeid = sizeselect.options[sizeselect.selectedIndex].value
-
-
-        // AJAX
-        const currentDomain = window.location.origin;
-        const url = new URL('/reviews/create', currentDomain);
-
-
-        url.searchParams.append('match', mtchid);
-        url.searchParams.append('strict_match', ws_r);
-        url.searchParams.append('is_express', ws_ex);
-        url.searchParams.append('stars', rate);
-
-
-        if (txt != '') {
-            url.searchParams.append('text', txt);
-        }
-
-        url.searchParams.append('size_id', sizeid);
-
         $.ajax({
-            url: url,
-            type: 'POST',
-            data: formData,
-            contentType: false,
-            processData: false,
+            url: '/organizations/readOrganization?org_id=' + org_id,
+            type: 'GET',
+            success: function (o) {
 
-            success: function () {
-                location.reload()
+                var rate = 5
+                if (o.is_competitor) {
+                    rate = 1
+                }
+
+
+                // TEXT
+                const text = document.getElementById('rev-text');
+                var txt = text.value
+
+
+                // MATCH
+                var ws = document.getElementById('match_flag')
+                var ws_r = !!ws.checked;
+                var ws2 = document.getElementById('is_express')
+                var ws_ex = !!ws2.checked;
+
+
+                var radioButtons = document.querySelectorAll('input[name="default-radio-1"]');
+                for (var i = 0; i < radioButtons.length; i++) {
+                    if (radioButtons[i].checked) {
+                        var mtchid = radioButtons[i].value;
+                        break;
+                    }
+                }
+
+
+                // SIZE
+                var sizeselect = document.getElementById('size_id')
+                var sizeid = sizeselect.options[sizeselect.selectedIndex].value
+
+
+                // AJAX
+                const currentDomain = window.location.origin;
+                const url = new URL('/reviews/create', currentDomain);
+
+
+                url.searchParams.append('match', mtchid);
+                url.searchParams.append('strict_match', ws_r);
+                url.searchParams.append('is_express', ws_ex);
+                url.searchParams.append('stars', rate);
+
+
+                if (txt != '') {
+                    url.searchParams.append('text', txt);
+                }
+
+                url.searchParams.append('size_id', sizeid);
+
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+
+                    success: function () {
+                        location.reload()
+                    },
+
+                    error: function (data) {
+                        toastr.error(data.responseJSON.detail)
+                        submitButton.classList.remove('disabled');
+                    }
+                });
+
             },
-
             error: function (data) {
                 toastr.error(data.responseJSON.detail)
                 submitButton.classList.remove('disabled');
             }
-        });
+        })
+
 
     });
 </script>
@@ -552,6 +562,7 @@
         var re_esmr_2 = document.getElementById('esmr-2')
         var re_esmr_3 = document.getElementById('esmr-3')
         var re_esmr_4 = document.getElementById('esmr-4')
+        var re_rnn = document.getElementById('rating_number')
 
         var re_stars1 = document.getElementById('Estars-1')
         var re_stars5 = document.getElementById('Estars-5')
@@ -575,7 +586,7 @@
                 re_div_stars.style.display = 'none'
                 if (o.is_competitor) {
                     is_c = true
-                    re_div_stars.style.display = 'block'
+
                 }
 
                 $.ajax({
@@ -598,6 +609,7 @@
                         re_stars5.checked = false
                         re_stars1.checked = false
                         re_match_size_edit.style.display = 'none'
+                        re_rnn.value = 5
 
                         // setting data values
                         re_review_id.value = data.id
@@ -638,8 +650,7 @@
                             re_esmr_4.checked = data.match === 3;
                         }
 
-                        re_stars5.checked = data.stars === 5;
-                        re_stars1.checked = data.stars === 1;
+                        re_rnn.value = data.stars
 
                         media_table.innerHTML = '<table id="dt_review_media" class="datatables-ajax table table-bordered dataTable no-footer">\n' +
                             '                            <thead>\n' +
@@ -839,19 +850,17 @@
             XV = 3;
         }
 
-        if (re_stars1.checked) {
-            XR = 1;
-        } else if (re_stars5.checked) {
-            XR = 5;
-        }
+        XR = document.getElementById('rating_number').value
 
         if (XV === null) {
             toastr.error('Выберите соответствие')
+            re_sb.classList.remove('disabled')
             return
         }
 
         if (XR === null) {
-            toastr.error('Выберите соответствие')
+            toastr.error('Выберите рейтинг')
+            re_sb.classList.remove('disabled')
             return
         }
 
@@ -1025,24 +1034,10 @@
                     </div>
                 </div>
 
-                <div class="row mb-4" id="rating" style="display: none">
-                    <div class="col">
-                        <label class="form-label">Рейтинг</label>
-                        <div class="form-check mt-1">
-                            <input name="default-radio-2" class="form-check-input" type="radio" value="5" id="stars-2"
-                                   checked="">
-                            <label class="form-check-label" for="stars-2">5 звезд</label>
-                        </div>
-                        <div class="form-check ">
-                            <input name="default-radio-2" class="form-check-input" type="radio" value="1" id="stars-1">
-                            <label class="form-check-label" for="stars-1">1 звезда</label>
-                        </div>
-
-                    </div>
-                </div>
+                <input type="hidden" id="rate_create" value="5">
 
                 <div class="mb-4 row">
-                    <label class="form-label">МЕДИА (< 50MB)</label>
+                    <label class="form-label">МЕДИА</label>
                     <div class="col">
                         <input type="file" accept=".jpeg, .png, .mov, .jpg, .webp" name="files" class="form-control"
                                multiple>
@@ -1149,7 +1144,7 @@
                         </div>
                     </div>
                 </div>
-
+                <input type="hidden" id="rating_number" value="5">
                 <div class="row mb-4" id="Erating" style="display: none">
                     <div class="col">
                         <label class="form-label">Рейтинг</label>

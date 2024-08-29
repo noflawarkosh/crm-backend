@@ -379,8 +379,8 @@
 
                 }
 
-                if (data[i].action_id === 2) {
-                    dayssF[d] += data[i]['amount']
+                if (data[i].action_id === 2 ) {
+                    dayssF[d] -= data[i]['amount']
 
                     if (data[i].target !== null) {
                         if (data[i].target.id === 1) {
@@ -389,6 +389,21 @@
 
                         if (data[i].target.id === 2 || data[i].target.id === 3 || data[i].target.id === 4 ||data[i].target.id === 5 ||data[i].target.id === 6 ||data[i].target.id === 7) {
                             servs_2[d] -= data[i]['amount']
+                        }
+
+                    }
+                }
+
+                if (data[i].action_id === 4 ) {
+                    dayssF[d] += data[i]['amount']
+
+                    if (data[i].target !== null) {
+                        if (data[i].target.id === 1) {
+                            prods_2[d] += data[i]['amount']
+                        }
+
+                        if (data[i].target.id === 2 || data[i].target.id === 3 || data[i].target.id === 4 ||data[i].target.id === 5 ||data[i].target.id === 6 ||data[i].target.id === 7) {
+                            servs_2[d] += data[i]['amount']
                         }
 
                     }

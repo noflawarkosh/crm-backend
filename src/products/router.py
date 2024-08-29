@@ -7,6 +7,7 @@ from auth.models import UserSessionModel
 from auth.router import authed
 from database import Repository
 from gutils import Strings
+from orgs.models import OrganizationModel
 
 from orgs.router import check_access
 from products.models import ProductModel, ReviewModel, ProductSizeModel, ReviewMediaModel
@@ -41,12 +42,21 @@ async def create_product(data: Annotated[ProductPOSTSchema, Depends()], session:
 
     product_check = await Repository.get_records(
         ProductModel,
-        filters=[ProductModel.wb_article == article],
+        filters=[
+            ProductModel.wb_article == article,
+            ProductModel.status != 3
+        ],
+        joins=[OrganizationModel],
         select_related=[ProductModel.organization],
     )
 
-    if product_check and not product_check[0].organization.is_competitor and not organization.is_competitor:
-        raise HTTPException(status_code=400, detail=string_products_product_already_exists)
+    for product in product_check:
+
+        if not product.organization.is_competitor and not organization.is_competitor:
+            raise HTTPException(status_code=400, detail=string_products_product_already_exists)
+
+        if product.organization.id == organization.id and organization.is_competitor:
+            raise HTTPException(status_code=400, detail=string_products_product_already_exists)
 
     filename = Strings.alphanumeric(32) if picture_data else None
 
@@ -402,12 +412,9 @@ async def update_review(media_id: int, session: UserSessionModel = Depends(authe
     await Repository.delete_record(ReviewMediaModel, media_id)
 
 
-
 @router_reviews.post('/addMedia')
 async def update_review(review_id: int = Form(), files: List[UploadFile] = File(...),
                         session: UserSessionModel = Depends(authed)):
-
-
     reviews = await Repository.get_records(
         ReviewModel,
         filters=[ReviewModel.id == review_id],
@@ -441,7 +448,6 @@ async def update_review(review_id: int = Form(), files: List[UploadFile] = File(
 
     if not filenames:
         raise HTTPException(status_code=400, detail='Файлы не выбраны')
-
 
     await Repository.save_records([
         {

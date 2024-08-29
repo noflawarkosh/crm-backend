@@ -61,6 +61,7 @@ async def refresh_active_and_collected(data, servers):
         {
             'id': x.id,
             'wb_price': x.wb_price,
+            'sys_status': x.status,
             'size_id': x.size_id,
             'org_id': x.size.product.org_id,
             'wb_uuid': x.wb_uuid,
@@ -126,7 +127,6 @@ async def refresh_active_and_collected(data, servers):
         for plan_line in plan_orders:
             if plan_line['uuid'] and ',' in plan_line['uuid']:
                 plan_line['uuid'] = plan_line['uuid'].split(',')[-1].strip()
-
 
         # Process accounts
         for orders_type, lines in orders.items():
@@ -239,6 +239,7 @@ async def refresh_active_and_collected(data, servers):
                     logs_orders.append(
                         {
                             'target': line['uuid'],
+                            'sid': None,
                             'success': False,
                             'detail': 'UUID заказа не указан',
                             'value': line['uuid'],
@@ -261,16 +262,16 @@ async def refresh_active_and_collected(data, servers):
                     found_order_in_plan_orders = None
 
                     for plan_line in plan_orders:
-                        print(plan_line['uuid'], line['uuid'])
+
                         if plan_line['uuid'] == line['uuid']:
                             found_order_in_plan_orders = plan_line
                             break
 
                     if not found_order_in_plan_orders:
-
                         logs_orders.append(
                             {
                                 'target': line['uuid'],
+                                'sid': None,
                                 'success': False,
                                 'detail': 'Заказа нет ни в плане ни в базе. Требуется обработка вручную',
                                 'value': line['uuid'],
@@ -285,6 +286,7 @@ async def refresh_active_and_collected(data, servers):
                         logs_orders.append(
                             {
                                 'target': found_order_in_plan_orders['sid'],
+                                'sid': found_order_in_plan_orders['sid'],
                                 'success': False,
                                 'detail': 'Не указан SID заказа',
                                 'value': found_order_in_plan_orders['sid'],
@@ -302,6 +304,7 @@ async def refresh_active_and_collected(data, servers):
                         logs_orders.append(
                             {
                                 'target': found_order_in_plan_orders['sid'],
+                                'sid': found_order_in_plan_orders['sid'],
                                 'success': False,
                                 'detail': 'Заказ не найден по SID',
                                 'value': found_order_in_plan_orders['sid'],
@@ -316,6 +319,7 @@ async def refresh_active_and_collected(data, servers):
                 query = df_orders.query(f"id == {order_id}")
 
                 current_is_success = query['is_success'].iloc[0] if len(query.values) != 0 else None
+                current_sys_status = query['sys_status'].iloc[0] if len(query.values) != 0 else None
 
                 db_order_id = query['id'].iloc[0] if len(query.values) != 0 else None
                 db_wb_status = line['status']
@@ -341,6 +345,7 @@ async def refresh_active_and_collected(data, servers):
                     logs_orders.append(
                         {
                             'target': order_id,
+                            'sid': str(db_order_id),
                             'success': False,
                             'detail': 'Неизвестный статус',
                             'value': line['status'],
@@ -356,6 +361,7 @@ async def refresh_active_and_collected(data, servers):
                     logs_orders.append(
                         {
                             'target': order_id,
+                            'sid': str(db_order_id),
                             'success': False,
                             'detail': 'Не указана стоимость заказа в базе данных',
                             'value': wb_price,
@@ -372,6 +378,7 @@ async def refresh_active_and_collected(data, servers):
                     logs_orders.append(
                         {
                             'target': order_id,
+                            'sid': str(db_order_id),
                             'success': False,
                             'detail': 'Цена должна быть числом',
                             'value': line['price'],
@@ -387,6 +394,7 @@ async def refresh_active_and_collected(data, servers):
                     logs_orders.append(
                         {
                             'target': order_id,
+                            'sid': str(db_order_id),
                             'success': False,
                             'detail': 'Организация заказа не опознана',
                             'value': org_id,
@@ -404,6 +412,7 @@ async def refresh_active_and_collected(data, servers):
                     logs_orders.append(
                         {
                             'target': line['uuid'],
+                            'sid': str(db_order_id),
                             'success': False,
                             'detail': 'Аккаунт заказа не найден в базе данных',
                             'value': line['account_number'],
@@ -443,7 +452,7 @@ async def refresh_active_and_collected(data, servers):
                     if status_model.refund_product:
                         data_payments_to_db.append(
                             {
-                                'amount': int(wb_price),
+                                'amount': int(wb_price) if current_sys_status == 2 else int(line['price']),
                                 'org_id': org_id,
                                 'action_id': 4,
                                 'target_id': 1,
@@ -456,7 +465,7 @@ async def refresh_active_and_collected(data, servers):
                                 'target': db_uuid,
                                 'success': True,
                                 'detail': 'Разморозка стоимости продукта',
-                                'value': int(wb_price),
+                                'value': int(wb_price) if current_sys_status == 2 else int(line['price']),
                                 'line': line['line_number'],
                                 'orders_type': orders_type,
                                 'server': server.name,
@@ -517,6 +526,7 @@ async def refresh_active_and_collected(data, servers):
                 logs_orders.append(
                     {
                         'target': db_uuid,
+                        'sid': str(db_order_id),
                         'success': True,
                         'detail': 'Данные заказа обновлены в базе данных',
                         'value': db_uuid,
@@ -535,6 +545,7 @@ async def refresh_active_and_collected(data, servers):
                 logs_orders.append(
                     {
                         'target': line['sid'],
+                        'sid': line['sid'],
                         'success': False,
                         'detail': 'Не указан SID заказа',
                         'value': line['sid'],
@@ -549,6 +560,7 @@ async def refresh_active_and_collected(data, servers):
                 logs_orders.append(
                     {
                         'target': line['sid'],
+                        'sid': line['sid'],
                         'success': False,
                         'detail': 'Не указан статус заказа',
                         'value': line['status'],
@@ -568,6 +580,7 @@ async def refresh_active_and_collected(data, servers):
                     logs_orders.append(
                         {
                             'target': line['sid'],
+                            'sid': line['sid'],
                             'success': False,
                             'detail': 'Заказ не найден по SID',
                             'value': line['sid'],
@@ -583,6 +596,7 @@ async def refresh_active_and_collected(data, servers):
                     logs_orders.append(
                         {
                             'target': order_id,
+                            'sid': line['sid'],
                             'success': False,
                             'detail': 'Не указана стоимость заказа в базе данных',
                             'value': wb_price,
@@ -598,6 +612,7 @@ async def refresh_active_and_collected(data, servers):
                     logs_orders.append(
                         {
                             'target': order_id,
+                            'sid': line['sid'],
                             'success': False,
                             'detail': 'Организация заказа не опознана',
                             'value': org_id,
@@ -674,6 +689,7 @@ async def refresh_active_and_collected(data, servers):
                 logs_orders.append(
                     {
                         'target': line['sid'],
+                        'sid': line['sid'],
                         'success': True,
                         'detail': 'Данные заказа обновлены в базе данных (Отмена)',
                         'value': line['uuid'],
@@ -693,7 +709,7 @@ async def refresh_active_and_collected(data, servers):
 
     records_to_db = [
         {'model': OrdersOrderModel, 'records': data_orders_to_db},
-        {'model': BalanceHistoryModel,'records': data_payments_to_db},
+        {'model': BalanceHistoryModel, 'records': data_payments_to_db},
     ]
 
     await Repository.save_records(records_to_db)

@@ -38,11 +38,10 @@ async def refresh_orders(request: Request, session: AdminSessionModel = Depends(
         if not data.get(f'plan-{server.id}', None) or data.get(f'plan-{server.id}') == 'undefined':
             raise HTTPException(status_code=400, detail=f'Отсутствует файл плана для {server.name}')
 
-    try:
-        return await refresh_active_and_collected(data, servers)
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f'{str(e)}')
+    return await refresh_active_and_collected(data, servers)
+
+
 
 
 @router.post('/generatePlan')

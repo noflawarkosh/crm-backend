@@ -192,6 +192,7 @@
                 '                        <thead>\n' +
                 '                        <tr>\n' +
                 '                            <th>UUID</th>\n' +
+                '                            <th>SID</th>\n' +
                 '                            <th>Статус</th>\n' +
                 '                            <th>Описание</th>\n' +
                 '                            <th>Значение</th>\n' +
@@ -202,7 +203,7 @@
                 '                        </thead>\n' +
                 '                    </table>'
 
-            document.getElementById('dt_logs_payments_div').innerHTML = '<table id="dt_logs_orders" class="datatables-ajax table table-bordered dataTable no-footer">\n' +
+            document.getElementById('dt_logs_payments_div').innerHTML = '<table id="dt_logs_payments" class="datatables-ajax table table-bordered dataTable no-footer">\n' +
                 '                        <thead>\n' +
                 '                        <tr>\n' +
                 '                            <th>UUID</th>\n' +
@@ -307,6 +308,12 @@
                                 }
                             },
                             {
+                                data: 'sid',
+                                render: function (data, type, row) {
+                                    return '<b>' + data + '</b>'
+                                }
+                            },
+                            {
                                 data: 'success',
                                 render: function (data, type, row) {
                                     if (data === true) {
@@ -373,10 +380,7 @@
                             {
                                 data: 'value',
                                 render: function (data, type, row) {
-                                    if (row.success === false) {
-                                        return '<b class="text-danger">' + data + '</b>'
-                                    }
-                                    return ''
+                                    return data
                                 }
                             },
                             {
