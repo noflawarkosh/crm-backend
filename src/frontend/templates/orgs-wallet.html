@@ -311,10 +311,11 @@
 
     $.ajax({
 
-        url: '/payments/getOrderedHistory?org_id=' + org_id,
+        url: '/payments/getHistory?org_id=' + org_id,
         type: 'GET',
 
         success: function (data) {
+            console.log(data)
             var tt = calcTotal(data)
 
             document.getElementById('ctr-2').innerHTML = '<b>₽ ' + (tt['total']).toLocaleString('ru-RU') + '</b>'
