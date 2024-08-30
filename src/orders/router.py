@@ -45,7 +45,7 @@ async def cancel_task(task_id: int, session: UserSessionModel = Depends(authed))
                 'id': task_id,
                 'status': 7,
             }]
-    }])
+    }], session_id=session.id)
 
 
 @router.post('/replaceTasks')
@@ -82,7 +82,7 @@ async def cancel_task(data: dict, session: UserSessionModel = Depends(authed)):
     await Repository.save_records([{
         'model': OrdersOrderModel,
         'records': update_records
-    }])
+    }], session_id=session.id)
 
 
 @router.post('/cancelTasks')
@@ -118,7 +118,7 @@ async def cancel_task(data: dict, session: UserSessionModel = Depends(authed)):
     await Repository.save_records([{
         'model': OrdersOrderModel,
         'records': update_records
-    }])
+    }], session_id=session.id)
 
 
 @router.get('/getPlan')
@@ -227,4 +227,4 @@ async def save_data(amount: int, data: Annotated[OrdersOrderCreateModel, Depends
             **data.model_dump(),
             'status': 1,
         }] * amount
-    }])
+    }], session_id=session.id)

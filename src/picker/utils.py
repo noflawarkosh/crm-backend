@@ -41,7 +41,7 @@ async def parse_excel_lines(excel_lines, columns):
     ]
 
 
-async def refresh_active_and_collected(data, servers):
+async def refresh_active_and_collected(data, servers, session):
     # Caching data from db
     db_accounts = await Repository.get_records(OrdersAccountModel)
     db_addresses = await Repository.get_records(OrdersAddressModel)
@@ -449,6 +449,29 @@ async def refresh_active_and_collected(data, servers):
                             }
                         )
 
+                    if status_model.unfreeze_product:
+                        data_payments_to_db.append(
+                            {
+                                'amount': int(wb_price) if current_sys_status == 2 else int(line['price']),
+                                'org_id': org_id,
+                                'action_id': 1,
+                                'target_id': 1,
+                                'record_id': db_order_id,
+                            }
+                        )
+
+                        logs_payments.append(
+                            {
+                                'target': db_uuid,
+                                'success': True,
+                                'detail': 'Возврат стоимости продукта',
+                                'value': int(wb_price) if current_sys_status == 2 else int(line['price']),
+                                'line': line['line_number'],
+                                'orders_type': orders_type,
+                                'server': server.name,
+                            }
+                        )
+
                     if status_model.refund_product:
                         data_payments_to_db.append(
                             {
@@ -513,6 +536,7 @@ async def refresh_active_and_collected(data, servers):
                         'status': status_model.status_number,
                         'wb_status': db_wb_status,
                         'wb_uuid': db_uuid,
+                        'wb_price': int(line['price']),
                         'description': db_description,
                         'wb_collect_code': db_collect_code,
                         'dt_ordered': db_dt_ordered,
@@ -712,7 +736,7 @@ async def refresh_active_and_collected(data, servers):
         {'model': BalanceHistoryModel, 'records': data_payments_to_db},
     ]
 
-    await Repository.save_records(records_to_db)
+    await Repository.save_records(records_to_db, session_id=session.id)
 
     return {'accounts': logs_accounts, 'orders': logs_orders, 'payments': logs_payments}
 

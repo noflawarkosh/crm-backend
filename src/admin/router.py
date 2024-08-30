@@ -32,6 +32,8 @@ router = APIRouter(
     tags=["Admin"]
 )
 
+
+
 tables_access = {
     'users': (UserModel, 4096, {}),
     'logs': (AdminAuditLog, 1048576, {}),
@@ -62,6 +64,18 @@ tables_access = {
     'reviews': (ReviewModel, 128, {}),
     'admins': (AdminUserModel, 16384, {}),
     'usersessions': (UserSessionModel, 65536, {}),
+    'usersessions_full': (
+        UserSessionModel, 65536,
+        {
+            'select_related': [UserSessionModel.user]
+        }
+    ),
+    'adminsessions_full': (
+        AdminSessionModel, 131072,
+        {
+            'select_related': [AdminSessionModel.admin]
+        }
+    ),
     'adminsessions': (AdminSessionModel, 131072, {}),
     'contractors': (OrdersContractorModel, 8, {}),
     'pickerstatuses': (PickerOrderStatus, 2, {}),
@@ -329,7 +343,7 @@ async def creating_data(data: dict[str, list[dict]], request: Request, session: 
             'records': model_with_typed_records
         })
 
-    await Repository.save_records(models_with_typed_records)
+    await Repository.save_records(models_with_typed_records, session_id=session.id, is_admin=True)
 
 
 @router.delete('/delete/{section}/{record_id}')
@@ -437,7 +451,6 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
 
     else:
         raise HTTPException(status_code=403, detail=string_403)
-
 
     if len(reviews) == 0:
         raise HTTPException(status_code=415, detail=string_404)

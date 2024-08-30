@@ -1,6 +1,8 @@
 import datetime
 import math
 from typing import Annotated
+
+import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 
 from database import Repository
@@ -172,7 +174,7 @@ async def create_organization(data: Annotated[BalanceBillCreateSchema, Depends()
         raise HTTPException(status_code=400, detail=string_400)
 
     level, purchases = await current_prices(organization)
-    
+
     status_id = 3
     penalty = 0
 
@@ -268,6 +270,97 @@ async def create_organization(org_id: int,
         filters=[BalanceHistoryModel.org_id == org_id]
     )
     return [BalanceHistoryReadSchema.model_validate(record, from_attributes=True) for record in history]
+
+
+@router.get('/getOrderedHistory')
+async def create_organization(org_id: int,
+                              session: UserSessionModel = Depends(authed)
+                              ):
+    await check_access(org_id, session.user.id, 32)
+    history = await Repository.get_records(
+        BalanceHistoryModel,
+        filters=[BalanceHistoryModel.org_id == org_id]
+    )
+
+    db_orders = await Repository.get_records(
+        OrdersOrderModel,
+        select_related=[OrdersOrderModel.size, OrdersOrderModel.account, OrdersOrderModel.picker_status],
+        deep_related=[
+            [OrdersOrderModel.size, ProductSizeModel.product],
+        ],
+        joins=[ProductSizeModel, ProductModel],
+        filtration=[ProductModel.org_id == org_id]
+    )
+
+    df_orders = pd.DataFrame([
+        {
+            'id': x.id,
+            'dt_planed': x.dt_planed,
+        }
+        for x in db_orders
+    ])
+
+    result = {}
+
+    for record in history:
+
+        if db_orders:
+            query = df_orders.query(f"id == {record.record_id}")
+            payment_date = query['dt_planed'].iloc[0] if len(query.values) != 0 else None
+
+        else:
+            payment_date = None
+
+        if not payment_date:
+            payment_date = record.date.date()
+
+        payment_date = payment_date.strftime('%d.%m.%Y')
+        if result.get(payment_date):
+            result[payment_date].append(BalanceHistoryReadSchema.model_validate(record, from_attributes=True))
+        else:
+            result[payment_date] = [BalanceHistoryReadSchema.model_validate(record, from_attributes=True)]
+
+    return result
+
+
+@router.get('/getOrderedHistoryDetails')
+async def create_organization(org_id: int, start: datetime.datetime, end: datetime.datetime,
+                              session: UserSessionModel = Depends(authed)
+                              ):
+    await check_access(org_id, session.user.id, 32)
+
+    start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+    end = end.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    history = await Repository.get_records(
+        BalanceHistoryModel,
+        filters=[BalanceHistoryModel.org_id == org_id]
+    )
+
+    db_orders = await Repository.get_records(
+        OrdersOrderModel,
+        select_related=[OrdersOrderModel.size, OrdersOrderModel.account, OrdersOrderModel.picker_status],
+        deep_related=[
+            [OrdersOrderModel.size, ProductSizeModel.product],
+        ],
+        joins=[ProductSizeModel, ProductModel],
+        filtration=[ProductModel.org_id == org_id],
+        filters=[OrdersOrderModel.dt_planed >= start.date(), OrdersOrderModel.dt_planed <= end.date()]
+    )
+
+    order_ids = [x.id for x in db_orders]
+
+    result = []
+
+    for record in history:
+
+        if record.record_id in order_ids:
+            result.append(BalanceHistoryReadSchema.model_validate(record, from_attributes=True))
+
+        elif record.date.date() >= start.date() and record.date.date() <= end.date():
+            result.append(BalanceHistoryReadSchema.model_validate(record, from_attributes=True))
+
+    return result
 
 
 @router.get('/getPaymentsDetails')
@@ -393,19 +486,19 @@ async def create_organization(org_id: int, data: list[int], session: UserSession
         total_to_pay += price_product + price_commission + level.price_collect + level.price_buy
 
     if current_balance - total_to_pay < organization.balance_limit:
-        raise HTTPException(status_code=403, detail=string_payments_not_enough_balance + f'. Пополните кошелек минимум на {abs(current_balance - total_to_pay)} рублей для совершения оплаты')
+        raise HTTPException(status_code=403,
+                            detail=string_payments_not_enough_balance + f'. Пополните кошелек минимум на {abs(current_balance - total_to_pay)} рублей для совершения оплаты')
 
     await Repository.save_records(
         [
             {'model': OrdersOrderModel, 'records': calculated_orders},
             {'model': BalanceHistoryModel, 'records': balance_records}
-        ]
+        ], session_id=session.id
     )
 
 
 @router.get('/tasksCheckout')
 async def create_organization(org_id: int, date: datetime.date, session: UserSessionModel = Depends(authed)):
-
     if date < datetime.date.today():
         raise HTTPException(status_code=403, detail=string_payments_wrong_date)
 

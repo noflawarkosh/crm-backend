@@ -61,7 +61,7 @@
     }
 
     $.ajax({
-        url: '/payments/getPaymentsDetails?org_id=' + org_id + '&start=' + formattedStartDate + '&end=' + formattedEndDate,
+        url: '/payments/getOrderedHistoryDetails?org_id=' + org_id + '&start=' + formattedStartDate + '&end=' + formattedEndDate,
         method: 'get',
         success: function (data) {
 
@@ -241,7 +241,7 @@
         total_div.innerHTML = ''
         $.ajax({
 
-            url: '/payments/getPaymentsDetails?org_id=' + org_id + '&start=' + start_date_input.value + '&end=' + end_date_input.value,
+            url: '/payments/getOrderedHistoryDetails?org_id=' + org_id + '&start=' + start_date_input.value + '&end=' + end_date_input.value,
             method: 'get',
 
             success: function (data) {

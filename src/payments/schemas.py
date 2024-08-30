@@ -24,6 +24,7 @@ class BalanceHistoryReadSchema(BaseModel):
     amount: int
     date: datetime.datetime
     record_id: int | None
+    target_id: int | None
 
     organization: Optional['OrganizationReadSchema']
     action: Optional['BalanceActionSchema']

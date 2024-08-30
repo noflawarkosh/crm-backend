@@ -30,6 +30,8 @@ s3 = boto3.session.Session().client(
 pk = Annotated[int, mapped_column(primary_key=True)]
 dt = Annotated[datetime.datetime, mapped_column(server_default=text('NOW()'))]
 
+models_to_logs = ['OrdersOrderModel', 'ReviewModel', 'ProductSizeModel', 'ProductModel']
+
 
 class Base(DeclarativeBase):
     pass
@@ -122,7 +124,24 @@ class Repository:
         """
 
         async def to_dict(r):
-            return {column.name: getattr(r, column.name) for column in r.__table__.columns}
+            data = {}
+            for column in r.__table__.columns:
+
+                value = getattr(r, column.name)
+                if str(value) == 'now()':
+                    data[column.name] = datetime.datetime.now().isoformat() if value is not None else None
+                elif str(column.type) == 'DATE':
+                    data[column.name] = value.isoformat() if value is not None else None
+                elif str(column.type) == 'INTEGER':
+                    data[column.name] = int(value) if value is not None else None
+                elif str(column.type) == 'VARCHAR':
+                    data[column.name] = str(value) if value is not None else None
+                elif str(column.type) == 'DATETIME':
+                    data[column.name] = value.isoformat() if value is not None else None
+                else:
+                    data[column.name] = value
+
+            return data
 
         try:
             async with async_session_factory() as session:
@@ -131,16 +150,19 @@ class Repository:
                 audit_log_records = []
 
                 for model in models:
+                    is_logging = model['model'].__name__ in models_to_logs
+
                     for record in model['records']:
                         if record.get('id'):
 
-                            if session_id:
+                            if session_id and is_logging:
                                 old_data_model = await session.get(model['model'], record['id'])
                                 old_data_dict = await to_dict(old_data_model)
 
                             new_data_model = await session.merge(model['model'](**record))
 
-                            if session_id:
+                            if session_id and is_logging:
+
                                 new_data_dict = await to_dict(new_data_model)
 
                                 audit_log_records.append(
@@ -156,11 +178,11 @@ class Repository:
                                 )
 
                         else:
-
                             records_to_insert.append(model['model'](**record))
 
                 session.add_all(records_to_insert)
-                if session_id:
+
+                if audit_log_records:
                     session.add_all(audit_log_records)
 
                 await session.flush()

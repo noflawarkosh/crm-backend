@@ -172,7 +172,7 @@ async def refresh_product(product_id: int, session: UserSessionModel = Depends(a
                     'wb_title': title,
                 }
             ]}
-        ]
+        ], session_id=session.id
 
     )
 
@@ -205,7 +205,8 @@ async def update_size_status(size_id: int, status: bool, session: UserSessionMod
     await check_access(size.product.org_id, session.user.id, 2)
 
     await Repository.save_records(
-        [{'model': ProductSizeModel, 'records': [{'id': size_id, 'is_active': status}]}])
+        [{'model': ProductSizeModel, 'records': [{'id': size_id, 'is_active': status}]}], session_id=session.id
+    )
 
 
 @router_products.post('/barcode')
@@ -224,7 +225,7 @@ async def update_size_barcode(size_id: int, barcode: str, session: UserSessionMo
     await check_access(size.product.org_id, session.user.id, 2)
 
     await Repository.save_records(
-        [{'model': ProductSizeModel, 'records': [{'id': size_id, 'barcode': barcode}]}])
+        [{'model': ProductSizeModel, 'records': [{'id': size_id, 'barcode': barcode}]}], session_id=session.id)
 
 
 @router_products.get('/disable')
@@ -239,7 +240,7 @@ async def disable_product(product_id: int, session: UserSessionModel = Depends(a
 
     await check_access(products[0].org_id, session.user.id, 2)
 
-    await Repository.save_records([{'model': ProductModel, 'records': [{'id': product_id, 'status': 3}]}])
+    await Repository.save_records([{'model': ProductModel, 'records': [{'id': product_id, 'status': 3}]}], session_id=session.id)
 
 
 @router_reviews.post('/create')
@@ -359,7 +360,7 @@ async def disable_review(review_id: int, session: UserSessionModel = Depends(aut
     if reviews[0].status != 1:
         raise HTTPException(status_code=403, detail=string_403)
 
-    await Repository.save_records([{'model': ReviewModel, 'records': [{'id': review_id, 'status': 4}]}])
+    await Repository.save_records([{'model': ReviewModel, 'records': [{'id': review_id, 'status': 4}]}], session_id=session.id)
 
 
 @router_reviews.post('/update')
@@ -384,7 +385,7 @@ async def update_review(data: Annotated[ReviewUpdateSchema, Depends()], session:
     if review.status != 1:
         raise HTTPException(status_code=403, detail=string_403)
 
-    await Repository.save_records([{'model': ReviewModel, 'records': [data.model_dump()]}])
+    await Repository.save_records([{'model': ReviewModel, 'records': [data.model_dump()]}], session_id=session.id)
 
 
 @router_reviews.post('/delMedia')

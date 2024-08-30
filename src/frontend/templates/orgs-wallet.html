@@ -193,7 +193,7 @@
                             var tpa = data
                             if (row.penalty > 0) {
                                 tpa = data + row.penalty
-                                penalty = '<small><b class="text-danger my-auto">' + row.penalty.toLocaleString('ru-RU') + ' ₽</b></small>'
+                                penalty = '<small class="text-nowrap"><b class="text-danger my-auto">' + row.penalty.toLocaleString('ru-RU') + ' ₽</b></small>'
                             }
 
                             return '<b>' + tpa.toLocaleString('ru-RU') + ' ₽ </b>' + penalty
@@ -311,7 +311,7 @@
 
     $.ajax({
 
-        url: '/payments/getHistory?org_id=' + org_id,
+        url: '/payments/getOrderedHistory?org_id=' + org_id,
         type: 'GET',
 
         success: function (data) {
@@ -326,110 +326,83 @@
                 document.getElementById('balance_alert').innerHTML = 'Необходимо пополнить баланс на сумму <b>' + (tt['total']).toLocaleString('ru-RU').toString().replace('-', '') + ' ₽</b> во избежание возникновения задолженности'
             }
 
-            var dayss = {}
-            var prods_2 = {}
-            var prods_3 = {}
-            var servs_2 = {}
-            var servs_3 = {}
-            var dayssF = {}
+        },
 
-            for (var i in data) {
+        error: function (data) {
+            toastr.error('Ошибка получения истории кошелька: ' + data.responseJSON.detail)
+            document.getElementById('hst-ldr').style.display = 'none';
+        }
+    });
 
-                var d = moment(data[i].date).format('DD.MM.YYYY')
+    $.ajax({
 
-                if (!dayss[d]) {
-                    dayss[d] = 0
-                }
+        url: '/payments/getOrderedHistory?org_id=' + org_id,
+        type: 'GET',
 
-                if (!dayssF[d]) {
-                    dayssF[d] = 0
-                }
-
-                if (!prods_2[d]) {
-                    prods_2[d] = 0
-
-                }
-
-                if (!prods_3[d]) {
-                    prods_3[d] = 0
-                }
-
-                if (!servs_2[d]) {
-                    servs_2[d] = 0
-                }
-
-                if (!servs_3[d]) {
-                    servs_3[d] = 0
-                }
-
-                if (data[i].action_id === 3) {
-                    dayss[d] -= data[i]['amount']
-
-                    if (data[i].target !== null) {
-                        if (data[i].target.id === 1) {
-                            prods_3[d] -= data[i]['amount']
-                        }
-
-                        if (data[i].target.id === 2 || data[i].target.id === 3 || data[i].target.id === 4 ||data[i].target.id === 5 ||data[i].target.id === 6 ||data[i].target.id === 7) {
-                            servs_3[d] -= data[i]['amount']
-                        }
-
-                    }
-
-
-                }
-
-                if (data[i].action_id === 2 ) {
-                    dayssF[d] -= data[i]['amount']
-
-                    if (data[i].target !== null) {
-                        if (data[i].target.id === 1) {
-                            prods_2[d] -= data[i]['amount']
-                        }
-
-                        if (data[i].target.id === 2 || data[i].target.id === 3 || data[i].target.id === 4 ||data[i].target.id === 5 ||data[i].target.id === 6 ||data[i].target.id === 7) {
-                            servs_2[d] -= data[i]['amount']
-                        }
-
-                    }
-                }
-
-                if (data[i].action_id === 4 ) {
-                    dayssF[d] += data[i]['amount']
-
-                    if (data[i].target !== null) {
-                        if (data[i].target.id === 1) {
-                            prods_2[d] += data[i]['amount']
-                        }
-
-                        if (data[i].target.id === 2 || data[i].target.id === 3 || data[i].target.id === 4 ||data[i].target.id === 5 ||data[i].target.id === 6 ||data[i].target.id === 7) {
-                            servs_2[d] += data[i]['amount']
-                        }
-
-                    }
-                }
-
-
-            }
-
+        success: function (data) {
             var res = []
 
-            for (var i in dayss) {
+            for (var key in data) {
+
+                var prods_1 = 0
+                var prods_2 = 0
+
+                var servs_1 = 0
+                var servs_2 = 0
+
+                var total_1 = 0
+                var total_2 = 0
+
+                for (var i in data[key]) {
+                    if (data[key][i].action_id === 3) {
+                        total_1 -= data[key][i].amount
+
+                        if (data[key][i].target_id === 1) {
+                            prods_1 -= data[key][i].amount
+                        }
+
+                        if (data[key][i].target_id === 2 || data[key][i].target_id === 3 || data[key][i].target_id === 4 || data[key][i].target_id === 5 || data[key][i].target_id === 6 || data[key][i].target_id === 7) {
+                            servs_1 -= data[key][i].amount
+                        }
+
+                    }
+
+                    if (data[key][i].action_id === 2) {
+                        total_2 -= data[key][i].amount
+
+                        if (data[key][i].target_id === 1) {
+                            prods_2 -= data[key][i].amount
+                        }
+
+                        if (data[key][i].target_id === 2 || data[key][i].target_id === 3 || data[key][i].target_id === 4 || data[key][i].target_id === 5 || data[key][i].target_id === 6 || data[key][i].target_id === 7) {
+                            servs_2 -= data[key][i].amount
+                        }
+                    }
+
+                    if (data[key][i].action_id === 4) {
+                        total_2 += data[key][i].amount
+
+                        if (data[key][i].target_id === 1) {
+                            prods_2 += data[key][i].amount
+                        }
+
+                        if (data[key][i].target_id === 2 || data[key][i].target_id === 3 || data[key][i].target_id === 4 || data[key][i].target_id === 5 || data[key][i].target_id === 6 || data[key][i].target_id === 7) {
+                            servs_2 += data[key][i].amount
+                        }
+                    }
+
+                }
+
                 res.push({
-                    'date': i,
-                    'amount': dayss[i],
-                    'freezed': dayssF[i],
-                    'prods_2': prods_2[i],
-                    'prods_3': prods_3[i],
-                    'servs_2': servs_2[i],
-                    'servs_3': servs_3[i],
+                    'date': key,
+                    'prods1': prods_1,
+                    'prods2': prods_2,
+                    'servs1': servs_1,
+                    'servs2': servs_2,
+                    'total1': total_1,
+                    'total2': total_2
                 })
             }
-
-
-
-
-
 
 
             $('#dt_user_history').DataTable({
@@ -453,7 +426,7 @@
                         "render": function (data, type, row) {
 
 
-                            return '<b class="text-nowrap text-danger">' + row.prods_3.toLocaleString('ru-RU') + ' ₽</b>' + '<b> / </b>' + '<b class="text-nowrap text-info">' + row.prods_2.toLocaleString('ru-RU') + ' ₽</b>'
+                            return '<b class="text-nowrap text-danger">' + row.prods1.toLocaleString('ru-RU') + ' ₽</b>' + '<b> / </b>' + '<b class="text-nowrap text-info">' + row.prods2.toLocaleString('ru-RU') + ' ₽</b>'
                         }
                     },
                     {
@@ -462,14 +435,14 @@
 
 
 
-                            return '<b class="text-nowrap text-danger">' + row.servs_3.toLocaleString('ru-RU') + ' ₽</b>' + '<b> / </b>' + '<b class="text-nowrap text-info">' + row.servs_2.toLocaleString('ru-RU') + ' ₽</b>'
+                            return '<b class="text-nowrap text-danger">' + row.servs1.toLocaleString('ru-RU') + ' ₽</b>' + '<b> / </b>' + '<b class="text-nowrap text-info">' + row.servs2.toLocaleString('ru-RU') + ' ₽</b>'
                         }
                     },
                     {
                         data: 'amount',
                         "render": function (data, type, row) {
 
-                            return '<b class="text-nowrap text-danger">' + row.amount.toLocaleString('ru-RU') + ' ₽</b>' + '<b> / </b>' + '<b class="text-nowrap text-info">' + row.freezed.toLocaleString('ru-RU') + ' ₽</b>'
+                            return '<b class="text-nowrap text-danger">' + row.total1.toLocaleString('ru-RU') + ' ₽</b>' + '<b> / </b>' + '<b class="text-nowrap text-info">' + row.total2.toLocaleString('ru-RU') + ' ₽</b>'
                         }
                     },
                     {
@@ -494,6 +467,10 @@
             document.getElementById('hst-ldr').style.display = 'none';
         }
     });
+
+
+
+
 </script>
 {% endblock %}
 
