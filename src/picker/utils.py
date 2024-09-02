@@ -449,12 +449,11 @@ async def refresh_active_and_collected(data, servers, session):
                             }
                         )
 
-                    if status_model.unfreeze_product:
                         data_payments_to_db.append(
                             {
                                 'amount': int(wb_price) if current_sys_status == 2 else int(line['price']),
                                 'org_id': org_id,
-                                'action_id': 1,
+                                'action_id': 4,
                                 'target_id': 1,
                                 'record_id': db_order_id,
                             }
@@ -477,7 +476,7 @@ async def refresh_active_and_collected(data, servers, session):
                             {
                                 'amount': int(wb_price) if current_sys_status == 2 else int(line['price']),
                                 'org_id': org_id,
-                                'action_id': 4,
+                                'action_id': 1 if current_sys_status != 2 else 4,
                                 'target_id': 1,
                                 'record_id': db_order_id,
                             }

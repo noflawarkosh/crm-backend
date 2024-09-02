@@ -113,7 +113,6 @@ class PickerOrderStatus(Base):
     status_number: Mapped[int]
     pay_product: Mapped[bool]
     refund_product: Mapped[bool]
-    unfreeze_product: Mapped[bool]
     refund_services: Mapped[bool]
     is_success: Mapped[bool]
 

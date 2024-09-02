@@ -89,6 +89,14 @@
         success: function (data) {
             var selectElement = $('#bill-source');
 
+            data = data.sort((a, b) => {
+
+                const priorityA = a.priority ?? 9999;
+                const priorityB = b.priority ?? 9999;
+
+                return priorityA - priorityB;
+            });
+
             $.each(data, function (index, item) {
                 var optionText = item.bank;
                 var optionValue = item.id
@@ -315,7 +323,7 @@
         type: 'GET',
 
         success: function (data) {
-            console.log(data)
+
             var tt = calcTotal(data)
 
             document.getElementById('ctr-2').innerHTML = '<b>₽ ' + (tt['total']).toLocaleString('ru-RU') + '</b>'
@@ -435,7 +443,6 @@
                         "render": function (data, type, row) {
 
 
-
                             return '<b class="text-nowrap text-danger">' + row.servs1.toLocaleString('ru-RU') + ' ₽</b>' + '<b> / </b>' + '<b class="text-nowrap text-info">' + row.servs2.toLocaleString('ru-RU') + ' ₽</b>'
                         }
                     },
@@ -470,8 +477,6 @@
     });
 
 
-
-
 </script>
 {% endblock %}
 
@@ -489,7 +494,7 @@
                             <small>Баланс </small>
                         </div>
                         <span class="badge bg-label-secondary rounded-circle p-2">
-                            <i class="bx bx-credit-card-front bx-sm" ></i>
+                            <i class="bx bx-credit-card-front bx-sm"></i>
                         </span>
                     </div>
                 </div>
@@ -563,14 +568,14 @@
                            data-bs-target="#off-create-bill"
                            aria-controls="off-create-bill">
                             <i class="bx bxs-plus-square" data-bs-toggle="tooltip" data-bs-offset="0,8"
-                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
-                           data-bs-original-title="Создать"></i>
+                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                               data-bs-original-title="Создать"></i>
                         </a>
                         <a href="javascript:var u = '/payments/getOwnedBills?org_id=' + id; dt_refresh('dt_user_bills', u)"
                            id="rb1">
                             <i class="bx bx-refresh" data-bs-toggle="tooltip" data-bs-offset="0,8"
-                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
-                           data-bs-original-title="Обновить"></i>
+                               data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                               data-bs-original-title="Обновить"></i>
                         </a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="bls-ldr"></span>
                     </h5>

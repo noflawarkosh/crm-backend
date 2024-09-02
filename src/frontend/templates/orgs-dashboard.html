@@ -788,13 +788,13 @@
 
 <div class="flex-grow-1" id="page_container">
     <div class="row g-6">
-        <div class="col-xxl-3 col-xl-6 col-sm-6 col-lg-6 col-md-6">
+        <div class="col-xxl-4">
             <div class="col-lg mb-md-0 mb-4" id="current_level">
 
             </div>
         </div>
 
-        <div class="col-xxl-5 col-xl-6 col-sm-6 col-lg-6 col-md-6">
+        <div class="col-xxl-8 mt-4 mt-xxl-0">
             <div class="card h-100">
                 <div class="card-header">
                     <h5 class="card-title mb-1" id="org-name">Организация
@@ -810,9 +810,41 @@
                 </div>
             </div>
         </div>
-
-
     </div>
+
+
+    <div class="col-auto mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-1">Участники вашей организации
+                    <a href="javascript:var u = '/organizations/readOrganizationMemberships?org_id=' + id; dt_refresh('dt_user_members', u)"
+                       id="rb1">
+                        <i class="bx bx-refresh" data-bs-toggle="tooltip" data-bs-offset="0,8"
+                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
+                           data-bs-original-title="Обновить"></i>
+                    </a>
+                    <span class="spinner-border spinner-border-sm text-primary" role="status" id="mem-ldr"></span>
+                </h5>
+                <small class="card-subtitle">
+                    Управлять участниками
+                </small>
+            </div>
+            <div class="card-body table-responsive" id="mem-div" style="display: none;">
+                <table id="dt_user_members" class="datatables-ajax table table-bordered dataTable no-footer">
+                    <thead>
+                    <tr>
+                        <th>Имя</th>
+                        <th>Telegram</th>
+                        <th>Права</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+    </div>
+
 
     <div class="col-auto mt-4">
         <div class="">
@@ -854,38 +886,6 @@
                         </thead>
                     </table>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-auto mt-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-1">Участники вашей организации
-                    <a href="javascript:var u = '/organizations/readOrganizationMemberships?org_id=' + id; dt_refresh('dt_user_members', u)"
-                       id="rb1">
-                        <i class="bx bx-refresh" data-bs-toggle="tooltip" data-bs-offset="0,8"
-                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"
-                           data-bs-original-title="Обновить"></i>
-                    </a>
-                    <span class="spinner-border spinner-border-sm text-primary" role="status" id="mem-ldr"></span>
-                </h5>
-                <small class="card-subtitle">
-                    Управлять участниками
-                </small>
-            </div>
-            <div class="card-body table-responsive" id="mem-div" style="display: none;">
-                <table id="dt_user_members" class="datatables-ajax table table-bordered dataTable no-footer">
-                    <thead>
-                    <tr>
-                        <th>Имя</th>
-                        <th>Telegram</th>
-                        <th>Права</th>
-                        <th>Статус</th>
-                        <th>Действия</th>
-                    </tr>
-                    </thead>
-                </table>
             </div>
         </div>
     </div>

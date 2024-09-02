@@ -40,6 +40,7 @@ class BalanceSourceSchema(BaseModel):
     bill: str
     description: str | None
     is_active: bool
+    priority: int | None
 
 
 # Balance Status

@@ -113,3 +113,4 @@ class BalanceSourceModel(Base):
     bill: Mapped[str]
     description: Mapped[str | None]
     is_active: Mapped[bool]
+    priority: Mapped[int | None]
