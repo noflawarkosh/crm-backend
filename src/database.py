@@ -162,7 +162,6 @@ class Repository:
                             new_data_model = await session.merge(model['model'](**record))
 
                             if session_id and is_logging:
-
                                 new_data_dict = await to_dict(new_data_model)
 
                                 audit_log_records.append(
@@ -278,6 +277,16 @@ class Repository:
 
                 await session.execute(query)
                 await session.commit()
+
+        finally:
+            await session.close()
+
+    @classmethod
+    async def execute_sql(cls, query):
+        try:
+            async with async_session_factory() as session:
+                db_response = await session.execute(text(query))
+                return db_response.all()
 
         finally:
             await session.close()

@@ -32,8 +32,6 @@ router = APIRouter(
     tags=["Admin"]
 )
 
-
-
 tables_access = {
     'users': (UserModel, 4096, {}),
     'logs': (AdminAuditLog, 1048576, {}),
@@ -675,6 +673,53 @@ async def create_organization(org_id: int, session: AdminSessionModel = Depends(
     records = await MembershipRepository.read_memberships_of_organization(org_id)
 
     return [record.__dict__ for record in records]
+
+
+@router.get('/getBalance')
+async def create_organization(org_id: int = None, session: AdminSessionModel = Depends(authed)):
+    if not 2048 & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    query = 'SELECT SUM(' \
+            'CASE ' \
+            'WHEN action_id IN (1, 4) THEN amount ' \
+            'WHEN action_id IN (2, 3) THEN -amount ' \
+            'ELSE 0 ' \
+            'END) AS total_amount ' \
+            'FROM balance_history '
+
+    if org_id is not None:
+
+        try:
+            int(org_id)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=string_400)
+
+        query += f'WHERE org_id = {org_id};'
+
+    result = await Repository.execute_sql(query)
+
+    return result[0][0]
+
+
+@router.get('/getBalances')
+async def create_organization(session: AdminSessionModel = Depends(authed)):
+    if not 2048 & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    query = 'SELECT org_id,' \
+            'SUM(' \
+            'CASE ' \
+            'WHEN action_id IN (1, 4) THEN amount ' \
+            'WHEN action_id IN (2, 3) THEN -amount ' \
+            'ELSE 0 ' \
+            'END) AS balance ' \
+            'FROM balance_history ' \
+            'GROUP BY org_id;'
+
+    result = await Repository.execute_sql(query)
+
+    return {x[0]: x[1] for x in result}
 
 
 # Forced saves

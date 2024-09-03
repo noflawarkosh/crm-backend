@@ -170,187 +170,232 @@
     }
 
     $.ajax({
-        type: "GET",
-        url: '/admin/get/organizations_full',
-        success: function (data) {
+        url: '/admin/getBalances',
+        type: 'GET',
+        success: function (bls) {
+            $.ajax({
+                type: "GET",
+                url: '/admin/get/organizations_full',
+                success: function (data) {
 
-            for (var i in data) {
-                if (!data[i].is_competitor) {
-                    INNS.push(data[i].inn)
-                }
-
-            }
-
-            $('#dt_orgs').DataTable({
-                data: data,
-                "paging": true,
-                "pageLength": 10,
-                "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-                "searching": true,
-                "ordering": true,
-
-                columns: [
-                    {data: 'id'},
-                    {
-                        data: 'title',
-                        render: function (data, type, row) {
-                            var color = ''
-
-                            if (row.is_competitor) {
-                                color = 'text-dark'
-                            }
-
-                            return '<span class="text-nowrap ' + color + '">' + data + '</span>'
+                    for (var i in data) {
+                        if (!data[i].is_competitor) {
+                            INNS.push(data[i].inn)
                         }
-                    },
-                    {
-                        data: 'inn',
-                        render: function (data, type, row) {
-                            if (check_inn(data)) {
-                                return '<span class="text-warning">' + data + ' <i class="bx bx-error"></i></span>'
-                            }
-                            return data
-                        }
-                    },
-                    {
-                        data: 'is_competitor',
-                        render: function (data, type, row) {
-                            return data? 'Да' : 'Нет'
-                        }
-                    },
-                    {
-                        "data": "owner",
-                        "render": function (data, type, row) {
-                            return '<a href="##" onclick="showContacts(' + row.id + ');" data-bs-toggle="modal" data-bs-target="#modalCenter">Контакты</a>'
 
-                        }
-                    },
-                    {data: 'balance_limit'},
-                    {
-                        "data": "level",
-                        "render": function (data, type, row) {
-                            var cell = '—'
-                            if (data !== null) {
-                                return data.title
-                            }
-                            return cell
-                        }
-                    },
-                    {
-                        "data": "server",
-                        "render": function (data, type, row) {
-
-                            if (data !== null) {
-                                return data.name
-                            }
-
-                            return '<b class="text-danger"> Не указано </b>'
-                        }
-                    },
-                    {
-                        "data": "status",
-                        "render": function (data, type, row) {
-
-                            var color = 'warning'
-                            var txt = 'Ожидает подтверждения'
-                            var sp_confilct = ''
-
-                            if (data === 2) {
-                                color = 'success'
-                                txt = 'Активна'
-                            }
-
-                            if (data === 3) {
-                                color = 'danger'
-                                txt = 'Приоставновлена'
-                            }
-
-                            if (data === 4) {
-                                color = 'secondary'
-                                txt = 'Закрыта'
-                            }
-
-
-                            if (check_inn(row.inn)) {
-                                sp_confilct = '<span class="badge bg-label-warning">Конфликт ИНН</span>'
-                            }
-
-                            var sp_comp = ''
-                            if (row.is_competitor) {
-                                sp_comp = '<span class="badge bg-label-secondary">Конкурент</span>'
-                            }
-
-                            return '<span class="me-2 badge bg-label-' + color + '">' + txt + '</span>' + sp_confilct + sp_comp
-                        }
-                    },
-
-                    {
-                        "data": "status",
-                        "render": function (data, type, row) {
-
-                            var edit = '<a target="_blank" href="/admin-tables/balances?org_id=' + row.id + '"><i class="bx bx-detail me-2"></i></a><a href="/admin-edit/organizations/' + row.id + '"><i class="bx bx-edit-alt"></i></a>'
-
-                            if (data === 1) {
-                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ', 11)"><i class="bx bx-check"></i></a>' +
-                                    '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ', null)"><i class="bx bx-block"></i></a>' +
-                                    '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 4 + ', null)"><i class="bx bx-x"></i></a>'
-
-                            }
-
-                            if (data === 2) {
-                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ', null)"><i class="bx bx-block"></i></a>'
-                                    + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 4 + ', null)"><i class="bx bx-x"></i></a>'
-                            }
-
-                            if (data === 3) {
-                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ', null)"><i class="bx bx-check"></i></a>'
-                                    + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 4 + ', null)"><i class="bx bx-x"></i></a>'
-                            }
-
-                            if (data === 4) {
-                                return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ', null)"><i class="bx bx-check"></i></a>'
-                            }
-
-                        }
                     }
-                ],
-                "initComplete": function () {
 
-                    var table = this.api().table().header();
-                    var newRow = $('<tr></tr>');
-                    $(table).append(newRow);
+                    $('#dt_orgs').DataTable({
+                        data: data,
+                        "paging": true,
+                        "pageLength": 10,
+                        "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                        "searching": true,
+                        "ordering": true,
 
-                    var searchColumns = [0, 1, 2, 3, 4, 5, 6, 7];
+                        columns: [
+                            {data: 'id'},
+                            {
+                                data: 'title',
+                                render: function (data, type, row) {
+                                    var color = ''
 
-                    this.api().columns().every(function (i) {
-                        var column = this;
-                        if (searchColumns.includes(i)) {
+                                    if (row.is_competitor) {
+                                        color = 'text-dark'
+                                    }
 
-                            var input = $('<input type="text" class="form-control" placeholder="" />');
-                            $(newRow).append($('<th></th>').append(input));
+                                    return '<span class="text-nowrap ' + color + '">' + data + '</span>'
+                                }
+                            },
+                            {
+                                data: 'inn',
+                                render: function (data, type, row) {
+                                    if (check_inn(data)) {
+                                        return '<span class="text-warning">' + data + ' <i class="bx bx-error"></i></span>'
+                                    }
+                                    return data
+                                }
+                            },
+                            {
+                                data: 'is_competitor',
+                                render: function (data, type, row) {
+                                    return data ? 'Да' : 'Нет'
+                                }
+                            },
+                            {
+                                data: 'id',
+                                render: function (data, type, row) {
+                                    if (bls[data] !== undefined) {
 
-                            input.on('keyup change clear', function () {
-                                if (column.search() !== this.value) {
-                                    column.search(this.value).draw();
+                                        var color = ''
+                                        if (bls[data] < 0) {
+
+                                            color = 'text-danger'
+                                        }
+
+                                        return '<span class="text-nowrap ' + color + '"><b>' + bls[data].toLocaleString('ru-RU') + ' ₽</b></span>'
+                                    }
+
+                                    return '<span class="text-nowrap"><b>0 ₽</b></span>'
+
+
+                                }
+                            },
+                            {
+                                "data": "owner",
+                                "render": function (data, type, row) {
+                                    return '<a href="##" onclick="showContacts(' + row.id + ');" data-bs-toggle="modal" data-bs-target="#modalCenter">Контакты</a>'
+
+                                }
+                            },
+                            {
+                                data: 'balance_limit',
+                                render: function (data, type, row) {
+                                    return '<b>' + data.toLocaleString('ru-RU') + ' ₽</b>'
+                                }
+                            },
+                            {
+                                "data": "level",
+                                "render": function (data, type, row) {
+                                    var cell = '—'
+                                    if (data !== null) {
+                                        return data.title
+                                    }
+                                    return cell
+                                }
+                            },
+                            {
+                                "data": "server",
+                                "render": function (data, type, row) {
+
+                                    if (data !== null) {
+                                        return data.name
+                                    }
+
+                                    return '<b class="text-danger"> Не указано </b>'
+                                }
+                            },
+                            {
+                                "data": "status",
+                                "render": function (data, type, row) {
+
+                                    var color = 'warning'
+                                    var txt = 'Ожидает подтверждения'
+                                    var sp_confilct = ''
+
+                                    if (data === 2) {
+                                        color = 'success'
+                                        txt = 'Активна'
+                                    }
+
+                                    if (data === 3) {
+                                        color = 'danger'
+                                        txt = 'Приоставновлена'
+                                    }
+
+                                    if (data === 4) {
+                                        color = 'secondary'
+                                        txt = 'Закрыта'
+                                    }
+
+
+                                    if (check_inn(row.inn)) {
+                                        sp_confilct = '<span class="badge bg-label-warning">Конфликт ИНН</span>'
+                                    }
+
+                                    var sp_comp = ''
+                                    if (row.is_competitor) {
+                                        sp_comp = '<span class="badge bg-label-secondary">Конкурент</span>'
+                                    }
+
+                                    return '<span class="me-2 badge bg-label-' + color + '">' + txt + '</span>' + sp_confilct + sp_comp
+                                }
+                            },
+
+                            {
+                                "data": "status",
+                                "render": function (data, type, row) {
+
+                                    var edit = '<a target="_blank" href="/admin-tables/balances?org_id=' + row.id + '"><i class="bx bx-detail me-2"></i></a><a href="/admin-edit/organizations/' + row.id + '"><i class="bx bx-edit-alt"></i></a>'
+
+                                    if (data === 1) {
+                                        return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ', 11)"><i class="bx bx-check"></i></a>' +
+                                            '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ', null)"><i class="bx bx-block"></i></a>' +
+                                            '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 4 + ', null)"><i class="bx bx-x"></i></a>'
+
+                                    }
+
+                                    if (data === 2) {
+                                        return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 3 + ', null)"><i class="bx bx-block"></i></a>'
+                                            + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 4 + ', null)"><i class="bx bx-x"></i></a>'
+                                    }
+
+                                    if (data === 3) {
+                                        return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ', null)"><i class="bx bx-check"></i></a>'
+                                            + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 4 + ', null)"><i class="bx bx-x"></i></a>'
+                                    }
+
+                                    if (data === 4) {
+                                        return edit + '<a href="javascript:updateOrgStatus(' + row.id + ', ' + 2 + ', null)"><i class="bx bx-check"></i></a>'
+                                    }
+
+                                }
+                            }
+                        ],
+                        "initComplete": function () {
+
+                            var table = this.api().table().header();
+                            var newRow = $('<tr></tr>');
+                            $(table).append(newRow);
+
+                            var searchColumns = [0, 1, 2, 3, 4, 5, 6, 7];
+
+                            this.api().columns().every(function (i) {
+                                var column = this;
+                                if (searchColumns.includes(i)) {
+
+                                    var input = $('<input type="text" class="form-control" placeholder="" />');
+                                    $(newRow).append($('<th></th>').append(input));
+
+                                    input.on('keyup change clear', function () {
+                                        if (column.search() !== this.value) {
+                                            column.search(this.value).draw();
+                                        }
+                                    });
+                                } else {
+                                    $(newRow).append($('<th></th>'))
+
                                 }
                             });
-                        } else {
-                            $(newRow).append($('<th></th>'))
+                        },
 
-                        }
+                        "order": [[0, "desc"]]
                     });
+
+
                 },
+                error: function () {
+                    toastr.error('Ошибка обновления данных. Обновите страницу и повторите попытку')
 
-                "order": [[0, "desc"]]
-            });
-
-
-        },
-        error: function () {
-            toastr.error('Ошибка обновления данных. Обновите страницу и повторите попытку')
-
+                }
+            })
         }
     })
+
+
+    function loadBalance(id) {
+        $.ajax({
+            url: '/admin/getBalance?org_id=' + id,
+            type: 'GET',
+            success: function (balance) {
+                if (balance == null) {
+                    balance = 0
+                }
+                document.getElementById('balance_' + id).innerHTML = balance.toLocaleString('ru-RU') + ' ₽'
+                toastr.success('Данные получены')
+            }
+        })
+    }
 
 </script>
 {% endblock %}
@@ -375,6 +420,7 @@
                             <th>Название</th>
                             <th>ИНН</th>
                             <th>Конкурент</th>
+                            <th>Баланс</th>
                             <th>Контакты</th>
                             <th>Лимит баланса</th>
                             <th>Уровень</th>

@@ -92,7 +92,7 @@
                 </div>
 
                 <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
-
+                    <span class="badge bg-primary me-2" style="display:none" id="curr_balance"></span>
                     <div class="navbar-nav align-items-center me-3 me-xl-0" id="c-users-div" style="display:none">
                         <a href="/admin-tables/users" class="nav-link">
                             <i class="bx bx-user-plus bx-sm"></i>
@@ -132,6 +132,7 @@
 
                     <ul class="navbar-nav flex-row align-items-center ms-auto">
 
+
                         <!-- User -->
                         <li class="nav-item navbar-dropdown dropdown-user dropdown">
 
@@ -145,7 +146,7 @@
 
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
-                                    <a class="dropdown-item" href="admin/profile">
+                                    <a class="dropdown-item" href="javascript:">
                                         <div class="d-flex">
                                             <div class="flex-shrink-0 me-3">
                                                 <div class="avatar avatar-online" id="my-avatar-drop">
@@ -705,6 +706,18 @@
                 $('#c-reviews').show()
                 $('#c-reviews').html(amount)
             }
+        },
+    });
+
+    $.ajax({
+        url: '/admin/getBalance',
+        method: 'get',
+
+        success: function (data) {
+            var i = document.getElementById('curr_balance')
+            i.innerHTML = data.toLocaleString('ru-RU') + ' ₽'
+            i.style.display = 'block'
+
         },
     });
 </script>

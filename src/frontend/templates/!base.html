@@ -129,7 +129,9 @@
                 </div>
 
                 <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
-                    <div id="topnavicons"></div>
+                    <div id="topnavicons">
+
+                    </div>
                     <div class="navbar-nav align-items-center">
                         <span class="spinner-border spinner-border-sm text-primary" role="status" id="page_ldr"
                               style="display: none;"></span>
@@ -835,25 +837,91 @@
 
 <!-- Get Current Org -->
 <script>
+
+    function CTB(x) {
+        var add = 0
+        var freeze = 0
+        var spent = 0
+        var unfreezed = 0
+
+        for (var i in x) {
+            if (x[i].action_id === 1) {
+                add = add + x[i].amount
+            }
+            if (x[i].action_id === 2) {
+                freeze = freeze + x[i].amount
+            }
+            if (x[i].action_id === 3) {
+                spent = spent + x[i].amount
+            }
+            if (x[i].action_id === 4) {
+                unfreezed = unfreezed + x[i].amount
+            }
+        }
+
+        return add + unfreezed - freeze - spent
+
+    }
+
     $(document).ready(function () {
         var pname = window.location.pathname;
         var currentPage = window.location.pathname;
         var OrgID = pname.split('/')[3];
 
         if (pname.includes('/organization')) {
+
             $.ajax({
                 url: '/organizations/readOrganization?org_id=' + OrgID,
                 type: 'GET',
                 success: function (data) {
-                    if (data.is_competitor) {
-                        document.getElementById('page_body').style.background = 'rgb(239,239,239)'
-                        var tni = document.getElementById('topnavicons')
-                        tni.innerHTML = '<span class="badge bg-label-secondary me-2">КОНКУРЕНТ</span>'
 
-                         if (pname.includes('reviews')) {
-                             document.getElementById('rate_create').value = '1'
-                         }
-                    }
+                    $.ajax({
+
+                        url: '/payments/getHistory?org_id=' + OrgID,
+                        type: 'GET',
+
+                        success: function (data2) {
+                            var tt = CTB(data2)
+
+                            var color = 'primary'
+                            if (tt < 0) {
+                                color = 'label-danger'
+                            }
+
+                            var info = '<span class="badge bg-label-primary me-2">' + data.title + '</span>' +
+                                '<a href="/organization/wallet/' + OrgID + '"><span class="me-2 badge bg-' + color + ' me-2">' + tt.toLocaleString('ru-RU') + ' ₽</span></a>'
+
+                            if (data.is_competitor) {
+                                document.getElementById('page_body').style.background = 'rgb(239,239,239)'
+                                info += '<span class="badge bg-label-secondary me-2">КОНКУРЕНТ</span>'
+                                if (pname.includes('reviews')) {
+                                    document.getElementById('rate_create').value = '1'
+                                }
+                            }
+
+                            var tni = document.getElementById('topnavicons')
+                            tni.innerHTML = info
+
+                        },
+
+                        error: function () {
+                            
+                            var info = '<span class="badge bg-label-primary me-2">' + data.title + '</span>'
+
+                            if (data.is_competitor) {
+                                document.getElementById('page_body').style.background = 'rgb(239,239,239)'
+                                info += '<span class="badge bg-label-secondary me-2">КОНКУРЕНТ</span>'
+                                if (pname.includes('reviews')) {
+                                    document.getElementById('rate_create').value = '1'
+                                }
+                            }
+
+                            var tni = document.getElementById('topnavicons')
+                            tni.innerHTML = info
+                        }
+                    });
+
+
                 }
             })
         }
