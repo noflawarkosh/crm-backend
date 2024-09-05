@@ -224,6 +224,30 @@ async def create_organization(org_id: int,
     return [BalanceBillReadSchema.model_validate(record, from_attributes=True) for record in bills]
 
 
+@router.get('/getBalance')
+async def create_organization(org_id: int, session: UserSessionModel = Depends(authed)):
+    await check_access(org_id, session.user.id, 32)
+
+    try:
+        int(org_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=string_400)
+
+    query = 'SELECT SUM(' \
+            'CASE ' \
+            'WHEN action_id IN (1, 4) THEN amount ' \
+            'WHEN action_id IN (2, 3) THEN -amount ' \
+            'ELSE 0 ' \
+            'END) AS total_amount ' \
+            'FROM balance_history ' \
+            f'WHERE org_id = {org_id};'
+
+
+    result = await Repository.execute_sql(query)
+
+    return result[0][0]
+
+
 @router.post('/updateBillStatus')
 async def create_organization(bill_id: int, status_id: int,
                               session: UserSessionModel = Depends(authed)):

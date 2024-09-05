@@ -15,7 +15,7 @@ from auth.models import UserModel, UserSessionModel
 from orgs.repository import MembershipRepository
 from payments.router import current_prices
 from picker.models import PickerServerScheduleModel, PickerSettingsModel, PickerServerContractorModel, \
-    PickerHistoryModel, PickerServerModel, PickerOrderStatus
+    PickerHistoryModel, PickerServerModel, PickerOrderStatus, PickerServerClientModel
 
 from gutils import Strings
 from database import Repository, AdminAuditLog
@@ -91,6 +91,16 @@ tables_access = {
             'select_related': [ProductSizeModel.product],
             'deep_related': [
                 [ProductSizeModel.product, ProductModel.organization]
+            ]
+        }
+    ),
+
+    'pickerorgs': (
+        PickerServerClientModel, 2,
+        {
+            'select_related': [PickerServerClientModel.organization],
+            'deep_related': [
+                [PickerServerClientModel.organization, OrganizationModel.server],
             ]
         }
     ),

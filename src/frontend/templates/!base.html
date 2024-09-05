@@ -877,11 +877,15 @@
 
                     $.ajax({
 
-                        url: '/payments/getHistory?org_id=' + OrgID,
+                        url: '/payments/getBalance?org_id=' + OrgID,
                         type: 'GET',
 
                         success: function (data2) {
-                            var tt = CTB(data2)
+                            var tt = data2
+
+                            if (tt == null) {
+                                tt = 0
+                            }
 
                             var color = 'primary'
                             if (tt < 0) {

@@ -145,11 +145,12 @@
         var ba = document.getElementById('bad_accounts').value
 
         var formData = new FormData();
+        formData.append('date', document.getElementById('picker_date').value);
         formData.append('bad_accounts', document.getElementById('bad_accounts').value);
 
         $.ajax({
             type: "POST",
-            url: '/picker/generatePlan',
+            url: '/picker/generatePlan?date=' + document.getElementById('picker_date').value,
             data: formData,
             contentType: false,
             processData: false,
@@ -432,8 +433,10 @@
             document.getElementById('dt_picker_history_div').innerHTML = '<table id="dt_picker_history" class="datatables-ajax table table-bordered dataTable no-footer">\n' +
                 '                        <thead>\n' +
                 '                        <tr>\n' +
+                  '                            <th>ID</th>\n' +
                 '                            <th>Дата</th>\n' +
                 '                            <th>План</th>\n' +
+                                '                            <th>Логи</th>\n' +
 
                 '                            <th>Сервер</th>\n' +
                 '                        </tr>\n' +
@@ -450,6 +453,10 @@
                 autoWidth: false,
                 "columns": [
                     {
+                        data: 'id',
+
+                    },
+                    {
                         data: 'date',
                         render: function (data, type, row) {
                             return moment(data).format('DD.MM.YYYY HH:mm:ss')
@@ -457,6 +464,16 @@
                     },
                     {
                         data: 'result',
+                        render: function (data, type, row) {
+                            if (data) {
+                                return '<a target="_blank" href="https://storage.yandexcloud.net/greedybear/' + data + '">Скачать</a>'
+                            } else {
+                                return ''
+                            }
+                        }
+                    },
+                    {
+                        data: 'logs',
                         render: function (data, type, row) {
                             if (data) {
                                 return '<a target="_blank" href="https://storage.yandexcloud.net/greedybear/' + data + '">Скачать</a>'
@@ -600,7 +617,7 @@
 
 {% block content %}
 <div class="flex-grow-1">
-    <div class="row"  style="display: none">
+    <div class="row" style="display: none">
         <div class="col">
             <div class="card">
                 <div class="card-header">
@@ -658,10 +675,11 @@
             <div class="card h-100">
 
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Генерация плана
+                    <h5 class="card-title mb-0">Обновление заказов
                         <span class="spinner-border spinner-border-sm text-primary" role="status"
                               id="ldr_picker"></span>
-                        <a target="_blank" href="/admin-tables/pickerstatuses" class="small">статусы <i class="bx bxs-arrow-to-right"></i> </a>
+                        <a target="_blank" href="/admin-tables/pickerstatuses" class="small">статусы <i
+                                class="bx bxs-arrow-to-right"></i> </a>
                     </h5>
 
                     <small class="card-subtitle" id="prod-cntr"></small>
@@ -681,12 +699,9 @@
 
                         </tbody>
                     </table>
-                    <div class="mt-3" style="display: none">
-                        <label for="bad_accounts" class="form-label">Реестровые минус аккаунты</label>
-                        <textarea class="form-control" id="bad_accounts" rows="3"></textarea>
-                    </div>
+
                     <div>
-                        <button id="btn4" onclick="picker(true, false)" class="btn btn-label-primary mt-4">Заказы
+                        <button id="btn4" onclick="picker(true, false)" class="btn btn-primary mt-4">Выполнить
                         </button>
 
                     </div>
@@ -701,14 +716,23 @@
         <div class="col">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0 me-1">История генерации планов
+                    <h5 class="card-title mb-0 me-1">Генерация плана
                         <a href="javascript:dt_refresh('dt_picker_history', '/admin/get/pickerhistory')"><i
                                 class="bx bx-refresh"></i></a>
                         <span class="spinner-border spinner-border-sm text-primary" role="status"
                               id="ldr_history"></span>
                     </h5>
-                    <input class="form-control mt-4 w-20" type="date" id="picker_date"></input>
-                    <button id="btn5" onclick="generate_plan_tmp()" class="btn btn-label-primary mt-4">Генерация плана</button>
+                    <input class="form-control mt-4 w-20" type="date" id="picker_date">
+                    <div class="mt-3">
+                        <label for="bad_accounts" class="form-label">Реестровые минус аккаунты</label>
+                        <textarea class="form-control" id="bad_accounts" rows="3"></textarea>
+                    </div>
+                    <button id="btn3" onclick="generate_plan()" class="btn btn-primary mt-4">План с подбором
+                    </button>
+
+                    <button id="btn5" onclick="generate_plan_tmp()" class="btn btn-label-primary mt-4">Пустой план
+                    </button>
+
                     <small class="card-subtitle" id="history_console"></small>
                 </div>
                 <div class="card-body table-responsive" id="dt_picker_history_div">
@@ -753,12 +777,13 @@
         </div>
     </div>
 
-    <div class="row mt-3" style="display: none">
+    <div class="row mt-3">
         <div class="col">
             <div class="card h-100">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Конфигурация подбора
                         <a href="/admin-edit/pickersettings/1"><i class="bx bx-edit-alt"></i></a>
+                        <a href="/admin-tables/pickerorgs"><i class="bx bx-group"></i></a>
 
                         <span class="spinner-border spinner-border-sm text-primary" role="status"
                               id="ldr_config"></span>

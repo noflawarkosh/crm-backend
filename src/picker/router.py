@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Response, Request, HTTPException, Upload
 from admin.models import AdminSessionModel
 from admin.router import authed
 
-from picker.utils import refresh_active_and_collected, generate_plan_xlsx, generate_plan_xlsx_2
+from picker.utils import refresh_active_and_collected, generate_plan_xlsx, generate_plan_xlsx_2, generate_plan_main
 from picker.models import PickerServerScheduleModel, PickerSettingsModel, PickerServerContractorModel, \
     PickerHistoryModel, PickerServerModel
 
@@ -45,7 +45,7 @@ async def refresh_orders(request: Request, session: AdminSessionModel = Depends(
 
 
 @router.post('/generatePlan')
-async def generate_plan(request: Request, session: AdminSessionModel = Depends(authed)):
+async def generate_plan(request: Request, date: datetime.date, session: AdminSessionModel = Depends(authed)):
     servers = await Repository.get_records(
         PickerServerModel,
         filters=[PickerServerModel.is_active],
@@ -56,7 +56,7 @@ async def generate_plan(request: Request, session: AdminSessionModel = Depends(a
     bad_accounts = data['bad_accounts']
 
     try:
-        await generate_plan_xlsx(servers, bad_accounts)
+        await generate_plan_main(servers, bad_accounts, date)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'{str(e)}')
 

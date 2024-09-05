@@ -85,6 +85,18 @@ class PickerServerScheduleModel(Base):
     time_second_point: Mapped[datetime.time]
 
 
+class PickerServerClientModel(Base):
+    __tablename__ = 'orders_server_client'
+    id: Mapped[pk]
+    load_i: Mapped[int]
+
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey('organization.id', ondelete='CASCADE', onupdate='CASCADE')
+    )
+
+    organization: Mapped['OrganizationModel'] = relationship(lazy='noload')
+
+
 class PickerServerModel(Base):
     __tablename__ = 'orders_server'
 
@@ -115,4 +127,3 @@ class PickerOrderStatus(Base):
     refund_product: Mapped[bool]
     refund_services: Mapped[bool]
     is_success: Mapped[bool]
-
