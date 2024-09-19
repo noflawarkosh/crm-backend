@@ -471,6 +471,7 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
     }
 
     tasks = {}
+    reviews_to_update = reviews
     for review in reviews:
         if tasks.get(review.size.product.wb_article):
             tasks[review.size.product.wb_article].append(review)
@@ -522,7 +523,7 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
         [
             {
                 'model': ReviewModel,
-                'records': [{'id': review.id, 'status': 2} for review in reviews]
+                'records': [{'id': review.id, 'status': 2} for review in reviews_to_update]
             }
         ]
     )
