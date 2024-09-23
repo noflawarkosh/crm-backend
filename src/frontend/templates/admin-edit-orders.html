@@ -149,17 +149,14 @@
                         success: function (accs) {
 
                             var accsSelect = $('#account_id');
-
+                            accsSelect.append($('<option>').text('- Не выбрано -').val(''));
                             for (let i in accs) {
 
                                 var opTxt = accs[i].number
-
                                 var option = $('<option>').text(opTxt).val(accs[i].id);
-
                                 if (data.account_id == accs[i].id) {
                                     option.attr('selected', 'true');
                                 }
-
                                 accsSelect.append(option);
                             }
                             accsSelect.selectpicker('refresh');

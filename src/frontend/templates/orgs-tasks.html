@@ -334,9 +334,9 @@
                     '                                    <th>Артикул</th>\n' +
                     '                                    <th>Размер</th>\n' +
                     '                                    <th>Товар</th>\n' +
-                    '                                    <th>Комиссия</th>\n' +
                     '                                    <th>Выкуп</th>\n' +
                     '                                    <th>Логистика</th>\n' +
+                    '                                    <th>Комиссия</th>\n' +
                     '                                    <th>Сумма</th>\n' +
                     '                                </tr>\n' +
                     '                                </thead>\n' +
@@ -415,9 +415,10 @@
                         {"data": "wb_article"},
                         {"data": "wb_size_origName"},
                         {"data": "price_product"},
-                        {"data": "price_commission"},
+
                         {"data": "price_buy"},
                         {"data": "price_collect"},
+                        {"data": "price_commission"},
                         {"data": "price_total"},
                     ],
                     "order": [[0, "desc"]],
@@ -755,7 +756,8 @@
 
                             <div class="col-auto">
                                 <button id="cancel-selected" class="btn btn-label-danger mb-2">Отменить
-                                    выбранные </button>
+                                    выбранные
+                                </button>
                             </div>
 
                         </div>

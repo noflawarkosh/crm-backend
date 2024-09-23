@@ -146,6 +146,7 @@ async def register(data: Annotated[UserUpdateSchema, Depends()],
     unique_fields = [
         ('email', data.email, string_user_email_exist),
         ('telnum', data.telnum, string_user_telnum_exist),
+        ('username', data.username.lower(), string_user_username_exist),
         ('telegram', data.telegram, string_user_telegram_exist),
     ]
 

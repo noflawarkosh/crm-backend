@@ -13,11 +13,13 @@
         const inputEmail = document.querySelector('input[id="email"]');
         const inputTelegram = document.querySelector('input[id="telegram"]');
         const inputTelnum = document.querySelector('input[id="telnum"]');
+        const inputUsername = document.querySelector('input[id="username"]');
 
         inputName.setAttribute('value', data.name);
         inputEmail.setAttribute('value', data.email);
         inputTelegram.setAttribute('value', data.telegram);
         inputTelnum.setAttribute('value', data.telnum);
+        inputUsername.setAttribute('value', data.username);
 
         var imageUrl = "{{ url_for('static', path='assets/img/avatars/def-avatar.jpg')}}";
 
@@ -144,14 +146,42 @@
         return good('email', 'То, что нужно!');
     }
 
+    function validateUsername(value) {
+        const regex = /^[a-zA-z0-9]+$/;
+        var x = value.length;
+
+        if (value === '') {
+            return bad('username', 'Введите имя пользователя')
+        }
+
+        if (!regex.test(value)) {
+            return bad('username', 'Пожалуйста, используйте только латиницу и цифры')
+        }
+
+        if (x < 5) {
+            return bad('username', 'Еще хотя бы ' + (5 - x) + ' символов')
+        }
+
+        if (x > 20) {
+            return bad('username', 'Перебор, нужно убрать ' + (x - 20) + ' символов')
+        }
+
+        return good('username', 'То, что нужно!')
+    }
+
     const nameInput = document.getElementById('name');
     const emailInput = document.getElementById('email');
     const telnumInput = document.getElementById('telnum');
     const telegramInput = document.getElementById('telegram');
+    const usernameInput = document.getElementById('username');
 
 
     nameInput.addEventListener('input', function (event) {
         validateName(event.target.value);
+    });
+
+    usernameInput.addEventListener('input', function (event) {
+        validateUsername(event.target.value);
     });
 
     telnumInput.addEventListener('input', function (event) {
@@ -183,6 +213,10 @@
             validated = false
         }
 
+        if (!validateUsername(usernameInput.value)) {
+            validated = false
+        }
+
         if (!validateEmail(emailInput.value)) {
             validated = false
         }
@@ -205,6 +239,7 @@
         url.searchParams.append('email', emailInput.value);
         url.searchParams.append('telnum', telnumInput.value);
         url.searchParams.append('telegram', telegramInput.value);
+        url.searchParams.append('username', usernameInput.value);
 
         var avafile = $('#avatar-file')[0].files
 
@@ -262,7 +297,7 @@
                         class="bx bx-user me-1"></i> Основные</a></li>
                 <li class="nav-item"><a class="nav-link" href="/security"><i
                         class="bx bx-lock-alt me-1"></i> Безопасность</a></li>
-                <li class="nav-item"><a class="nav-link disabled" ><i
+                <li class="nav-item"><a class="nav-link disabled"><i
                         class="bx bx-bell me-1"></i> Уведомления</a></li>
             </ul>
 
@@ -287,6 +322,13 @@
                     <hr class="my-0">
                     <div class="card-body">
                         <div class="row">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Логин *</label>
+                                <input type="text" class="form-control" id="username" name="username"
+                                       placeholder="ivan77" autofocus autocomplete="nofill">
+                                <div class="valid-feedback" id="vf-username">То, что нужно!</div>
+                                <div class="invalid-feedback" id="if-username"></div>
+                            </div>
                             <div class="mb-3 col-md-6 fv-plugins-icon-container">
                                 <label for="name" class="form-label">Имя *</label>
                                 <input type="text" class="form-control" id="name" name="name"

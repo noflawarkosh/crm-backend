@@ -17,6 +17,7 @@ class UserUpdateSchema(BaseModel):
     email: constr(max_length=100)
     telnum: constr(min_length=12, max_length=12)
     telegram: constr(max_length=50)
+    username: constr(min_length=5, max_length=20)
 
 
 class UserReadSchema(BaseModel):
