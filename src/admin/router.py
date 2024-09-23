@@ -784,6 +784,48 @@ async def force_save_product(wb_article, wb_title, sizes, org_id):
 
 @router.post('/x')
 async def x(file: UploadFile = File(...)):
+    db_orgs = await Repository.get_records(OrganizationModel)
+    df_orgs = pd.DataFrame([{'id': x.id, 'title': x.title} for x in db_orgs])
+
+    columns = {
+        'title': 0,
+        'balance': 1,
+    }
+
+    content = await file.read()
+
+    data = await parse_excel_lines(pd.read_excel(BytesIO(content), dtype=str).values.tolist(), columns)
+    tt = 0
+    actions = []
+    for line in data:
+
+        aid = None
+        bal = int(line['balance'])
+        abal = abs(bal)
+
+        if bal == 0:
+            continue
+
+        if bal > 0:
+            tt += abal
+            aid = 1
+
+        elif bal < 0:
+            tt -= abal
+            aid = 3
+
+        query = df_orgs.query(f"title == '{line['title']}'")
+        org_id = query['id'].iloc[0] if len(query.values) != 0 else None
+
+        actions.append({
+            'amount': abal,
+            'org_id': int(org_id),
+            'action_id': aid,
+            'description': 'Стартовый баланс',
+        })
+
+    await Repository.save_records([{'model': BalanceHistoryModel, 'records': actions}])
+
     return
     # Caching data from db
     db_accounts = await Repository.get_records(OrdersAccountModel)
@@ -879,7 +921,6 @@ async def x(file: UploadFile = File(...)):
             )
             raise HTTPException(status_code=404, detail='NOT FULL')
 
-
         # ADD TO DB
         orders_to_db.append({
             'wb_keyword': line['product_title'],
@@ -900,11 +941,8 @@ async def x(file: UploadFile = File(...)):
             'status': status,
         })
 
-
     await Repository.save_records([{'model': OrdersOrderModel, 'records': orders_to_db}])
     return
-
-
 
     # Barcodes
     content = await file.read()
