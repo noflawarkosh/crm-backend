@@ -122,6 +122,7 @@ async def page(request: Request,
 @router.get('/')
 async def page(request: Request,
                session: UserSessionModel = Depends(every)):
+
     if session:
         return RedirectResponse('/dashboard')
 

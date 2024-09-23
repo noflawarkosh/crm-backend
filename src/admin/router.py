@@ -24,7 +24,10 @@ from orders.models import OrdersAddressModel, OrdersOrderModel, OrdersContractor
 from orgs.models import OrganizationModel, OrganizationMembershipModel
 from payments.models import BalanceBillModel, BalanceSourceModel, BalancePricesModel, BalanceHistoryModel, \
     BalanceTargetModel, BalanceActionModel
+from picker.utils import parse_excel_lines, detect_date
 from products.models import ProductModel, ReviewModel, ProductSizeModel
+from products.repository import ProductsRepository
+from products.utils import parse_wildberries_card
 from strings import *
 
 router = APIRouter(
@@ -731,6 +734,415 @@ async def create_organization(session: AdminSessionModel = Depends(authed)):
     result = await Repository.execute_sql(query)
 
     return {x[0]: x[1] for x in result}
+
+
+async def force_save_product(wb_article, wb_title, sizes, org_id):
+    wb_url = f'https://www.wildberries.ru/catalog/{wb_article}/detail.aspx'
+
+    title, p_article, sizes, picture_data = parse_wildberries_card(wb_url)
+
+    filename = Strings.alphanumeric(32) if picture_data else None
+
+    await ProductsRepository.create_product(
+        {
+            'org_id': int(org_id),
+            'wb_article': p_article,
+            'wb_title': title,
+            'status': 1,
+            'media': filename + '.webp',
+        },
+        [size.model_dump() for size in sizes]
+    )
+
+    if picture_data:
+        await Repository.s3_save_image(picture_data, filename + '.webp')
+
+    return True
+    """
+    except Exception as e:
+
+        await ProductsRepository.create_product(
+            {
+                'org_id': int(org_id),
+                'wb_article': wb_article,
+                'wb_title': wb_title,
+                'status': 1,
+            },
+            [{
+                'wb_size_origName': wb_size_origName,
+                'wb_size_optionId': wb_size_optionId,
+                'wb_in_stock': False,
+                'wb_price': None,
+                'barcode': None,
+                'is_active': True,
+            }]
+        )
+
+        return False
+"""
+
+
+@router.post('/x')
+async def x(file: UploadFile = File(...)):
+    return
+    # Caching data from db
+    db_accounts = await Repository.get_records(OrdersAccountModel)
+    db_prods = await Repository.get_records(ProductModel, select_related=[ProductModel.sizes])
+    db_orgs = await Repository.get_records(OrganizationModel)
+    db_statuses = await Repository.get_records(PickerOrderStatus)
+
+    df_accounts = pd.DataFrame([{'id': x.id, 'number': x.number} for x in db_accounts])
+    df_orgs = pd.DataFrame([{'id': x.id, 'title': x.title} for x in db_orgs])
+
+    columns = {
+        'address': 0,
+        'status': 1,
+        'account_name': 2,
+        'telnum': 3,
+        'collect_code': 4,
+        'organization_title': 5,
+        'product_article': 6,
+        'product_size': 7,
+        'product_title': 8,
+        'price': 9,
+        'dt_ordered': 10,
+        'dt_delivered': 11,
+        'dt_collected': 12,
+        'account_number': 13,
+        'uuid': 14,
+    }
+
+    content = await file.read()
+
+    data = await parse_excel_lines(pd.read_excel(BytesIO(content), dtype=str).values.tolist(), columns)
+
+    processed_accounts = []
+    orders_to_db = []
+    pnf = []
+    prods_to_parse = {}
+    for line in reversed(data):
+
+        size_id = None
+        account_id = None
+        status_id = None
+        status = None
+
+        # SEARCH STATUS
+        status_model = None
+        for db_status in db_statuses:
+            if db_status.full_match and line['status'] == db_status.title:
+                status_model = db_status
+                status_id = db_status.id
+                status = status_model.status_number
+                break
+            elif not db_status.full_match and db_status.title in line['status']:
+                status_model = db_status
+                status_id = db_status.id
+                status = status_model.status_number
+                break
+
+        # SEARCH ORG
+        query = df_orgs.query(f"title == '{line['organization_title']}'")
+        org_id = query['id'].iloc[0] if len(query.values) != 0 else None
+
+        # SEARCH SIZE
+        for prod in db_prods:
+            found = False
+
+            if prod.wb_article == line['product_article'] and prod.org_id == org_id:
+                for size in prod.sizes:
+
+                    if size.wb_size_origName == line['product_size'] or size.wb_size_name == line['product_size']:
+                        size_id = size.id
+                        found = True
+                        break
+
+                if not found:
+                    size_id = prod.sizes[0].id
+
+            if found:
+                break
+
+        # SEARCH ACCOUNT
+        query = df_accounts.query(f"number == '{line['account_number']}'")
+        account_id = query['id'].iloc[0] if len(query.values) != 0 else None
+
+        if not size_id or not account_id or not status_id or not status:
+            print(
+                {
+                    'size_id': size_id,
+                    'account_id': account_id,
+                    'picker_status_id': status_id,
+                    'status': status,
+                    'line': line['line_number']
+                }
+            )
+            raise HTTPException(status_code=404, detail='NOT FULL')
+
+
+        # ADD TO DB
+        orders_to_db.append({
+            'wb_keyword': line['product_title'],
+            'wb_price': int(line['price']),
+            'wb_uuid': line['uuid'],
+            'wb_status': line['status'],
+            'wb_collect_code': line['collect_code'],
+
+            'description': 'forced',
+            'dt_planed': detect_date(line['dt_ordered']),
+            'dt_ordered': detect_date(line['dt_ordered']),
+            'dt_delivered': detect_date(line['dt_delivered']),
+            'dt_collected': detect_date(line['dt_collected']),
+
+            'size_id': size_id,
+            'account_id': account_id,
+            'picker_status_id': status_id,
+            'status': status,
+        })
+
+
+    await Repository.save_records([{'model': OrdersOrderModel, 'records': orders_to_db}])
+    return
+
+
+
+    # Barcodes
+    content = await file.read()
+    columns = {
+        'inn': 0,
+        'art': 1,
+        'bar': 2,
+        'sze': 3,
+        'ttl': 4
+    }
+
+    data = await parse_excel_lines(pd.read_excel(BytesIO(content), dtype=str).values.tolist(), columns)
+
+    db_prods = await Repository.get_records(ProductModel, select_related=[ProductModel.sizes])
+
+    bs_to = []
+    for line in data:
+
+        bar = line['bar'].replace('БАР', '').replace(' ', '')
+        art = line['art'].replace(' ', '').replace('АРТ', '')
+        sze = line['sze'].replace('>>', '')
+
+        for prod in db_prods:
+            found = False
+            if prod.wb_article == art:
+
+                for size in prod.sizes:
+
+                    if size.wb_size_origName == sze:
+                        bs_to.append({
+                            'id': size.id,
+                            'barcode': bar,
+                        })
+                        found = True
+                        break
+            if found:
+                break
+
+    await Repository.save_records([{'model': ProductSizeModel, 'records': bs_to}])
+    return
+
+    # PRODS
+    content = await file.read()
+    columns = {
+        'inn': 0,
+        'art': 1,
+        'bar': 2,
+        'sze': 3,
+        'ttl': 4
+    }
+
+    data = await parse_excel_lines(pd.read_excel(BytesIO(content), dtype=str).values.tolist(), columns)
+
+    db_orgs = await Repository.get_records(OrganizationModel)
+    df_orgs = pd.DataFrame(
+        [
+            {
+                'id': x.id,
+                'inn': x.inn,
+            }
+            for x in db_orgs
+        ]
+    )
+
+    prods_to_parse = {}
+
+    for line in data:
+
+        query = df_orgs.query(f"inn == '{line['inn'].replace(' ', '').replace('ИНН', '')}'")
+        org_id = query['id'].iloc[0] if len(query.values) != 0 else None
+
+        if not org_id:
+            raise HTTPException(status_code=400, detail=line['inn'])
+
+        art = line['art'].replace(' ', '').replace('АРТ', '')
+        ttl = line['ttl']
+        sze = line['sze'].replace('>>', '')
+        org_id = str(org_id)
+        if sze == '':
+            sze = None
+
+        if prods_to_parse.get(org_id):
+            if prods_to_parse[org_id].get(art):
+                prods_to_parse[org_id][art]['sizes'].append(
+                    {
+                        'wb_size_origName': sze,
+                        'wb_size_optionId': line['line_number'],
+                        'wb_in_stock': False,
+                        'wb_price': None,
+                        'barcode': None,
+                        'is_active': True,
+                    }
+                )
+            else:
+                prods_to_parse[org_id][art] = {
+                    'product': {
+                        'org_id': int(org_id),
+                        'wb_article': art,
+                        'wb_title': ttl,
+                        'status': 1,
+                    },
+                    'sizes': [
+                        {
+                            'wb_size_origName': sze,
+                            'wb_size_optionId': line['line_number'],
+                            'wb_in_stock': False,
+                            'wb_price': None,
+                            'barcode': None,
+                            'is_active': True,
+                        }
+                    ]
+                }
+        else:
+            prods_to_parse[org_id] = {}
+            prods_to_parse[org_id][art] = {
+                'product': {
+                    'org_id': int(org_id),
+                    'wb_article': art,
+                    'wb_title': ttl,
+                    'status': 1,
+                },
+                'sizes': [
+                    {
+                        'wb_size_origName': sze,
+                        'wb_size_optionId': line['line_number'],
+                        'wb_in_stock': False,
+                        'wb_price': None,
+                        'barcode': None,
+                        'is_active': True,
+                    }
+                ]
+            }
+
+    for org_id in prods_to_parse:
+        for art in prods_to_parse[org_id]:
+            print(org_id, art, end='')
+            try:
+                wb_url = f'https://www.wildberries.ru/catalog/{art}/detail.aspx'
+
+                title, p_article, sizes, picture_data = parse_wildberries_card(wb_url)
+
+                filename = Strings.alphanumeric(32) if picture_data else None
+
+                await ProductsRepository.create_product(
+                    {
+                        'org_id': int(org_id),
+                        'wb_article': p_article,
+                        'wb_title': title,
+                        'status': 1,
+                        'media': filename + '.webp',
+                    },
+                    [size.model_dump() for size in sizes]
+                )
+
+                if picture_data:
+                    await Repository.s3_save_image(picture_data, filename + '.webp')
+
+                print('WB')
+
+            except Exception as e:
+                print('FORCED', str(e))
+                await ProductsRepository.create_product(
+                    prods_to_parse[org_id][art]['product'],
+                    prods_to_parse[org_id][art]['sizes']
+                )
+
+    return prods_to_parse
+    rr = await force_save_product(
+        line['art'].replace(' ', '').replace('ИНН', ''),
+        line['ttl'],
+        line['sze'].replace('>>', ''),
+        line['line_number'],
+        org_id
+    )
+
+    print(line['line_number'], len(data), org_id, rr)
+
+    return
+    a = []
+    for x in range(11):
+        p = Strings.alphanumeric(10)
+
+        a.append([
+            {
+                'u': 'wb_' + Strings.alphanumeric(8).lower(),
+                'p': p,
+                'h': Strings.hmac(p)
+            }
+        ])
+    return a
+    content = await file.read()
+    columns = {
+        'is_competitor': 1,
+        'title': 2,
+        'inn': 4,
+        'owner_tg': 7,
+        'owner_name': 8,
+    }
+
+    data = await parse_excel_lines(pd.read_excel(BytesIO(content), dtype=str).values.tolist(), columns)
+
+    db_users = await Repository.get_records(UserModel)
+    df_users = pd.DataFrame(
+        [
+            {
+                'id': x.id,
+                'telegram': x.telegram,
+            }
+            for x in db_users
+        ]
+    )
+
+    orgs = []
+    logs = []
+
+    for line in data:
+        query = df_users.query(f"telegram == '{line['owner_tg'].replace('@', '')}'")
+        user_id = query['id'].iloc[0] if len(query.values) != 0 else None
+
+        if not user_id:
+            logs.append(line)
+            continue
+
+        orgs.append(
+            {
+                'title': line['title'],
+                'inn': line['inn'].replace(' ', '').replace('ИНН', ''),
+                'status': 2,
+                'is_competitor': True if line['is_competitor'] == '1' else False,
+                'owner_id': user_id,
+                'server_id': 11,
+
+            }
+        )
+
+    await Repository.save_records([{'model': OrganizationModel, 'records': orgs}])
+
+    return logs
 
 
 # Forced saves
