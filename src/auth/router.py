@@ -158,6 +158,7 @@ async def register(data: Annotated[UserUpdateSchema, Depends()],
         if user_check and user_check[0].id != session.user.id:
             raise HTTPException(status_code=409, detail=error)
 
+    data.username = data.username.lower()
     record = {**data.model_dump(), 'id': session.user.id}
 
     if file:

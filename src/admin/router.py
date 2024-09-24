@@ -2,6 +2,7 @@ from io import BytesIO
 from zipfile import ZipFile
 
 import pandas as pd
+import requests
 from fastapi import APIRouter, Depends, Response, Request, HTTPException, UploadFile, File
 from datetime import datetime, timedelta
 
@@ -172,7 +173,7 @@ tables_access = {
 
 async def every(request: Request = Request):
     token = request.cookies.get(cookies_admin_token_key)
-
+    print(token)
     if not token:
         return None
 
@@ -187,7 +188,7 @@ async def every(request: Request = Request):
 
     session = sessions[0]
 
-    if not session or session.ip != request.client.host or session.user_agent != request.headers.get('user-agent'):
+    if not session:
         return None
 
     if not session.admin.is_active:
@@ -689,6 +690,16 @@ async def create_organization(org_id: int, session: AdminSessionModel = Depends(
     return [record.__dict__ for record in records]
 
 
+@router.get('/getAccess')
+async def create_organization(org_id: int, session: AdminSessionModel = Depends(authed)):
+    if not 128 & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
+
+    records = await MembershipRepository.read_memberships_of_organization(org_id)
+
+    return [record.__dict__ for record in records]
+
+
 @router.get('/getBalance')
 async def create_organization(org_id: int = None, session: AdminSessionModel = Depends(authed)):
     if not 2048 & session.admin.level:
@@ -734,6 +745,44 @@ async def create_organization(session: AdminSessionModel = Depends(authed)):
     result = await Repository.execute_sql(query)
 
     return {x[0]: x[1] for x in result}
+
+
+@router.post('/approve')
+async def approve(result: bool, record_table: str, record_id: int, session: AdminSessionModel = Depends(authed)):
+
+    if record_table == 'bill':
+        bills = await Repository.get_records(
+            BalanceBillModel,
+            filters=[BalanceBillModel.id == record_id],
+            select_related=[BalanceBillModel.status]
+        )
+
+        if len(bills) != 1:
+            return {'detail': '✅⚠️ Счет не найден', 'remove_markup': False}
+
+        bill = bills[0]
+
+        if bill.status_id != 2:
+            return {'detail': f'✅⚠️ Заявка уже рассмотрена: {bill.status.title}', 'remove_markup': True}
+
+        records = [{'model': BalanceBillModel, 'records': [{'id': bill.id, 'status_id': 1 if result else 5}]}]
+
+        if result is True:
+            records.append({'model': BalanceHistoryModel, 'records': [
+                {
+                    'amount': bill.amount,
+                    'org_id': bill.org_id,
+                    'description': 'Пополнение по счету #' + str(bill.id),
+                    'action_id': 1,
+                }
+            ]})
+
+        await Repository.save_records(records)
+
+        if result is True:
+            return {'detail': '✅🟢 Счет успешно одобрен', 'remove_markup': True}
+        else:
+            return {'detail': '✅🔴 Счет успешно отклонен', 'remove_markup': True}
 
 
 async def force_save_product(wb_article, wb_title, sizes, org_id):

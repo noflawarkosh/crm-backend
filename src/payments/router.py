@@ -3,6 +3,7 @@ import math
 from typing import Annotated
 
 import pandas as pd
+import requests
 from fastapi import APIRouter, Depends, HTTPException
 
 from database import Repository
@@ -183,6 +184,12 @@ async def create_organization(data: Annotated[BalanceBillCreateSchema, Depends()
         status_id = 6
 
     bill_id = await PaymentsRepository.create_bill({**data.model_dump(), 'status_id': status_id, 'penalty': penalty})
+
+    source = await Repository.get_records(BalanceSourceModel, filters=[BalanceSourceModel.id == data.source_id])
+    if len(source) != 1:
+        raise HTTPException(status_code=404, detail=string_404)
+    source = source[0]
+
     return bill_id
 
 
@@ -242,7 +249,6 @@ async def create_organization(org_id: int, session: UserSessionModel = Depends(a
             'FROM balance_history ' \
             f'WHERE org_id = {org_id};'
 
-
     result = await Repository.execute_sql(query)
 
     return result[0][0]
@@ -253,13 +259,14 @@ async def create_organization(bill_id: int, status_id: int,
                               session: UserSessionModel = Depends(authed)):
     bills = await Repository.get_records(
         BalanceBillModel,
-        filters=[BalanceBillModel.id == bill_id]
+        filters=[BalanceBillModel.id == bill_id],
+        select_related=[BalanceBillModel.source]
     )
 
     if len(bills) != 1:
         raise HTTPException(status_code=404, detail=string_404)
 
-    await check_access(bills[0].org_id, session.user.id, 32)
+    organization, membership = await check_access(bills[0].org_id, session.user.id, 32)
 
     if status_id not in [2, 4]:
         raise HTTPException(status_code=403, detail=string_403)
@@ -269,6 +276,12 @@ async def create_organization(bill_id: int, status_id: int,
 
     elif status_id == 4 and bills[0].status_id not in [3]:
         raise HTTPException(status_code=403, detail=string_403)
+
+    if status_id == 2:
+        bill = bills[0]
+        source = bill.source
+        msg = f'⚡️💵 Счет на сумму {bill.amount} рублей от {organization.title} через {source.bank} ({source.recipient}, {source.number}, {source.bill}) ожидает подтверждения'
+        requests.post(f'http://185.253.181.112:9500/bot/admin/approve?text={msg}&record_table=bill&record_id={bill.id}')
 
     await Repository.save_records(
         [{'model': BalanceBillModel, 'records': [{'id': bill_id, 'status_id': status_id}]}]
