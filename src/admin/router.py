@@ -173,7 +173,6 @@ tables_access = {
 
 async def every(request: Request = Request):
     token = request.cookies.get(cookies_admin_token_key)
-    print(token)
     if not token:
         return None
 

@@ -192,8 +192,9 @@
             document.getElementById('dt_logs_orders_div').innerHTML = '<table id="dt_logs_orders" class="datatables-ajax table table-bordered dataTable no-footer">\n' +
                 '                        <thead>\n' +
                 '                        <tr>\n' +
-                '                            <th>UUID</th>\n' +
                 '                            <th>SID</th>\n' +
+                '                            <th>UUID</th>\n' +
+
                 '                            <th>Статус</th>\n' +
                 '                            <th>Описание</th>\n' +
                 '                            <th>Значение</th>\n' +
@@ -207,6 +208,7 @@
             document.getElementById('dt_logs_payments_div').innerHTML = '<table id="dt_logs_payments" class="datatables-ajax table table-bordered dataTable no-footer">\n' +
                 '                        <thead>\n' +
                 '                        <tr>\n' +
+                '                            <th>SID</th>\n' +
                 '                            <th>UUID</th>\n' +
                 '                            <th>Статус</th>\n' +
                 '                            <th>Описание</th>\n' +
@@ -303,13 +305,13 @@
                         autoWidth: false,
                         "columns": [
                             {
-                                data: 'target',
+                                data: 'sid',
                                 render: function (data, type, row) {
                                     return '<b>' + data + '</b>'
                                 }
                             },
                             {
-                                data: 'sid',
+                                data: 'target',
                                 render: function (data, type, row) {
                                     return '<b>' + data + '</b>'
                                 }
@@ -359,6 +361,12 @@
                         "ordering": true,
                         autoWidth: false,
                         "columns": [
+                            {
+                                data: 'sid',
+                                render: function (data, type, row) {
+                                    return '<b>' + data + '</b>'
+                                }
+                            },
                             {
                                 data: 'target',
                                 render: function (data, type, row) {
@@ -433,10 +441,10 @@
             document.getElementById('dt_picker_history_div').innerHTML = '<table id="dt_picker_history" class="datatables-ajax table table-bordered dataTable no-footer">\n' +
                 '                        <thead>\n' +
                 '                        <tr>\n' +
-                  '                            <th>ID</th>\n' +
+                '                            <th>ID</th>\n' +
                 '                            <th>Дата</th>\n' +
                 '                            <th>План</th>\n' +
-                                '                            <th>Логи</th>\n' +
+                '                            <th>Логи</th>\n' +
 
                 '                            <th>Сервер</th>\n' +
                 '                        </tr>\n' +

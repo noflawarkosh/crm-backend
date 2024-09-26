@@ -39,7 +39,11 @@ async def refresh_orders(request: Request, session: AdminSessionModel = Depends(
             raise HTTPException(status_code=400, detail=f'Отсутствует файл плана для {server.name}')
 
 
-    return await refresh_active_and_collected(data, servers, session)
+    res = await refresh_active_and_collected(data, servers, session)
+
+
+    return res
+
 
 
 

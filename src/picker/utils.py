@@ -1,6 +1,7 @@
 import copy
 import datetime
 import io
+import math
 import operator
 import random
 from io import BytesIO
@@ -14,6 +15,7 @@ from gutils import Strings
 from orders.models import OrdersOrderModel, OrdersAccountModel, OrdersAddressModel
 from orgs.models import OrganizationModel
 from payments.models import BalanceHistoryModel
+from payments.router import current_prices
 from picker.models import PickerOrderStatus, PickerHistoryModel, PickerSettingsModel, PickerServerClientModel
 from products.models import ProductSizeModel, ProductModel
 
@@ -429,6 +431,102 @@ async def refresh_active_and_collected(data, servers, session):
 
                 if current_is_success != status_model.is_success:
 
+                    # commission
+                    if status_model.refund_services or (int(wb_price) != int(line['price'])):
+
+                        commission_records = await Repository.get_records(
+                            BalanceHistoryModel,
+                            filters=[
+                                BalanceHistoryModel.target_id.in_([4]),
+                                BalanceHistoryModel.record_id == db_order_id,
+                                BalanceHistoryModel.action_id.in_([1, 3])
+                            ],
+                            select_related=[BalanceHistoryModel.target]
+                        )
+
+                        old_commission_amount = 0
+
+                        for commission_record in commission_records:
+                            if commission_record.action_id == 3:
+                                old_commission_amount += commission_record.amount
+
+                            elif commission_record.action_id == 1:
+                                old_commission_amount -= commission_record.amount
+
+
+                        if status_model.refund_services and old_commission_amount != 0:
+                            data_payments_to_db.append(
+                                {
+                                    'amount': old_commission_amount,
+                                    'org_id': org_id,
+                                    'action_id': 1,
+                                    'target_id': 4,
+                                    'record_id': db_order_id,
+                                }
+                            )
+
+                            logs_payments.append(
+                                {
+                                    'target': db_uuid,
+                                    'sid': str(db_order_id),
+                                    'success': True,
+                                    'detail': f'Возврат: Комиссия за стоимость товара',
+                                    'value': int(old_commission_amount),
+                                    'line': line['line_number'],
+                                    'orders_type': orders_type,
+                                    'server': server.name,
+                                }
+                            )
+
+                        elif int(wb_price) != int(line['price']):
+
+                            organizations = await Repository.get_records(
+                                OrganizationModel,
+                                filters=[OrganizationModel.id == int(org_id)]
+                            )
+
+                            if len(organizations) != 1:
+                                raise Exception(f'Организация ID {org_id} не найдена')
+
+                            organization = organizations[0]
+
+                            level, purchases = await current_prices(organization)
+
+                            if int(line['price']) >= level.price_percent_limit:
+                                new_commission_amount = \
+                                    math.ceil((int(line['price']) - level.price_percent_limit) * (level.price_percent / 100))
+                            else:
+                                new_commission_amount = 0
+
+                            commission_difference = old_commission_amount - new_commission_amount
+
+                            act_id = 1
+                            if commission_difference < 0:
+                                act_id = 3
+
+                            data_payments_to_db.append(
+                                {
+                                    'amount': abs(commission_difference),
+                                    'org_id': org_id,
+                                    'action_id': act_id,
+                                    'target_id': 4,
+                                    'record_id': db_order_id,
+                                }
+                            )
+
+                            logs_payments.append(
+                                {
+                                    'target': db_uuid,
+                                    'sid': str(db_order_id),
+                                    'success': True,
+                                    'detail': f'Изменение размера комиссии {old_commission_amount} - {new_commission_amount} = {commission_difference}',
+                                    'value': int(commission_difference),
+                                    'line': line['line_number'],
+                                    'orders_type': orders_type,
+                                    'server': server.name,
+                                }
+                            )
+
                     # Making payment with status
                     if status_model.pay_product:
                         data_payments_to_db.append(
@@ -444,6 +542,7 @@ async def refresh_active_and_collected(data, servers, session):
                         logs_payments.append(
                             {
                                 'target': db_uuid,
+                                'sid': str(db_order_id),
                                 'success': True,
                                 'detail': 'Оплата стоимости продукта',
                                 'value': int(line['price']),
@@ -466,6 +565,7 @@ async def refresh_active_and_collected(data, servers, session):
                         logs_payments.append(
                             {
                                 'target': db_uuid,
+                                'sid': str(db_order_id),
                                 'success': True,
                                 'detail': 'Возврат стоимости продукта',
                                 'value': int(wb_price) if current_sys_status == 2 else int(line['price']),
@@ -489,6 +589,7 @@ async def refresh_active_and_collected(data, servers, session):
                         logs_payments.append(
                             {
                                 'target': db_uuid,
+                                'sid': str(db_order_id),
                                 'success': True,
                                 'detail': 'Разморозка стоимости продукта',
                                 'value': int(wb_price) if current_sys_status == 2 else int(line['price']),
@@ -500,13 +601,15 @@ async def refresh_active_and_collected(data, servers, session):
 
                     if status_model.refund_services:
 
+                        # refund services
                         service_payments = await Repository.get_records(
                             BalanceHistoryModel,
                             filters=[
-                                BalanceHistoryModel.target_id.in_([2, 3, 4]),
+                                BalanceHistoryModel.target_id.in_([2, 3]),
                                 BalanceHistoryModel.record_id == db_order_id,
                                 BalanceHistoryModel.action_id.in_([2, 3])
-                            ]
+                            ],
+                            select_related=[BalanceHistoryModel.target]
                         )
 
                         for service_payment in service_payments:
@@ -520,11 +623,16 @@ async def refresh_active_and_collected(data, servers, session):
                                 }
                             )
 
+                            target_title = ''
+                            if service_payment.target_id is not None:
+                                target_title = service_payment.target.title
+
                             logs_payments.append(
                                 {
                                     'target': db_uuid,
+                                    'sid': str(db_order_id),
                                     'success': True,
-                                    'detail': f'Возврат стоимости услуги (возврат платежа #{service_payment.id})',
+                                    'detail': f'Возврат: {target_title} (платеж №{service_payment.id})',
                                     'value': service_payment.amount,
                                     'line': line['line_number'],
                                     'orders_type': orders_type,
@@ -663,6 +771,7 @@ async def refresh_active_and_collected(data, servers, session):
                 logs_payments.append(
                     {
                         'target': line['sid'],
+                        'sid': line['sid'],
                         'success': True,
                         'detail': 'Разморозка стоимости продукта',
                         'value': int(wb_price),
@@ -695,6 +804,7 @@ async def refresh_active_and_collected(data, servers, session):
                     logs_payments.append(
                         {
                             'target': line['sid'],
+                            'sid': line['sid'],
                             'success': True,
                             'detail': f'Возврат стоимости услуги (возврат платежа #{service_payment.id})',
                             'value': service_payment.amount,
@@ -1994,7 +2104,6 @@ async def generate_plan_main(servers, bad_accounts, date):
             select_related=[OrdersAccountModel.address],
         )
 
-
         logs.new('Общий пул')
         logs.line(1, ['ID аккаунта', 'Номер', 'Имя', 'Статус аккаунта', 'ID адреса', 'Адрес', 'Район', 'Курьер',
                       'Статус адреса', 'Исключен', 'T', 'W'])
@@ -2517,7 +2626,7 @@ async def generate_plan_main(servers, bad_accounts, date):
 
                 if str(acc['org']) == str(result.active[f'N{line}'].value) and not acc.get('selected') and str(
                         art) == str(
-                        result.active[f'B{line}'].value):
+                    result.active[f'B{line}'].value):
                     acc['selected'] = True
                     result.active[f'G{line}'] = acc['address']
                     result.active[f'L{line}'] = acc['number']
