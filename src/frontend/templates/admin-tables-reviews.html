@@ -107,6 +107,65 @@
 
                     },
                     {
+                        "data": 'advs',
+                        "render": function (data, type, row) {
+                            if (data) {
+
+                                var style = 'display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; text-overflow: ellipsis; line-height: 1.2em; max-height: 3.6em;'
+
+                                t_modals += '<div class="modal fade" id="textExpand1-' + row.id + '" aria-labelledby="textExpandLabel1-' + row.id + '" tabindex="-1" style="display: none;"\n' +
+                                    '         aria-hidden="true">\n' +
+                                    '        <div class="modal-dialog modal-dialog-centered">\n' +
+                                    '            <div class="modal-content">\n' +
+                                    '                <div class="modal-header">\n' +
+                                    '                    <h5 class="modal-title" id="textExpandLabel1-' + row.id + '">' + 'Текст отзыва' + '</h5>\n' +
+                                    '                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
+                                    '                </div>\n' +
+                                    '                <div class="modal-body"><p>' + data + '</p></div></div>' +
+                                    '\n' +
+                                    '            </div>\n' +
+                                    '        </div>\n' +
+                                    '    </div>'
+
+
+                                return '<span style="' + style + '">' + '<a href="##" data-bs-toggle="modal" data-bs-target="#textExpand1-' + row.id + '"><i class="bx bx-window"></i></a> ' + data + '</span>'
+                            }
+
+                            return '—'
+                        },
+
+                    },
+
+                    {
+                        "data": 'disadvs',
+                        "render": function (data, type, row) {
+                            if (data) {
+
+                                var style = 'display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; text-overflow: ellipsis; line-height: 1.2em; max-height: 3.6em;'
+
+                                t_modals += '<div class="modal fade" id="textExpand2-' + row.id + '" aria-labelledby="textExpandLabel2-' + row.id + '" tabindex="-1" style="display: none;"\n' +
+                                    '         aria-hidden="true">\n' +
+                                    '        <div class="modal-dialog modal-dialog-centered">\n' +
+                                    '            <div class="modal-content">\n' +
+                                    '                <div class="modal-header">\n' +
+                                    '                    <h5 class="modal-title" id="textExpandLabel2-' + row.id + '">' + 'Текст отзыва' + '</h5>\n' +
+                                    '                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
+                                    '                </div>\n' +
+                                    '                <div class="modal-body"><p>' + data + '</p></div></div>' +
+                                    '\n' +
+                                    '            </div>\n' +
+                                    '        </div>\n' +
+                                    '    </div>'
+
+
+                                return '<span style="' + style + '">' + '<a href="##" data-bs-toggle="modal" data-bs-target="#textExpand2-' + row.id + '"><i class="bx bx-window"></i></a> ' + data + '</span>'
+                            }
+
+                            return '—'
+                        },
+
+                    },
+                    {
                         "data": 'strict_match',
                         "render": function (data, type, row) {
                             return data ? 'Да' : 'Нет'
@@ -470,6 +529,8 @@
                                 <th>Товар</th>
                                 <th>Размер</th>
                                 <th>Текст</th>
+                                <th>Достоинства</th>
+                                <th>Недостатки</th>
                                 <th>Строгий размер</th>
                                 <th>Срочный</th>
                                 <th>Соответствие</th>

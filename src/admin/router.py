@@ -474,7 +474,7 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
     }
 
     tasks = {}
-    reviews_to_update = reviews
+    revs_to_update = reviews
     for review in reviews:
         if tasks.get(review.size.product.wb_article):
             tasks[review.size.product.wb_article].append(review)
@@ -486,23 +486,27 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
         for article, reviews in tasks.items():
             excel_file = BytesIO()
             texts = []
-            matches = []
+            advs = []
+            disadvs = []
             ids = []
+            matches = []
 
             for review in reviews:
-                texts.append(review.text if review.text else 'Без текста')
+                texts.append(review.text if review.text else '')
+                advs.append(review.advs if review.text else '')
+                disadvs.append(review.disadvs if review.text else '')
                 matches.append(matches_ids[review.match])
                 ids.append(review.id)
 
             data = {
-                "Отзыв": texts,
+                "Достоинства": advs,
+                "Недостатки": disadvs,
+                "Комментарий к отзыву": texts,
                 "Пол": [''] * len(texts),
                 "Размер": [''] * len(texts),
-                "Фото 1": [''] * len(texts),
-                "Фото 2": [''] * len(texts),
-                "Фото 3": [''] * len(texts),
-                "Фото 4": [''] * len(texts),
-                "Фото 5": [''] * len(texts),
+                "Фото": [''] * len(texts),
+                "": [''] * len(texts),
+                " ": [''] * len(texts),
                 "Видео": [''] * len(texts),
                 "Соответствие размеру": matches,
                 "Аккаунт": [''] * len(texts),
@@ -526,12 +530,23 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
         [
             {
                 'model': ReviewModel,
-                'records': [{'id': review.id, 'status': 2} for review in reviews_to_update]
+                'records': [{'id': review.id, 'status': 2} for review in revs_to_update]
             }
         ]
     )
 
     return StreamingResponse(zip_file, media_type='application/zip', headers=headers)
+
+
+
+
+
+
+
+
+
+
+
 
 
 @router.post('/xlsxReviewsTasksPay')

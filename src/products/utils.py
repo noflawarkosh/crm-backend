@@ -11,13 +11,15 @@ from products.schemas import ProductSizeCreateSchema
 from strings import *
 
 
-async def process_reviews_xlsx(file, org_id):
+async def process_reviews_xlsx(file, org_id, stars):
     excel_columns = {
         'wb_article': 0,
         'wb_size_origName': 1,
-        'text': 2,
-        'strict_match': 3,
-        'match': 4
+        'advs': 2,
+        'disadvs': 3,
+        'text': 4,
+        'strict_match': 5,
+        'match': 6
     }
 
     xlsx_reviews_content = await file.read()
@@ -115,14 +117,15 @@ async def process_reviews_xlsx(file, org_id):
                 'size_id': selected_size.id,
                 'status': 1,
                 'text': line['text'],
+                'advs': line['advs'],
+                'disadvs': line['disadvs'],
                 'strict_match': strict_match,
                 'match': match,
+                'stars': stars,
             }
         )
 
-    await Repository.save_records([{'model': ReviewModel,'records': records_to_insert}])
-
-
+    await Repository.save_records([{'model': ReviewModel, 'records': records_to_insert}])
 
 
 def volHostV2(e):

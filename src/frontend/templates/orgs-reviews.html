@@ -203,6 +203,69 @@
                                 },
 
                             },
+
+                            {
+                                "data": 'advs',
+                                "render": function (data, type, row) {
+                                    if (data) {
+
+                                        var style = 'display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; text-overflow: ellipsis; line-height: 1.2em; max-height: 3.6em;'
+
+                                        t_modals += '<div class="modal fade" id="textExpand22-' + row.id + '" aria-labelledby="textExpandLabel22-' + row.id + '" tabindex="-1" style="display: none;"\n' +
+                                            '         aria-hidden="true">\n' +
+                                            '        <div class="modal-dialog modal-dialog-centered">\n' +
+                                            '            <div class="modal-content">\n' +
+                                            '                <div class="modal-header">\n' +
+                                            '                    <h5 class="modal-title" id="textExpandLabel22-' + row.id + '">' + 'Достоинства' + '</h5>\n' +
+                                            '                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
+                                            '                </div>\n' +
+                                            '                <div class="modal-body"><p>' + data + '</p></div></div>' +
+                                            '\n' +
+                                            '            </div>\n' +
+                                            '        </div>\n' +
+                                            '    </div>'
+
+
+                                        return '<span style="' + style + '">' + '<a href="##" data-bs-toggle="modal" data-bs-target="#textExpand22-' + row.id + '"><i class="bx bx-window" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                            '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                            '                           data-bs-original-title="Полный текст"></i></a> ' + data + '</span>'
+                                    }
+
+                                    return '—'
+                                },
+
+                            },
+                            {
+                                "data": 'disadvs',
+                                "render": function (data, type, row) {
+                                    if (data) {
+
+                                        var style = 'display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; text-overflow: ellipsis; line-height: 1.2em; max-height: 3.6em;'
+
+                                        t_modals += '<div class="modal fade" id="textExpand1-' + row.id + '" aria-labelledby="textExpandLabel1-' + row.id + '" tabindex="-1" style="display: none;"\n' +
+                                            '         aria-hidden="true">\n' +
+                                            '        <div class="modal-dialog modal-dialog-centered">\n' +
+                                            '            <div class="modal-content">\n' +
+                                            '                <div class="modal-header">\n' +
+                                            '                    <h5 class="modal-title" id="textExpandLabel1-' + row.id + '">' + 'Недостатки' + '</h5>\n' +
+                                            '                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>\n' +
+                                            '                </div>\n' +
+                                            '                <div class="modal-body"><p>' + data + '</p></div></div>' +
+                                            '\n' +
+                                            '            </div>\n' +
+                                            '        </div>\n' +
+                                            '    </div>'
+
+
+                                        return '<span style="' + style + '">' + '<a href="##" data-bs-toggle="modal" data-bs-target="#textExpand1-' + row.id + '"><i class="bx bx-window" data-bs-toggle="tooltip" data-bs-offset="0,8"\n' +
+                                            '                           data-bs-placement="top" data-bs-custom-class="tooltip-primary"\n' +
+                                            '                           data-bs-original-title="Полный текст"></i></a> ' + data + '</span>'
+                                    }
+
+                                    return '—'
+                                },
+
+                            },
                             {
                                 "data": 'strict_match',
                                 "render": function (data, type, row) {
@@ -478,7 +541,11 @@
 
                 // TEXT
                 const text = document.getElementById('rev-text');
+                const textA = document.getElementById('rev-advs');
+                const textD = document.getElementById('rev-disadvs');
                 var txt = text.value
+                var txtA = textA.value
+                var txtD = textD.value
 
 
                 // MATCH
@@ -515,6 +582,14 @@
 
                 if (txt != '') {
                     url.searchParams.append('text', txt);
+                }
+
+                if (txtA != '') {
+                    url.searchParams.append('advs', txtA);
+                }
+
+                if (txtD != '') {
+                    url.searchParams.append('disadvs', txtD);
                 }
 
                 url.searchParams.append('size_id', sizeid);
@@ -556,6 +631,8 @@
         var re_prod = document.getElementById('review_edit_product')
         var re_review_id = document.getElementById('re_review_id')
         var re_text = document.getElementById('edit_rev-text')
+        var re_advs = document.getElementById('edit_rev-advs')
+        var re_disadvs = document.getElementById('edit_rev-disadvs')
         var re_m_flag = document.getElementById('edit_match_flag')
         var re_e_flag = document.getElementById('edit_is_express')
         var re_esmr_1 = document.getElementById('esmr-1')
@@ -600,6 +677,8 @@
                         re_review_id.value = ''
                         re_prod.innerText = ''
                         re_text.value = ''
+                        re_advs.value = ''
+                        re_disadvs.value = ''
                         re_m_flag.checked = false
                         re_e_flag.checked = false
                         re_esmr_1.checked = false
@@ -638,6 +717,8 @@
                             '                        </div>'
 
                         re_text.value = data.text
+                        re_advs.value = data.advs
+                        re_disadvs.value = data.disadvs
 
                         re_m_flag.checked = data.strict_match == true;
                         re_e_flag.checked = data.is_express == true;
@@ -817,6 +898,8 @@
         var re_prod = document.getElementById('review_edit_product')
         var re_review_id = document.getElementById('re_review_id')
         var re_text = document.getElementById('edit_rev-text')
+        var re_advs = document.getElementById('edit_rev-advs')
+        var re_disadvs = document.getElementById('edit_rev-disadvs')
         var re_m_flag = document.getElementById('edit_match_flag')
         var re_e_flag = document.getElementById('edit_is_express')
         var re_esmr_1 = document.getElementById('esmr-1')
@@ -865,7 +948,7 @@
         }
 
         $.ajax({
-            url: '/reviews/update?id=' + re_review_id.value + '&strict_match=' + re_m_flag_v + '&match=' + XV + '&text=' + re_text.value + '&is_express=' + re_e_flag_v + '&stars=' + XR,
+            url: '/reviews/update?id=' + re_review_id.value + '&strict_match=' + re_m_flag_v + '&match=' + XV + '&text=' + re_text.value + '&is_express=' + re_e_flag_v + '&stars=' + XR + '&advs=' + re_advs.value + '&disadvs=' + re_disadvs.value,
             type: 'POST',
             success: function () {
                 toastr.success('Изменения сохранены')
@@ -960,6 +1043,8 @@
                             <th>Товар</th>
                             <th>Размер</th>
                             <th width="15%">Текст</th>
+                            <th width="15%">Достоинства</th>
+                            <th width="15%">Недостатки</th>
                             <th>Строгий размер</th>
                             <th>Срочный</th>
                             <th>Соответствие</th>
@@ -1030,7 +1115,21 @@
                 <div class="mb-4 row">
                     <label for="rev-text" class="form-label">Текст отзыва</label>
                     <div class="col">
-                        <textarea class="form-control" id="rev-text" rows="3"></textarea>
+                        <textarea class="form-control" id="rev-text" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="mb-4 row">
+                    <label for="rev-text" class="form-label">Достоинства</label>
+                    <div class="col">
+                        <textarea class="form-control" id="rev-advs" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="mb-4 row">
+                    <label for="rev-text" class="form-label">Недостатки</label>
+                    <div class="col">
+                        <textarea class="form-control" id="rev-disadvs" rows="2"></textarea>
                     </div>
                 </div>
 
@@ -1103,7 +1202,21 @@
                 <div class="mb-4 row">
                     <label for="edit_rev-text" class="form-label">Текст отзыва</label>
                     <div class="col">
-                        <textarea class="form-control" id="edit_rev-text" rows="3"></textarea>
+                        <textarea class="form-control" id="edit_rev-text" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="mb-4 row">
+                    <label for="edit_rev-advs" class="form-label">Достоинства</label>
+                    <div class="col">
+                        <textarea class="form-control" id="edit_rev-advs" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="mb-4 row">
+                    <label for="edit_rev-disadvs" class="form-label">Недостатки</label>
+                    <div class="col">
+                        <textarea class="form-control" id="edit_rev-disadvs" rows="2"></textarea>
                     </div>
                 </div>
 
@@ -1144,7 +1257,9 @@
                         </div>
                     </div>
                 </div>
+
                 <input type="hidden" id="rating_number" value="5">
+
                 <div class="row mb-4" id="Erating" style="display: none">
                     <div class="col">
                         <label class="form-label">Рейтинг</label>

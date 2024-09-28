@@ -55,6 +55,9 @@ class ReviewModel(Base):
 
     id: Mapped[pk]
     text: Mapped[str | None]
+    advs: Mapped[str | None]
+    disadvs: Mapped[str | None]
+    text: Mapped[str | None]
     strict_match: Mapped[bool]
     match: Mapped[int | None]
     status: Mapped[int]

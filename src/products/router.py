@@ -301,7 +301,7 @@ async def create_review(data: Annotated[ReviewCreateSchema, Depends()], files: L
 @router_reviews.post('/xlsxUpload')
 async def get_reviews_of_organization(org_id: int, file: UploadFile = File(...),
                                       session: UserSessionModel = Depends(authed)):
-    await check_access(org_id, session.user.id, 8)
+    organization, membership = await check_access(org_id, session.user.id, 8)
 
     try:
         await Repository.verify_file(file, ['xlsx'])
@@ -309,7 +309,11 @@ async def get_reviews_of_organization(org_id: int, file: UploadFile = File(...),
         raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")
 
     try:
-        await process_reviews_xlsx(file, org_id)
+        stars = 5
+        if organization.is_competitor:
+            stars = 1
+
+        await process_reviews_xlsx(file, org_id, stars)
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")
