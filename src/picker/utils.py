@@ -350,7 +350,7 @@ async def refresh_active_and_collected(data, servers, session):
                 if not status_model:
                     logs_orders.append(
                         {
-                            'target': order_id,
+                            'target': str(order_id),
                             'sid': str(db_order_id),
                             'success': False,
                             'detail': 'Неизвестный статус',
@@ -366,7 +366,7 @@ async def refresh_active_and_collected(data, servers, session):
                 if not wb_price:
                     logs_orders.append(
                         {
-                            'target': order_id,
+                            'target': str(order_id),
                             'sid': str(db_order_id),
                             'success': False,
                             'detail': 'Не указана стоимость заказа в базе данных',
@@ -383,7 +383,7 @@ async def refresh_active_and_collected(data, servers, session):
                 except:
                     logs_orders.append(
                         {
-                            'target': order_id,
+                            'target': str(order_id),
                             'sid': str(db_order_id),
                             'success': False,
                             'detail': 'Цена должна быть числом',
@@ -399,7 +399,7 @@ async def refresh_active_and_collected(data, servers, session):
                 if not org_id:
                     logs_orders.append(
                         {
-                            'target': order_id,
+                            'target': str(order_id),
                             'sid': str(db_order_id),
                             'success': False,
                             'detail': 'Организация заказа не опознана',
@@ -467,7 +467,7 @@ async def refresh_active_and_collected(data, servers, session):
 
                             logs_payments.append(
                                 {
-                                    'target': db_uuid,
+                                    'target': str(db_uuid),
                                     'sid': str(db_order_id),
                                     'success': True,
                                     'detail': f'Возврат: Комиссия за стоимость товара',
@@ -516,11 +516,11 @@ async def refresh_active_and_collected(data, servers, session):
 
                             logs_payments.append(
                                 {
-                                    'target': db_uuid,
+                                    'target': str(db_uuid),
                                     'sid': str(db_order_id),
                                     'success': True,
                                     'detail': f'Изменение размера комиссии {old_commission_amount} - {new_commission_amount} = {commission_difference}',
-                                    'value': int(commission_difference),
+                                    'value': str(int(commission_difference)),
                                     'line': line['line_number'],
                                     'orders_type': orders_type,
                                     'server': server.name,
@@ -541,7 +541,7 @@ async def refresh_active_and_collected(data, servers, session):
 
                         logs_payments.append(
                             {
-                                'target': db_uuid,
+                                'target': str(db_uuid),
                                 'sid': str(db_order_id),
                                 'success': True,
                                 'detail': 'Оплата стоимости продукта',
@@ -564,7 +564,7 @@ async def refresh_active_and_collected(data, servers, session):
 
                         logs_payments.append(
                             {
-                                'target': db_uuid,
+                                'target': str(db_uuid),
                                 'sid': str(db_order_id),
                                 'success': True,
                                 'detail': 'Возврат стоимости продукта',
@@ -588,7 +588,7 @@ async def refresh_active_and_collected(data, servers, session):
 
                         logs_payments.append(
                             {
-                                'target': db_uuid,
+                                'target': str(db_uuid),
                                 'sid': str(db_order_id),
                                 'success': True,
                                 'detail': 'Разморозка стоимости продукта',
@@ -730,7 +730,7 @@ async def refresh_active_and_collected(data, servers, session):
                 if not wb_price:
                     logs_orders.append(
                         {
-                            'target': order_id,
+                            'target': str(order_id),
                             'sid': line['sid'],
                             'success': False,
                             'detail': 'Не указана стоимость заказа в базе данных',
@@ -746,7 +746,7 @@ async def refresh_active_and_collected(data, servers, session):
                 if not org_id:
                     logs_orders.append(
                         {
-                            'target': order_id,
+                            'target': str(order_id),
                             'sid': line['sid'],
                             'success': False,
                             'detail': 'Организация заказа не опознана',
