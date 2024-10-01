@@ -429,7 +429,8 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
             deep_related=[
                 [ReviewModel.size, ProductSizeModel.product],
                 [ReviewModel.size, ProductSizeModel.product, ProductModel.organization]
-            ]
+            ],
+            order_by=[ReviewModel.id.asc()],
         )
 
     elif type == 2:
@@ -457,7 +458,8 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
             deep_related=[
                 [ReviewModel.size, ProductSizeModel.product],
                 [ReviewModel.size, ProductSizeModel.product, ProductModel.organization]
-            ]
+            ],
+            order_by=[ReviewModel.id.asc()],
         )
 
     else:
@@ -492,7 +494,7 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
             matches = []
 
             for review in reviews:
-                texts.append(review.text if review.text else '')
+                texts.append(review.text if review.text else 'Без текста')
                 advs.append(review.advs if review.text else '')
                 disadvs.append(review.disadvs if review.text else '')
                 matches.append(matches_ids[review.match])

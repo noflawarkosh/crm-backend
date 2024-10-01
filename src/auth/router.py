@@ -1,3 +1,4 @@
+import datetime
 from io import BytesIO
 from typing import Annotated, List, Optional
 
@@ -103,6 +104,7 @@ async def login(request: Request, response: Response, username: str, password: s
                     'user_id': user_check.id,
                     'token': token,
                     'useragent': request.headers.get('user-agent'),
+                    'expires': datetime.datetime.now() + datetime.timedelta(days=3),
                     'ip': request.client.host,
                 }
             ]

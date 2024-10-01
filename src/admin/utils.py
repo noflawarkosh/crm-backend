@@ -118,6 +118,7 @@ async def process_reviews_tasks_xlsx(file):
                 'action_id': 3
             })
 
+
     await Repository.save_records(
         [
             {'model': ReviewModel, 'records': review_records},

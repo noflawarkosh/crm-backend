@@ -29,8 +29,8 @@ async def process_reviews_xlsx(file, org_id, stars):
     if len(xlsx_reviews) <= 6:
         raise Exception('В файле нет отзывов')
 
-    if len(xlsx_reviews[6:]) > 1000:
-        raise Exception('Допустимо не более 1000 отзывов')
+    if len(xlsx_reviews[6:]) > 10000:
+        raise Exception('Допустимо не более 10000 отзывов')
 
     products = await Repository.get_records(
         ProductModel,

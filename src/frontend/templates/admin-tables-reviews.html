@@ -406,6 +406,8 @@
 
 
     function xlsx_new_reviews(flag) {
+        document.getElementById('xlsx_btn').classList.add('disabled')
+        document.getElementById('xlsx_btn2').classList.add('disabled')
         $.ajax({
             url: '/admin/xlsxReviewsTasks?type=' + flag,
             type: 'GET',
@@ -423,10 +425,12 @@
                 link.click();
                 document.body.removeChild(link);
                 dt_refresh('dt_addresses', '/admin/get/reviews_full')
+                document.getElementById('xlsx_btn').classList.remove('disabled')
+                document.getElementById('xlsx_btn2').classList.remove('disabled')
             },
             error: function (xhr, status, error) {
 
-                if (xhr.status === 415  ) {
+                if (xhr.status === 415) {
                     toastr.info('Задач нет');
                 } else {
                     toastr.info('Ошибка выполнения операции');

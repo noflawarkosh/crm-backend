@@ -85,6 +85,42 @@ async def cancel_task(data: dict, session: UserSessionModel = Depends(authed)):
     }], session_id=session.id)
 
 
+@router.post('/copyTasks')
+async def cancel_task(data: dict, session: UserSessionModel = Depends(authed)):
+    ids = data['id']
+    date = datetime.date.fromisoformat(data['date'])
+    org_id = int(data['org_id'])
+
+    await check_access(org_id, session.user.id, 4)
+
+    records = await Repository.get_records(
+        model=OrdersOrderModel,
+        select_related=[OrdersOrderModel.size],
+        deep_related=[[OrdersOrderModel.size, ProductSizeModel.product]],
+        joins=[ProductSizeModel, ProductModel],
+        filters=[OrdersOrderModel.id.in_(ids)],
+    )
+
+    for record in records:
+        if record.size.product.org_id != org_id:
+            raise HTTPException(status_code=400,
+                                detail=f'Задача {record.id}: копирование возможно только в рамках одной организации')
+
+    new_records = [
+        {
+            'size_id': record.size_id,
+            'wb_keyword': record.wb_keyword,
+            'dt_planed': date,
+            'status': 1
+        } for record in records
+    ]
+
+    await Repository.save_records([{
+        'model': OrdersOrderModel,
+        'records': new_records
+    }], session_id=session.id)
+
+
 @router.post('/cancelTasks')
 async def cancel_task(data: dict, session: UserSessionModel = Depends(authed)):
     ids = data['id']

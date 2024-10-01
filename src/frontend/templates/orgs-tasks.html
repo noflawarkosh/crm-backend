@@ -221,6 +221,7 @@
                         selected_ids.push(selected[i].id)
                     }
                     document.getElementById('cancel-selected').classList.add('disabled')
+                    document.getElementById('copy-selected').classList.add('disabled')
                     document.getElementById('replace-selected').classList.add('disabled')
                     $.ajax({
 
@@ -235,6 +236,7 @@
 
                         success: function (data) {
                             document.getElementById('cancel-selected').classList.remove('disabled')
+                            document.getElementById('copy-selected').classList.remove('disabled')
                             document.getElementById('replace-selected').classList.remove('disabled')
                             drawPlan(dateInput.value)
                             toastr.success('Задачи успешно перенесены')
@@ -242,6 +244,7 @@
                         },
                         error: function (data) {
                             document.getElementById('cancel-selected').classList.remove('disabled')
+                            document.getElementById('copy-selected').classList.remove('disabled')
                             document.getElementById('replace-selected').classList.remove('disabled')
                             toastr.error('Ошибка переноса задач')
                             toastr.error(data.responseJSON.detail)
@@ -249,6 +252,60 @@
                     })
 
                 });
+
+
+
+                $('#copy-selected').on('click', function () {
+                    var selected = [];
+                    table.$('input[type="checkbox"]:checked').each(function () {
+                        var rowData = table.row($(this).closest('tr')).data();
+                        selected.push(rowData);
+                    });
+
+                    if (selected.length === 0) {
+                        toastr.error('Выберите задачи для копирования')
+                        return
+                    }
+
+                    var selected_ids = []
+
+                    for (var i = 0; i < selected.length; i++) {
+                        selected_ids.push(selected[i].id)
+                    }
+                    document.getElementById('cancel-selected').classList.add('disabled')
+                    document.getElementById('copy-selected').classList.add('disabled')
+                    document.getElementById('replace-selected').classList.add('disabled')
+                    $.ajax({
+
+                        url: '/orders/copyTasks',
+                        method: 'post',
+                        data: JSON.stringify({
+                            'id': selected_ids,
+                            'date': document.getElementById('replace_date').value,
+                            'org_id': id,
+                        }),
+                        contentType: 'application/json',
+
+                        success: function (data) {
+                            document.getElementById('cancel-selected').classList.remove('disabled')
+                            document.getElementById('copy-selected').classList.remove('disabled')
+                            document.getElementById('replace-selected').classList.remove('disabled')
+                            drawPlan(dateInput.value)
+                            toastr.success('Задачи успешно скопированы')
+
+                        },
+                        error: function (data) {
+                            document.getElementById('cancel-selected').classList.remove('disabled')
+                            document.getElementById('copy-selected').classList.remove('disabled')
+                            document.getElementById('replace-selected').classList.remove('disabled')
+                            toastr.error('Ошибка копирования задач')
+                            toastr.error(data.responseJSON.detail)
+                        }
+                    })
+
+                });
+
+
 
                 $('#cancel-selected').on('click', function () {
                     var selected = [];
@@ -268,6 +325,7 @@
                         selected_ids.push(selected[i].id)
                     }
                     document.getElementById('cancel-selected').classList.add('disabled')
+                    document.getElementById('copy-selected').classList.add('disabled')
                     document.getElementById('replace-selected').classList.add('disabled')
                     $.ajax({
 
@@ -282,12 +340,14 @@
                         success: function (data) {
                             drawPlan(dateInput.value)
                             document.getElementById('cancel-selected').classList.remove('disabled')
+                            document.getElementById('copy-selected').classList.remove('disabled')
                             document.getElementById('replace-selected').classList.remove('disabled')
                             toastr.success('Задачи успешно отменены')
 
                         },
                         error: function (data) {
                             document.getElementById('cancel-selected').classList.remove('disabled')
+                            document.getElementById('copy-selected').classList.remove('disabled')
                             document.getElementById('replace-selected').classList.remove('disabled')
                             toastr.error('Ошибка переноса задач')
                             toastr.error(data.responseJSON.detail)
@@ -750,6 +810,12 @@
                             </div>
                             <div class="col-auto">
                                 <button id="replace-selected" class="btn btn-label-info mb-2">Перенести
+                                    выбранные
+                                </button>
+                            </div>
+
+                            <div class="col-auto">
+                                <button id="copy-selected" class="btn btn-label-info mb-2">Копировать
                                     выбранные
                                 </button>
                             </div>
