@@ -1,6 +1,6 @@
 import datetime
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 
 from auth.models import UserSessionModel
 from auth.router import authed
@@ -8,6 +8,7 @@ from auth.router import authed
 from database import Repository
 from orders.models import OrdersOrderModel
 from orders.schemas import OrdersOrderReadModel, OrdersOrderCreateModel
+from orders.utlis import process_order_tasks_xlsx
 from orgs.router import check_access
 from products.models import ProductModel, ProductSizeModel
 from strings import *
@@ -158,13 +159,17 @@ async def cancel_task(data: dict, session: UserSessionModel = Depends(authed)):
 
 
 @router.get('/getPlan')
-async def get_plan(org_id: int, date: datetime.datetime, session: UserSessionModel = Depends(authed)
+async def get_plan(org_id: int, start: datetime.datetime, end: datetime.datetime,
+                   session: UserSessionModel = Depends(authed)
                    ) -> list[OrdersOrderReadModel]:
     await check_access(org_id, session.user.id, 4)
 
     records = await Repository.get_records(
         model=OrdersOrderModel,
-        filters=[OrdersOrderModel.dt_planed == date],
+        filters=[
+            OrdersOrderModel.dt_planed >= start,
+            OrdersOrderModel.dt_planed <= end,
+        ],
         select_related=[OrdersOrderModel.size],
         deep_related=[[OrdersOrderModel.size, ProductSizeModel.product]],
         joins=[ProductSizeModel, ProductModel],
@@ -264,3 +269,19 @@ async def save_data(amount: int, data: Annotated[OrdersOrderCreateModel, Depends
             'status': 1,
         }] * amount
     }], session_id=session.id)
+
+
+@router.post('/xlsxTasksUpload')
+async def get_reviews_of_organization(org_id: int, file: UploadFile = File(...),
+                                      session: UserSessionModel = Depends(authed)):
+    await check_access(org_id, session.user.id, 8)
+
+    try:
+        await Repository.verify_file(file, ['xlsx'])
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")
+
+    try:
+        await process_order_tasks_xlsx(file, org_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"{file.filename}: {str(e)}")

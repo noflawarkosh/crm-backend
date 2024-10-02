@@ -208,7 +208,8 @@ class Repository:
 
     @classmethod
     async def get_records(cls, model, filters=None, joins=None, select_related=None, prefetch_related=None,
-                          order_by=None, limit=None, offset=None, selects=None, deep_related=None, filtration=None):
+                          order_by=None, limit=None, offset=None, selects=None, deep_related=None, filtration=None,
+                          left_joins=None):
 
         try:
             async with async_session_factory() as session:
@@ -225,6 +226,10 @@ class Repository:
                 if joins:
                     for join in joins:
                         query = query.join(join)
+
+                if left_joins:
+                    for join in left_joins:
+                        query = query.outerjoin(join)
 
                 if select_related:
                     for select_model in select_related:

@@ -1,51 +1,94 @@
 {% extends "!base-admin.html" %}
 {% block title %}Заказы | {% endblock %}
+
+{% block head %}
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/flatpickr/flatpickr.css') }}"/>
+<link rel="stylesheet"
+      href="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.css') }}"/>
+{% endblock %}
+
 {% block js %}
+
+<script src="{{ url_for('static', path='assets/vendor/libs/flatpickr/flatpickr.js') }}"></script>
+<script src="{{ url_for('static', path='assets/vendor/libs/bootstrap-select/bootstrap-select.js') }}"></script>
 <script>
-    function SD() {
-        const firstDate = new Date();
-        const start_year = firstDate.getFullYear();
-        const start_month = String(firstDate.getMonth() + 1).padStart(2, '0');
-        const start_day = String(firstDate.getDate()).padStart(2, '0');
-        document.getElementById('dts').value = `${start_year}-${start_month}-${start_day}`
-    }
 
-    SD()
-    var T_LIMIT = 3000
-    var T_DATE = document.getElementById('dts').value
+    var today = new Date();
 
-    function updateAccountStatus(id, is_active) {
-        $.ajax({
-            type: "POST",
-            url: '/admin/save',
-            data: JSON.stringify({accounts: [{id: id, is_active: is_active}]}),
-            contentType: "application/json; charset=utf-8",
-            success: function () {
-                var msg = 'Данные пользователя обновлены'
+    var dt_planed = [today, today]
+    var dt_ordered = null
+    var dt_delivered = null
+    var dt_collected = null
 
-                if (is_active === true) {
-                    msg = 'Аккаунт активирован'
-                }
-
-                if (is_active === false) {
-                    msg = 'Акакунт деактивирован'
-                }
-
-                toastr.success(msg)
-                dt_refresh('dt_accounts', '/admin/get/accounts')
-
-            },
-            error: function () {
-                toastr.error('Ошибка обновления данных. Обновите страницу и повторите попытку')
-
+    flatpickr("#dt_planed", {
+        mode: "range",
+        dateFormat: "d.m.Y",
+        defaultDate: [today, today],
+        onChange: function (selectedDates, dateStr, instance) {
+            dt_planed = selectedDates
+            if (dt_planed.length === 0) {
+                dt_planed = null
             }
-        })
+        }
+    });
+
+    flatpickr("#dt_ordered", {
+        mode: "range",
+        dateFormat: "d.m.Y",
+        onChange: function (selectedDates, dateStr, instance) {
+            dt_ordered = selectedDates
+            if (dt_ordered.length === 0) {
+                dt_ordered = null
+            }
+
+        }
+    });
+
+    flatpickr("#dt_delivered", {
+        mode: "range",
+        dateFormat: "d.m.Y",
+        onChange: function (selectedDates, dateStr, instance) {
+            dt_delivered = selectedDates
+            if (dt_delivered.length === 0) {
+                dt_delivered = null
+            }
+        }
+    });
+
+    flatpickr("#dt_collected", {
+        mode: "range",
+        dateFormat: "d.m.Y",
+        onChange: function (selectedDates, dateStr, instance) {
+            dt_collected = selectedDates
+            if (dt_collected.length === 0) {
+                dt_collected = null
+            }
+        }
+    });
+
+    var statuses = {
+        0: '- Без фильтрации -',
+        1: 'Не оплачен',
+        2: 'Оплачен',
+        3: 'Едет',
+        4: 'Готов',
+        5: 'Получен',
+        6: 'Отменен администратором',
+        7: 'Отменен пользователем',
     }
+
+    var statusSelect = $('#status_id');
+    for (let key in statuses) {
+        var option = $('<option>').text(statuses[key]).val(key);
+        statusSelect.append(option);
+    }
+    statusSelect.selectpicker('draw');
 
 
     $.ajax({
         type: "GET",
-        url: '/admin/get/orders_full?limit=' + T_LIMIT + '&dt_planed=' + T_DATE,
+        url: '/admin/get/orders_full?dt_planed=' + moment(today).format('YYYY-MM-DD'),
         success: function (data) {
             $('#dt_orders').DataTable({
                 data: data,
@@ -88,7 +131,7 @@
                                 }
                             }
 
-                            return '<span class="text-nowrap">' + s + '</span>'
+                            return '<span class="text-nowrap">' + s2 + '</span>'
                         }
                     },
                     {
@@ -225,6 +268,17 @@
                         }
                     },
 
+                    {
+                        data: 'account',
+                        "render": function (data, type, row) {
+                            if (data !== null) {
+                                return data.address.contractor.name
+                            }
+
+                            return '—'
+                        }
+                    },
+
 
                     {
                         "render": function (data, type, row) {
@@ -250,7 +304,7 @@
                     var newRow = $('<tr></tr>');
                     $(table).append(newRow);
 
-                    var searchColumns = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+                    var searchColumns = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
                     this.api().columns().every(function (i) {
                         var column = this;
@@ -282,32 +336,106 @@
         }
     })
 
+    function updateAccountStatus(id, is_active) {
+        $.ajax({
+            type: "POST",
+            url: '/admin/save',
+            data: JSON.stringify({accounts: [{id: id, is_active: is_active}]}),
+            contentType: "application/json; charset=utf-8",
+            success: function () {
+                var msg = 'Данные пользователя обновлены'
 
-    var dateInput = document.getElementById('dts');
-    dateInput.addEventListener('change', function () {
+                if (is_active === true) {
+                    msg = 'Аккаунт активирован'
+                }
 
-        dateInput.disabled = true
-        T_LIMIT = 0;
-        T_DATE = document.getElementById('dts').value;
-        dt_refresh('dt_orders', '/admin/get/orders_full?limit=' + T_LIMIT + '&dt_planed=' + T_DATE)
-        dateInput.disabled = false
-    });
+                if (is_active === false) {
+                    msg = 'Акакунт деактивирован'
+                }
 
-    function searchID() {
-        T_LIMIT = 0;
+                toastr.success(msg)
+                dt_refresh('dt_accounts', '/admin/get/accounts')
 
-        var key = 'id'
-        if (document.getElementById('R2').checked == true) {
-            key = 'wb_uuid'
+            },
+            error: function () {
+                toastr.error('Ошибка обновления данных. Обновите страницу и повторите попытку')
+
+            }
+        })
+    }
+
+    function search() {
+        var payload = new FormData();
+
+        if (dt_planed !== null) {
+            payload.append('dt_planed_start', moment(dt_planed[0]).format('YYYY-MM-DD'));
+            payload.append('dt_planed_end', moment(dt_planed[1]).format('YYYY-MM-DD'));
         }
-        var value = document.getElementById('search_value').value
 
-        if (key === 'id' && isNaN(Number(value))) {
-            toastr.error('Введите корректное значение ID')
-            return
+        if (dt_ordered !== null) {
+            payload.append('dt_ordered_start', moment(dt_ordered[0]).format('YYYY-MM-DD'));
+            payload.append('dt_ordered_end', moment(dt_ordered[1]).format('YYYY-MM-DD'));
         }
 
-        dt_refresh('dt_orders', '/admin/get/orders_full?limit=' + T_LIMIT + '&' + key + '=' + value)
+        if (dt_delivered !== null) {
+            payload.append('dt_delivered_start', moment(dt_delivered[0]).format('YYYY-MM-DD'));
+            payload.append('dt_delivered_end', moment(dt_delivered[1]).format('YYYY-MM-DD'));
+        }
+
+        if (dt_collected !== null) {
+            payload.append('dt_collected_start', moment(dt_collected[0]).format('YYYY-MM-DD'));
+            payload.append('dt_collected_end', moment(dt_collected[1]).format('YYYY-MM-DD'));
+        }
+
+        var status_id = document.getElementById('status_id').value;
+
+        if (status_id != 0) {
+            payload.append('status_id', status_id);
+        }
+
+
+        var elements = [
+            {id: 'inn', name: 'inn'},
+            {id: 'wb_article', name: 'wb_article'},
+            {id: 'wb_size_origName', name: 'wb_size_origName'},
+            {id: 'wb_price', name: 'wb_price'},
+            {id: 'order_id', name: 'order_id'},
+            {id: 'wb_uuid', name: 'wb_uuid'},
+            {id: 'wb_status', name: 'wb_status'},
+            {id: 'account_id', name: 'account_id'},
+            {id: 'address_id', name: 'address_id'},
+            {id: 'wb_collect_code', name: 'wb_collect_code'},
+            {id: 'contractor_id', name: 'contractor_id'}
+        ];
+
+        elements.forEach(function (element) {
+            var inputElement = document.getElementById(element.id);
+            if (inputElement && inputElement.value !== '') {
+                payload.append(element.name, inputElement.value);
+            }
+        });
+
+        document.getElementById('admin_ldr').style.display = 'block'
+        $.ajax({
+            type: "post",
+            url: '/admin/getFilteredOrders',
+            contentType: false,
+            processData: false,
+            data: payload,
+            success: function (data) {
+                console.log(data.length)
+                var table = $('#dt_orders').DataTable()
+                table.clear()
+                table.draw()
+                table.rows.add(data).draw();
+                document.getElementById('admin_ldr').style.display = 'none'
+            },
+            error: function (data) {
+                toastr.error('Ошибка получения данных')
+                toastr.error(data.responseJSON.detail)
+            }
+
+        })
     }
 
 
@@ -322,55 +450,109 @@
         <div class="col">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Фильтрация
-
-                    </h5>
-
+                    <h5 class="card-title mb-0">Фильтрация</h5>
+                    <small></small>
                 </div>
                 <div class="card-body">
 
-                    <div class="row">
-                        <div class="col-lg-auto mb-3  pe-0 pr-0 me-0 pe-0">
-                            <input type="date" class="form-control" id="dts">
+                    <div class="divider text-start mb-0 mt-0">
+                        <div class="divider-text">Даты</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-3">
+                            <label for="dt_planed" class="form-label">Дата планирования</label>
+                            <input type="text" class="form-control" placeholder="" id="dt_planed"/>
                         </div>
-                        <div class="col-lg-auto  pe-0 pr-0 me-0 pe-0">
-                            <div class="col-lg-auto mb-3">
-                                <input type="text" class="form-control" id="search_value" placeholder="Поиск">
-                            </div>
+                        <div class="col-3">
+                            <label for="dt_ordered" class="form-label">Дата заказа</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="dt_ordered"/>
                         </div>
+                        <div class="col-3">
+                            <label for="dt_delivered" class="form-label">Дата доставки</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="dt_delivered"/>
+                        </div>
+                        <div class="col-3">
+                            <label for="dt_collected" class="form-label">Дата получения</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="dt_collected"/>
+                        </div>
+                    </div>
 
-                        <div class="col-lg-auto me-0 pe-0 pr-0 me-0 pe-0">
-                            <a href="javascript:" onclick="searchID()"
-                               class="btn btn-primary">Поиск</a>
-                        </div>
-                        <div class="col-lg-auto mb-3  pe-0 pr-0 me-0 pe-0">
-                            <a href="javascript:SD(); T_DATE = document.getElementById('dts').value; dt_refresh('dt_orders', '/admin/get/orders_full?dt_planed=' + T_DATE)"
-                               class="btn btn-label-primary">Сегодня</a>
-                        </div>
 
-                        <div class="col-lg-auto me-0">
-                            <a href="javascript:dt_refresh('dt_orders', '/admin/get/orders_full')"
-                               class="btn btn-label-primary">Все время</a>
+                    <div class="divider text-start mb-0 mt-1">
+                        <div class="divider-text">Товары</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-3">
+                            <label for="dt_planed" class="form-label">ИНН</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="inn"/>
+                        </div>
+                        <div class="col-3">
+                            <label for="dt_ordered" class="form-label">Артикул</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="wb_article"/>
+                        </div>
+                        <div class="col-3">
+                            <label for="dt_delivered" class="form-label">Размер</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="wb_size_origName"/>
+                        </div>
+                        <div class="col-3">
+                            <label for="dt_delivered" class="form-label">Цена</label>
+                            <input type="text" class="form-control" placeholder="XXXXX-YYYYY" id="wb_price"/>
                         </div>
 
                     </div>
 
+                    <div class="divider text-start mb-0">
+                        <div class="divider-text">Системные</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-3">
+                            <label for="dt_planed" class="form-label">ID</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="order_id"/>
+                        </div>
+                        <div class="col-3">
+                            <label for="dt_ordered" class="form-label">UUID</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="wb_uuid"/>
+                        </div>
+
+                        <div class="col-3">
+                            <label for="dt_delivered" class="form-label">Статус</label>
+                            <select id="status_id" class="form-control selectpicker" data-live-search="true"></select>
+                        </div>
+
+                        <div class="col-3">
+                            <label for="dt_delivered" class="form-label">Статус WB</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="wb_status"/>
+                        </div>
+
+                    </div>
+
+
+                    <div class="divider text-start mb-0">
+                        <div class="divider-text">Логистика</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-3">
+                            <label for="dt_delivered" class="form-label">Аккаунт</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="account_id"/>
+                        </div>
+                        <div class="col-3">
+                            <label for="dt_delivered" class="form-label">Адрес</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="address_id"/>
+                        </div>
+                        <div class="col-3">
+                            <label for="dt_delivered" class="form-label">Код получения</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="wb_collect_code"/>
+                        </div>
+                        <div class="col-3">
+                            <label for="dt_delivered" class="form-label">Подрядчик</label>
+                            <input type="text" class="form-control" placeholder="Без фильтрации" id="contractor_id"/>
+                        </div>
+                    </div>
+
                     <div class="row">
-
-                        <div class="col-lg-auto  pe-0 pr-0 me-0 pe-0">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" value="1" id="R1" name="rad" checked="">
-                                <label class="form-check-label" for="R1">ID</label>
-                            </div>
+                        <div class="col">
+                            <button class="btn btn-primary" onclick="search()">Поиск</button>
                         </div>
-
-                        <div class="col-lg-auto">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" value="2" id="R2" name="rad">
-                                <label class="form-check-label" for="R2">UUID</label>
-                            </div>
-                        </div>
-
                     </div>
                 </div>
             </div>
@@ -407,6 +589,7 @@
                             <th>Описание</th>
                             <th>Аккаунт</th>
                             <th>Адрес</th>
+                            <th>Подрядчик</th>
                             <th>Действия</th>
                         </tr>
                         </thead>

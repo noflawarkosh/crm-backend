@@ -535,8 +535,9 @@ async def create_organization(org_id: int, data: list[int], session: UserSession
 
 
 @router.get('/tasksCheckout')
-async def create_organization(org_id: int, date: datetime.date, session: UserSessionModel = Depends(authed)):
-    if date < datetime.date.today():
+async def create_organization(org_id: int, start: datetime.date, end: datetime.date, session: UserSessionModel = Depends(authed)):
+
+    if start < datetime.date.today() or end < datetime.date.today():
         raise HTTPException(status_code=403, detail=string_payments_wrong_date)
 
     organization, membership = await check_access(org_id, session.user.id, 32)
@@ -546,7 +547,8 @@ async def create_organization(org_id: int, date: datetime.date, session: UserSes
         filters=[
             OrdersOrderModel.status == 1,
             OrdersOrderModel.wb_price.is_(None),
-            OrdersOrderModel.dt_planed == date,
+            OrdersOrderModel.dt_planed >= start,
+            OrdersOrderModel.dt_planed <= end
         ],
         select_related=[OrdersOrderModel.size],
         deep_related=[[OrdersOrderModel.size, ProductSizeModel.product]],

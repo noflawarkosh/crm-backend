@@ -132,7 +132,8 @@ tables_access = {
             'deep_related': [
                 [OrdersOrderModel.account, OrdersAccountModel.address],
                 [OrdersOrderModel.size, ProductSizeModel.product],
-                [OrdersOrderModel.size, ProductSizeModel.product, ProductModel.organization]
+                [OrdersOrderModel.size, ProductSizeModel.product, ProductModel.organization],
+                [OrdersOrderModel.account, OrdersAccountModel.address, OrdersAddressModel.contractor],
             ]
         }
     ),
@@ -540,15 +541,128 @@ async def download_xlsx_reviews(type: int, session: AdminSessionModel = Depends(
     return StreamingResponse(zip_file, media_type='application/zip', headers=headers)
 
 
+@router.post('/getFilteredOrders')
+async def get_filtered_orders(request: Request, session: AdminSessionModel = Depends(authed)):
+    if not 16 & session.admin.level:
+        raise HTTPException(status_code=403, detail=string_403)
 
+    data = dict(await request.form())
+    print(data)
+    filtration = []
 
+    if data.get('dt_planed_start') and data.get('dt_planed_end'):
+        filtration.append(
+            OrdersOrderModel.dt_planed >= datetime.strptime(data['dt_planed_start'], '%Y-%m-%d').date(),
+        )
+        filtration.append(
+            OrdersOrderModel.dt_planed <= datetime.strptime(data['dt_planed_end'], '%Y-%m-%d').date(),
+        )
 
+    if data.get('dt_ordered_start') and data.get('dt_ordered_end'):
+        filtration.append(
+            OrdersOrderModel.dt_ordered >= datetime.strptime(data['dt_ordered_start'], '%Y-%m-%d').date(),
+        )
+        filtration.append(
+            OrdersOrderModel.dt_ordered <= datetime.strptime(data['dt_ordered_end'], '%Y-%m-%d').date(),
+        )
 
+    if data.get('dt_delivered_start') and data.get('dt_delivered_end'):
+        filtration.append(
+            OrdersOrderModel.dt_delivered >= datetime.strptime(data['dt_delivered_start'], '%Y-%m-%d').date(),
+        )
+        filtration.append(
+            OrdersOrderModel.dt_delivered <= datetime.strptime(data['dt_delivered_end'], '%Y-%m-%d').date(),
+        )
 
+    if data.get('dt_collected_start') and data.get('dt_collected_end'):
+        filtration.append(
+            OrdersOrderModel.dt_collected >= datetime.strptime(data['dt_collected_start'], '%Y-%m-%d').date(),
+        )
+        filtration.append(
+            OrdersOrderModel.dt_collected <= datetime.strptime(data['dt_collected_end'], '%Y-%m-%d').date(),
+        )
 
+    if data.get('inn'):
+        filtration.append(OrganizationModel.inn == data['inn'].replace(' ', ''))
 
+    if data.get('wb_article'):
+        filtration.append(ProductModel.wb_article == data['wb_article'].replace(' ', ''))
 
+    if data.get('wb_size_origName'):
+        filtration.append(ProductSizeModel.wb_size_origName == data['wb_size_origName'])
 
+    if data.get('wb_price'):
+        prices = data['wb_price'].replace(' ', '').split('-')
+        if len(prices) != 2:
+            raise HTTPException(status_code=400, detail='Неверно указана цена. Формат: XXX-YYY')
+
+        try:
+            int(prices[0])
+            int(prices[1])
+        except:
+            raise HTTPException(status_code=400, detail='Неверно указана цена. Формат: XXX-YYY')
+
+        price_before = int(prices[0])
+        price_after = int(prices[1])
+
+        filtration.append(OrdersOrderModel.wb_price >= price_before)
+        filtration.append(OrdersOrderModel.wb_price <= price_after)
+
+    if data.get('order_id'):
+        try:
+            int(data['order_id'])
+        except:
+            raise HTTPException(status_code=400, detail='ID заказа должен быть числом')
+
+        filtration.append(OrdersOrderModel.id == int(data['order_id'].replace(' ', '')))
+
+    if data.get('wb_uuid'):
+        filtration.append(OrdersOrderModel.wb_uuid == data['wb_uuid'].replace(' ', ''))
+
+    if data.get('status_id'):
+        try:
+            int(data['status_id'])
+        except:
+            raise HTTPException(status_code=400, detail='Статус заказа должен быть числом')
+
+        filtration.append(OrdersOrderModel.status == int(data['status_id']))
+
+    if data.get('wb_status'):
+        filtration.append(OrdersOrderModel.wb_status == data['wb_status'])
+
+    if data.get('account_id'):
+        filtration.append(OrdersAccountModel.number == data['account_id'].replace(' ', ''))
+
+    if data.get('address_id'):
+        filtration.append(OrdersAddressModel.address == data['address_id'])
+
+    if data.get('wb_collect_code'):
+        filtration.append(OrdersOrderModel.wb_collect_code == data['wb_collect_code'])
+
+    if data.get('contractor_id'):
+        filtration.append(OrdersContractorModel.name == data['contractor_id'])
+
+    records = await Repository.get_records(
+        OrdersOrderModel,
+        select_related=[OrdersOrderModel.size, OrdersOrderModel.account],
+        deep_related=[
+            [OrdersOrderModel.account, OrdersAccountModel.address],
+            [OrdersOrderModel.account, OrdersAccountModel.address, OrdersAddressModel.contractor],
+            [OrdersOrderModel.size, ProductSizeModel.product],
+            [OrdersOrderModel.size, ProductSizeModel.product, ProductModel.organization]
+        ],
+        left_joins=[
+            ProductSizeModel,
+            ProductModel,
+            OrganizationModel,
+            OrdersAccountModel,
+            OrdersAddressModel,
+            OrdersContractorModel,
+        ],
+        filtration=filtration,
+    )
+
+    return [record.__dict__ for record in records]
 
 
 @router.post('/xlsxReviewsTasksPay')
@@ -765,7 +879,6 @@ async def create_organization(session: AdminSessionModel = Depends(authed)):
 
 @router.post('/approve')
 async def approve(result: bool, record_table: str, record_id: int, session: AdminSessionModel = Depends(authed)):
-
     if record_table == 'bill':
         bills = await Repository.get_records(
             BalanceBillModel,
