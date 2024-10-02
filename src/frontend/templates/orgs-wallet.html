@@ -190,7 +190,7 @@
                     {
                         data: 'date',
                         "render": function (data, type, row) {
-                            return moment(data).format('DD.MM.YYYY HH:mm')
+                            return '<span style="display: none">' + moment(data).unix() + '</span>' + moment(data).format('DD.MM.YYYY HH:mm')
                         }
                     },
                     {
@@ -462,7 +462,7 @@
                     {
                         data: 'date',
                         "render": function (data, type, row) {
-                            return data
+                            return '<span style="display: none">' + moment(data, 'DD.MM.YYYY').unix() + '</span>' + data
                         }
                     },
                     {

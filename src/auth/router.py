@@ -73,7 +73,7 @@ async def register(data: Annotated[UserCreateSchema, Depends()], session: UserSe
     data.username = data.username.lower()
     data.email = data.email.lower()
 
-    await Repository.save_records([{'model': UserModel, 'records': [{**data.model_dump(), 'status': 1}]}])
+    await Repository.save_records([{'model': UserModel, 'records': [{**data.model_dump(), 'status': 2}]}])
 
 
 @router.post('/login')

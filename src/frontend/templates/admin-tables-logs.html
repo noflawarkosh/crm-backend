@@ -82,7 +82,7 @@
                     {
                         data: 'date',
                         render: function (data, type, row) {
-                            return moment(data).format('DD.MM.YYYY HH:mm:ss')
+                            return '<span style="display: none">' + moment(data).unix() + '</span>' + moment(data).format('DD.MM.YYYY HH:mm:ss')
                         }
                     },
                     {

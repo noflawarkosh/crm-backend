@@ -50,7 +50,7 @@
                     {data: 'name'},
                     {
                         "render": function (data, type, row) {
-                            return row.reg_date === null ? 'Не указано' : moment(row.reg_date).format('DD.MM.YYYY HH:mm')
+                            return row.reg_date === null ? 'Не указано' : '<span style="display: none">' + moment(row.reg_date).unix() + '</span>' + moment(row.reg_date).format('DD.MM.YYYY')
                         }
                     },
 

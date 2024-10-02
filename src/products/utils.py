@@ -77,13 +77,6 @@ async def process_reviews_xlsx(file, org_id, stars):
                 if not selected_size:
                     raise Exception(
                         f"Строка {line['line_number']}: не удалось выбрать размер автоматически. Пожалуйста, укажите любой размер товара вручную")
-
-                if not selected_size.wb_in_stock:
-                    raise Exception(f"Строка {line['line_number']}: размер не в наличии")
-
-                if not selected_size.barcode:
-                    raise Exception(f"Строка {line['line_number']}: штрих-код размера не указан")
-
                 break
 
         # Strict match check

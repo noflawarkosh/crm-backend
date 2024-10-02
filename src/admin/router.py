@@ -585,6 +585,9 @@ async def get_filtered_orders(request: Request, session: AdminSessionModel = Dep
     if data.get('inn'):
         filtration.append(OrganizationModel.inn == data['inn'].replace(' ', ''))
 
+    if data.get('org_title'):
+        filtration.append(OrganizationModel.title.ilike(f'%{data["org_title"]}%'))
+
     if data.get('wb_article'):
         filtration.append(ProductModel.wb_article == data['wb_article'].replace(' ', ''))
 
@@ -634,13 +637,13 @@ async def get_filtered_orders(request: Request, session: AdminSessionModel = Dep
         filtration.append(OrdersAccountModel.number == data['account_id'].replace(' ', ''))
 
     if data.get('address_id'):
-        filtration.append(OrdersAddressModel.address == data['address_id'])
+        filtration.append(OrdersAddressModel.address.ilike(f'%{data["address_id"]}%'))
 
     if data.get('wb_collect_code'):
         filtration.append(OrdersOrderModel.wb_collect_code == data['wb_collect_code'])
 
     if data.get('contractor_id'):
-        filtration.append(OrdersContractorModel.name == data['contractor_id'])
+        filtration.append(OrdersContractorModel.name.ilike(f'%{data["contractor_id"]}%'))
 
     records = await Repository.get_records(
         OrdersOrderModel,

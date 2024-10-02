@@ -61,7 +61,7 @@ async def create_organization(data: Annotated[OrganizationCreateSchema, Depends(
         level_id = 1
 
     await Repository.save_records(
-        [{'model': OrganizationModel, 'records': [{**data.model_dump(), 'owner_id': session.user.id, 'status': 1, 'level_id': level_id}]}]
+        [{'model': OrganizationModel, 'records': [{**data.model_dump(), 'owner_id': session.user.id, 'status': 2, 'level_id': level_id, 'server_id': 11}]}]
     )
 
 

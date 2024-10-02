@@ -110,19 +110,19 @@
                         {
                             "data": 'dt_planed',
                             render: function (data, type, row) {
-                                return data ? moment(data).format('DD.MM.YYYY') : ''
+                                return data ? '<span style="display: none">' + moment(data).unix() + '</span>' + moment(data).format('DD.MM.YYYY') : ''
                             }
                         },
                         {
                             "data": 'dt_ordered',
                             render: function (data, type, row) {
-                                return data ? moment(data).format('DD.MM.YYYY') : ''
+                                return data ? '<span style="display: none">' + moment(data).unix() + '</span>' + moment(data).format('DD.MM.YYYY') : ''
                             }
                         },
                         {
                             "data": 'dt_collected',
                             render: function (data, type, row) {
-                                return data ? moment(data).format('DD.MM.YYYY') : ''
+                                return data ? '<span style="display: none">' + moment(data).unix() + '</span>' + moment(data).format('DD.MM.YYYY') : ''
                             }
                         },
                         {
@@ -290,7 +290,8 @@
                             <a href="javascript:setCalDate(3)" class="btn btn-label-secondary" id="dt_3">Завтра</i></a>
                         </div>
                         <div class="col-auto p-xl-0 p-lg-0 me-1">
-                            <a href="javascript:setCalDate(0)" class="btn btn-label-secondary" id="dt_4">Все время</i></a>
+                            <a href="javascript:setCalDate(0)" class="btn btn-label-secondary" id="dt_4">Все
+                                время</i></a>
                         </div>
 
                     </div>

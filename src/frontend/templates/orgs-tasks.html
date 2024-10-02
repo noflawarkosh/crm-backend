@@ -143,7 +143,7 @@
                         {
                             "data": 'dt_planed',
                             "render": function (data, type, row) {
-                                return moment(row.dt_planed).format('DD.MM.YYYY')
+                                return '<span style="display: none">' + moment(row.dt_planed).unix() + '</span>' + moment(row.dt_planed).format('DD.MM.YYYY')
                             }
                         },
                         {
@@ -922,7 +922,7 @@
                         <div class="col-auto">
                             <a href="javascript:"
                                onclick="calculatePayment()"
-                               class="btn btn-label-success"
+                               class="btn btn-success"
                                id="pay-plan-btn"
                                data-bs-toggle="modal"
                                data-bs-target="#modal-plan-calc">Оплатить за выбранный период

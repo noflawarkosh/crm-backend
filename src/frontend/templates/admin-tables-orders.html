@@ -213,22 +213,22 @@
                     },
                     {
                         "render": function (data, type, row) {
-                            return row.dt_planed === null ? '—' : moment(row.dt_planed).format('DD.MM.YYYY')
+                            return row.dt_planed === null ? '—' : '<span style="display: none">' + moment(row.dt_planed).unix() + '</span>' + moment(row.dt_planed).format('DD.MM.YYYY')
                         }
                     },
                     {
                         "render": function (data, type, row) {
-                            return row.dt_ordered === null ? '—' : moment(row.dt_ordered).format('DD.MM.YYYY')
+                            return row.dt_ordered === null ? '—' : '<span style="display: none">' + moment(row.dt_ordered).unix() + '</span>' + moment(row.dt_ordered).format('DD.MM.YYYY')
                         }
                     },
                     {
                         "render": function (data, type, row) {
-                            return row.dt_delivered === null ? '—' : moment(row.dt_delivered).format('DD.MM.YYYY')
+                            return row.dt_delivered === null ? '—' : '<span style="display: none">' + moment(row.dt_delivered).unix() + '</span>' + moment(row.dt_delivered).format('DD.MM.YYYY')
                         }
                     },
                     {
                         "render": function (data, type, row) {
-                            return row.dt_collected === null ? '—' : moment(row.dt_collected).format('DD.MM.YYYY')
+                            return row.dt_collected === null ? '—' : '<span style="display: none">' + moment(row.dt_collected).unix() + '</span>' + moment(row.dt_collected).format('DD.MM.YYYY')
                         }
                     },
                     {
@@ -395,7 +395,7 @@
 
 
         var elements = [
-            {id: 'inn', name: 'inn'},
+            {id: 'inn', name: search_org_type},
             {id: 'wb_article', name: 'wb_article'},
             {id: 'wb_size_origName', name: 'wb_size_origName'},
             {id: 'wb_price', name: 'wb_price'},
@@ -438,6 +438,18 @@
         })
     }
 
+    var search_org_type = 'org_title' //true
+    function swap_org_search(flag) {
+        var sfo = document.getElementById('sfo')
+        if (flag) {
+            search_org_type = 'org_title'
+            sfo.innerHTML = 'ИП <span><a href="javascript:swap_org_search(false)">сменить</a></span>'
+        } else {
+            search_org_type = 'inn'
+            sfo.innerHTML = 'ИНН <span><a href="javascript:swap_org_search(true)">сменить</a></span>'
+        }
+
+    }
 
 </script>
 {% endblock %}
@@ -483,19 +495,20 @@
                     </div>
                     <div class="row mb-3">
                         <div class="col-3">
-                            <label for="dt_planed" class="form-label">ИНН</label>
+                            <label for="inn" id="sfo" class="form-label">ИП <span><a
+                                    href="javascript:swap_org_search(false)">сменить</a></span></label>
                             <input type="text" class="form-control" placeholder="Без фильтрации" id="inn"/>
                         </div>
                         <div class="col-3">
-                            <label for="dt_ordered" class="form-label">Артикул</label>
+                            <label for="wb_article" class="form-label">Артикул</label>
                             <input type="text" class="form-control" placeholder="Без фильтрации" id="wb_article"/>
                         </div>
                         <div class="col-3">
-                            <label for="dt_delivered" class="form-label">Размер</label>
+                            <label for="wb_size_origName" class="form-label">Размер</label>
                             <input type="text" class="form-control" placeholder="Без фильтрации" id="wb_size_origName"/>
                         </div>
                         <div class="col-3">
-                            <label for="dt_delivered" class="form-label">Цена</label>
+                            <label for="wb_price" class="form-label">Цена</label>
                             <input type="text" class="form-control" placeholder="XXXXX-YYYYY" id="wb_price"/>
                         </div>
 
@@ -506,21 +519,21 @@
                     </div>
                     <div class="row mb-3">
                         <div class="col-3">
-                            <label for="dt_planed" class="form-label">ID</label>
+                            <label for="order_id" class="form-label">ID</label>
                             <input type="text" class="form-control" placeholder="Без фильтрации" id="order_id"/>
                         </div>
                         <div class="col-3">
-                            <label for="dt_ordered" class="form-label">UUID</label>
+                            <label for="wb_uuid" class="form-label">UUID</label>
                             <input type="text" class="form-control" placeholder="Без фильтрации" id="wb_uuid"/>
                         </div>
 
                         <div class="col-3">
-                            <label for="dt_delivered" class="form-label">Статус</label>
+                            <label for="status_id" class="form-label">Статус</label>
                             <select id="status_id" class="form-control selectpicker" data-live-search="true"></select>
                         </div>
 
                         <div class="col-3">
-                            <label for="dt_delivered" class="form-label">Статус WB</label>
+                            <label for="wb_status" class="form-label">Статус WB</label>
                             <input type="text" class="form-control" placeholder="Без фильтрации" id="wb_status"/>
                         </div>
 
@@ -532,19 +545,19 @@
                     </div>
                     <div class="row mb-3">
                         <div class="col-3">
-                            <label for="dt_delivered" class="form-label">Аккаунт</label>
+                            <label for="account_id" class="form-label">Аккаунт</label>
                             <input type="text" class="form-control" placeholder="Без фильтрации" id="account_id"/>
                         </div>
                         <div class="col-3">
-                            <label for="dt_delivered" class="form-label">Адрес</label>
+                            <label for="address_id" class="form-label">Адрес</label>
                             <input type="text" class="form-control" placeholder="Без фильтрации" id="address_id"/>
                         </div>
                         <div class="col-3">
-                            <label for="dt_delivered" class="form-label">Код получения</label>
+                            <label for="wb_collect_code" class="form-label">Код получения</label>
                             <input type="text" class="form-control" placeholder="Без фильтрации" id="wb_collect_code"/>
                         </div>
                         <div class="col-3">
-                            <label for="dt_delivered" class="form-label">Подрядчик</label>
+                            <label for="contractor_id" class="form-label">Подрядчик</label>
                             <input type="text" class="form-control" placeholder="Без фильтрации" id="contractor_id"/>
                         </div>
                     </div>

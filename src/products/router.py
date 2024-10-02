@@ -240,7 +240,8 @@ async def disable_product(product_id: int, session: UserSessionModel = Depends(a
 
     await check_access(products[0].org_id, session.user.id, 2)
 
-    await Repository.save_records([{'model': ProductModel, 'records': [{'id': product_id, 'status': 3}]}], session_id=session.id)
+    await Repository.save_records([{'model': ProductModel, 'records': [{'id': product_id, 'status': 3}]}],
+                                  session_id=session.id)
 
 
 @router_reviews.post('/create')
@@ -270,12 +271,6 @@ async def create_review(data: Annotated[ReviewCreateSchema, Depends()], files: L
 
     if not size.is_active:
         raise HTTPException(status_code=403, detail=string_product_size_not_active)
-
-    if not size.barcode:
-        raise HTTPException(status_code=403, detail=string_product_size_no_barcode)
-
-    if not size.wb_in_stock:
-        raise HTTPException(status_code=403, detail=string_product_size_not_in_stock)
 
     if data.match not in [None, 0, 1, 2, 3]:
         raise HTTPException(status_code=404, detail=string_404)
@@ -364,7 +359,8 @@ async def disable_review(review_id: int, session: UserSessionModel = Depends(aut
     if reviews[0].status != 1:
         raise HTTPException(status_code=403, detail=string_403)
 
-    await Repository.save_records([{'model': ReviewModel, 'records': [{'id': review_id, 'status': 4}]}], session_id=session.id)
+    await Repository.save_records([{'model': ReviewModel, 'records': [{'id': review_id, 'status': 4}]}],
+                                  session_id=session.id)
 
 
 @router_reviews.post('/update')

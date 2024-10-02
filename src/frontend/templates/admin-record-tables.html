@@ -58,7 +58,7 @@
                                 }
 
                                 if (fields[field] === 'DATETIME') {
-                                    return moment(row[field]).format('DD.MM.YYYY HH:mm')
+                                    return '<span style="display: none">' + moment(row[field]).unix() + '</span>' + moment(row[field]).format('DD.MM.YYYY HH:mm')
                                 }
 
                                 return row[field]
