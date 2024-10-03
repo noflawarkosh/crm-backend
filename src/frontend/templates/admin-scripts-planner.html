@@ -144,13 +144,19 @@
 
         var ba = document.getElementById('bad_accounts').value
 
+
         var formData = new FormData();
         formData.append('date', document.getElementById('picker_date').value);
         formData.append('bad_accounts', document.getElementById('bad_accounts').value);
 
+        var with_fakes = ''
+        if (document.getElementById('with_fakes').checked) {
+            with_fakes = '&with_fakes=True'
+        }
+
         $.ajax({
             type: "POST",
-            url: '/picker/generatePlan?date=' + document.getElementById('picker_date').value,
+            url: '/picker/generatePlan?date=' + document.getElementById('picker_date').value + with_fakes,
             data: formData,
             contentType: false,
             processData: false,
@@ -735,10 +741,16 @@
                         <label for="bad_accounts" class="form-label">Реестровые минус аккаунты</label>
                         <textarea class="form-control" id="bad_accounts" rows="3"></textarea>
                     </div>
-                    <button id="btn3" onclick="generate_plan()" class="btn btn-primary mt-4">План с подбором
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" value="" id="with_fakes">
+                        <label class="form-check-label" for="with_fakes">
+                            Fake accounts
+                        </label>
+                    </div>
+                    <button id="btn3" onclick="generate_plan()" class="btn btn-primary mt-2">План с подбором
                     </button>
 
-                    <button id="btn5" onclick="generate_plan_tmp()" class="btn btn-label-primary mt-4">Пустой план
+                    <button id="btn5" onclick="generate_plan_tmp()" class="btn btn-label-primary mt-2">Пустой план
                     </button>
 
                     <small class="card-subtitle" id="history_console"></small>

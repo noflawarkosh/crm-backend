@@ -1972,7 +1972,7 @@ async def proc_3(accs, settings):
     return accs
 
 
-async def generate_plan_main(servers, bad_accounts, date):
+async def generate_plan_main(servers, bad_accounts, date, with_fakes):
     # Prepare data
     bad_accounts = (
         bad_accounts.replace('\n', '').replace(' ', '').split('\r')
@@ -2102,19 +2102,23 @@ async def generate_plan_main(servers, bad_accounts, date):
             OrdersAccountModel,
             filters=[OrdersAccountModel.server_id == server.id],
             select_related=[OrdersAccountModel.address],
+            deep_related=[
+                [OrdersAccountModel.address, OrdersAddressModel.contractor]
+            ]
         )
 
         logs.new('Общий пул')
         logs.line(1, ['ID аккаунта', 'Номер', 'Имя', 'Статус аккаунта', 'ID адреса', 'Адрес', 'Район', 'Курьер',
                       'Статус адреса', 'Исключен', 'T', 'W'])
 
+        line = 2
         for i, account in enumerate(db_accounts):
             line = i + 2
 
             logs.line(line,
                       [account.id, account.number, account.name, account.number in bad_accounts or account.is_active,
                        account.address.id, account.address.address, account.address.district,
-                       account.address.contractor, account.address.is_active])
+                       account.address.contractor.name, account.address.is_active])
 
             if account.number in bad_accounts:
                 logs.active[f'J{line}'] = 'Исключен, реестровый аккаунт'
@@ -2198,6 +2202,62 @@ async def generate_plan_main(servers, bad_accounts, date):
             logs.active[f'J{line}'] = 'Не исключен'
             logs.active[f'K{line}'] = T
             logs.active[f'L{line}'] = W
+
+
+        if with_fakes:
+
+            active_addresses = await Repository.get_records(
+                OrdersAddressModel,
+                filters=[OrdersAddressModel.is_active.is_(True)],
+                select_related=[OrdersAddressModel.contractor]
+            )
+
+            x = 0
+            for address in active_addresses:
+
+                x += 1
+                y = 9000000000 + x
+                line += 1
+
+                logs.line(line,
+                          [y, str(y), 'Имя',
+                           str(y) in bad_accounts,
+                           address.id, address.address, address.district,
+                           address.contractor.name, address.is_active])
+
+                contractor = next(
+                    (
+                        server_contractor for server_contractor in server.contractors
+                        if server_contractor.contractor.id == address.contractor_id
+                    ), None
+                )
+
+                if not contractor:
+                    logs.active[f'J{line}'] = 'Исключен, курьер адреса аккаунта отсутствует на сервере (Фейк акк)'
+                    continue
+
+
+                W = (df_orders.query(f'address_id == {address.id} and dt_collected.isnull()').shape[0])
+
+                accs.append({
+                    'account_id': y,
+                    'address_id': address.id,
+                    'number': str(y),
+                    'address': address.address,
+                    'contractor': contractor,
+                    'district': address.district,
+
+                    'T': 0,  # amount of active orders on account
+                    'W': W,  # amount of active orders on account's address
+                })
+
+                logs.active[f'J{line}'] = 'Не исключен (Фейк акк)'
+                logs.active[f'K{line}'] = 0
+                logs.active[f'L{line}'] = W
+
+
+
+
 
         ################################################################################################################
         # ACCOUNTS PICKER
@@ -2494,7 +2554,7 @@ async def generate_plan_main(servers, bad_accounts, date):
                     ITER_SUCCESS = True
 
                 else:
-                    if ITER_NUMBER == 1:
+                    if ITER_NUMBER == 2:
 
                         contractors = []
                         remaining = amount
@@ -2524,7 +2584,7 @@ async def generate_plan_main(servers, bad_accounts, date):
 
                         I_ADD += 1
 
-                    if ITER_NUMBER == 2:
+                    if ITER_NUMBER == 1:
 
                         tasks_not_completed = amount - sum([len(c['usages']) for c in contractors])
 

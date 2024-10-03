@@ -49,7 +49,7 @@ async def refresh_orders(request: Request, session: AdminSessionModel = Depends(
 
 
 @router.post('/generatePlan')
-async def generate_plan(request: Request, date: datetime.date, session: AdminSessionModel = Depends(authed)):
+async def generate_plan(request: Request, date: datetime.date, with_fakes: bool = False, session: AdminSessionModel = Depends(authed)):
     servers = await Repository.get_records(
         PickerServerModel,
         filters=[PickerServerModel.is_active],
@@ -60,7 +60,7 @@ async def generate_plan(request: Request, date: datetime.date, session: AdminSes
     bad_accounts = data['bad_accounts']
 
     try:
-        await generate_plan_main(servers, bad_accounts, date)
+        await generate_plan_main(servers, bad_accounts, date, with_fakes)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'{str(e)}')
 
